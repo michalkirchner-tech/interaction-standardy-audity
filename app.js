@@ -22,7 +22,7 @@ function renderHome() {
     </section>
     <section class="grid">
       ${BRANDS.map(b => `
-        <a class="tile" href="#/${b.id}" aria-label="${b.name}">
+        <a class="tile" href="#${b.id}" aria-label="${b.name}">
           <span class="tile-logo${b.wide ? " wide" : ""}"><img src="${b.logo}" alt="${b.name}"></span>
           <span class="tile-name">${b.name}</span>
         </a>`).join("")}
@@ -34,7 +34,7 @@ function renderBrand(brand) {
   document.title = `${brand.name} – Standardy a audity | INTERACTION`;
   app.innerHTML = `
     <section class="brand-page">
-      <a class="back" href="#/">← Zpět na přehled značek</a>
+      <a class="back" href="#">← Zpět na přehled značek</a>
       <div class="brand-head">
         <img src="${brand.logo}" alt="${brand.name}">
         <div>
