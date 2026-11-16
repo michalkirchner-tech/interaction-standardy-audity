@@ -294,4 +294,14 @@ tr.st-soon td:first-child { box-shadow: inset 4px 0 0 #f0a000; }
 .res-table.small { font-size: .85rem; }
 .btn-del { border: 1px solid #ddd; background: #fff; color: #888; border-radius: 7px; padding: 4px 9px; cursor: pointer; font-size: .8rem; }
 .btn-del:hover { border-color: var(--ia-red); color: var(--ia-red); }
-.res-table td:nth-child(4), .res-table td:nth-child(5) { white-space: nowrap; }
+.td-date { white-space: nowrap; }
+
+/* Arval: úrovně hodnocených částí */
+.th-lvl { min-width: 104px; }
+.lvl { display: inline-block; padding: 3px 9px; border-radius: 7px; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+.lvl-0 { background: #fde3e5; color: #b0101d; }
+.lvl-1 { background: #fff1d6; color: #8a5300; }
+.lvl-2 { background: #e3ecfb; color: #0D4798; }
+.lvl-3 { background: #dff3e6; color: #1d6b3d; }
+.lvl-cell .ext { display: block; font-size: .74rem; color: #555; margin-top: 4px; line-height: 1.25; }
+.res-arval td, .res-arval th { padding-left: 7px; padding-right: 7px; }

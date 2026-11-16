@@ -23,7 +23,9 @@ export function statusOf(nextIso) {
 
 // ---------- Načtení dat ----------
 export async function loadAudits(brand) {
-  let q = supabase.from("audits").select("id,brand,partner,ic,audit_date,valid_months,next_audit_date,result,source,created_at").order("next_audit_date");
+  const cols = "id,brand,partner,ic,audit_date,valid_months,next_audit_date,result,source,created_at"
+    + (brand === "arval" ? ",meta:data->meta,checks:data->checks,esgChecks:data->esgChecks,esgRadio:data->esgRadio" : "");
+  let q = supabase.from("audits").select(cols).order("next_audit_date");
   if (brand) q = q.eq("brand", brand);
   const { data, error } = await q;
   if (error) throw error;
@@ -63,28 +65,35 @@ async function formDefs(brand) {
   return (defsCache[brand] = defs);
 }
 
-function arvalResult(state, { CATEGORIES, ESG, NAHRADNI }) {
-  const parts = [];
-  const levels = [];
-  for (const cat of CATEGORIES) {
-    if (cat.id === "karoserie" && state.meta?.karoserieExterni === "externi") continue;
-    if (cat.id === "lakovna" && state.meta?.lakovnaExterni === "externi") continue;
+const ARVAL_LEVEL = n => (n ? `Úroveň ${n}` : "Neúspěšný audit");
+
+// Rozpad výsledku Arval: úroveň každé hodnocené části + ESG, u externí karosárny/lakovny i dodavatel
+export function arvalBreakdown(state, { CATEGORIES, ESG, NAHRADNI }) {
+  const meta = state.meta || {};
+  const cats = CATEGORIES.map(cat => {
     const items = cat.sharesNahradni ? cat.items.concat(NAHRADNI.items) : cat.items;
     const per = { 1: [0, 0], 2: [0, 0], 3: [0, 0] };
     for (const it of items) for (let n = it.level; n <= 3; n++) { per[n][1]++; if (state.checks?.[it.id]) per[n][0]++; }
-    let lvl = 0; [1, 2, 3].forEach(n => { if (per[n][1] > 0 && per[n][0] === per[n][1]) lvl = n; });
-    levels.push(lvl);
-    parts.push(`${cat.title}: ${lvl ? "úroveň " + lvl : "nesplněno"}`);
-  }
-  let pts = 0;
+    let level = 0; [1, 2, 3].forEach(n => { if (per[n][1] > 0 && per[n][0] === per[n][1]) level = n; });
+    let ext = null;
+    if (cat.id === "karoserie" && meta.karoserieExterni === "externi") ext = { name: meta.dodavatelKarosarna || "", ico: meta.dodavatelKarosarnaIco || "" };
+    if (cat.id === "lakovna" && meta.lakovnaExterni === "externi") ext = { name: meta.dodavatelLakovna || "", ico: meta.dodavatelLakovnaIco || "" };
+    return { id: cat.id, title: cat.title, level, label: ARVAL_LEVEL(level), ext };
+  });
+  let pts = 0, max = 0;
   for (const g of ESG.groups) for (const it of g.items) {
-    if (it.type === "radio" || (!it.type && g.type === "radio")) { const sel = state.esgRadio?.[it.id]; if (sel !== undefined && it.options[sel]) pts += it.options[sel].points; }
-    else if (state.esgChecks?.[it.id]) pts += it.points;
+    if (it.type === "radio" || (!it.type && g.type === "radio")) { max += Math.max(...it.options.map(o => o.points)); const sel = state.esgRadio?.[it.id]; if (sel !== undefined && it.options[sel]) pts += it.options[sel].points; }
+    else { max += it.points; if (state.esgChecks?.[it.id]) pts += it.points; }
   }
-  let esg = "Neúspěšný audit"; ESG.thresholds.forEach(t => { if (pts >= t.min && pts <= t.max) esg = t.label; });
-  const names = parts.filter(p => p.endsWith("nesplněno")).map(p => p.split(":")[0]);
-  const head = names.length ? `Nesplněno: ${names.join(", ")}` : `Nejnižší dosažená úroveň ${Math.min(...levels)}`;
-  return `${head} · ESG: ${esg} | ${parts.join(" · ")}`;
+  let label = "Neúspěšný audit"; ESG.thresholds.forEach(t => { if (pts >= t.min && pts <= t.max) label = t.label; });
+  const lvl = (label.match(/(\d)/) || [0, 0])[1] | 0;
+  return { cats, esg: { title: "ESG a CSR", level: lvl, label, points: pts, max } };
+}
+
+function arvalResult(state, defs) {
+  const b = arvalBreakdown(state, defs);
+  const txt = c => `${c.title}${c.ext ? " (externí)" : ""}: ${c.label}`;
+  return [...b.cats.map(txt), `ESG: ${b.esg.label}`].join(" · ");
 }
 
 function stellantisResult(state, { AREAS, RESULT_AREAS, ZINC_BRANDS, BRANDS }) {
@@ -144,7 +153,19 @@ export function resultCell(result) {
   return `<span class="res-head ${cls}">${esc(head)}</span>${detail ? `<span class="res-detail">${esc(detail)}</span>` : ""}`;
 }
 
-export function dashboardHtml(brand, rows, isAdmin) {
+export async function arvalDefs() { return formDefs("arval"); }
+
+function lvlBadge(level, label) { return `<span class="lvl lvl-${level}">${esc(label)}</span>`; }
+
+function arvalCells(r, defs) {
+  if (!r.checks && !r.meta) return defs.CATEGORIES.map(() => "<td>—</td>").join("") + "<td>—</td>";
+  const b = arvalBreakdown({ meta: r.meta, checks: r.checks, esgChecks: r.esgChecks, esgRadio: r.esgRadio }, defs);
+  return b.cats.map(c => `<td class="lvl-cell">${lvlBadge(c.level, c.label)}${c.ext ? `<span class="ext">Externí: ${esc(c.ext.name || "neuvedeno")}${c.ext.ico ? `, IČO ${esc(c.ext.ico)}` : ""}</span>` : ""}</td>`).join("")
+    + `<td class="lvl-cell">${lvlBadge(b.esg.level, b.esg.label)}<span class="ext">${b.esg.points} / ${b.esg.max} bodů</span></td>`;
+}
+
+export function dashboardHtml(brand, rows, isAdmin, defs) {
+  const arv = brand === "arval" && defs;
   const list = latestPerCustomer(rows).map(r => ({ ...r, st: statusOf(r.next_audit_date) }))
     .sort((a, b) => a.st.order - b.st.order || a.next_audit_date.localeCompare(b.next_audit_date));
   const cnt = k => list.filter(r => r.st.key === k).length;
@@ -159,16 +180,16 @@ export function dashboardHtml(brand, rows, isAdmin) {
     <div class="res-card">
       <div class="res-toolbar"><input type="search" id="resSearch" placeholder="Hledat zákazníka nebo IČ…"></div>
       ${list.length ? `
-      <div class="table-wrap"><table class="res-table">
-        <thead><tr><th>Stav</th><th>Zákazník</th><th>Výsledek</th><th>Datum auditu</th><th>Příští audit</th>${isAdmin ? "<th></th>" : ""}</tr></thead>
+      <div class="table-wrap"><table class="res-table${arv ? " res-arval" : ""}">
+        <thead><tr><th>Stav</th><th>Zákazník</th>${arv ? defs.CATEGORIES.map(c => `<th class="th-lvl">${esc(c.title)}</th>`).join("") + `<th class="th-lvl">ESG a CSR</th>` : "<th>Výsledek</th>"}<th>Datum auditu</th><th>Příští audit</th>${isAdmin ? "<th></th>" : ""}</tr></thead>
         <tbody>
           ${list.map(r => `
           <tr class="st-${r.st.key}" data-q="${esc((r.partner + " " + (r.ic || "")).toLowerCase())}">
             <td><span class="st-badge st-${r.st.key}">${r.st.label}</span></td>
             <td><strong>${esc(r.partner)}</strong>${r.ic ? `<span class="muted">IČ ${esc(r.ic)}</span>` : ""}${r.older ? `<span class="muted">+ ${r.older} starší audit${r.older > 1 ? "y" : ""}</span>` : ""}</td>
-            <td class="res-col">${resultCell(r.result)}</td>
-            <td>${czDate(r.audit_date)}<span class="muted">platnost ${r.valid_months} měs.</span></td>
-            <td><strong>${czDate(r.next_audit_date)}</strong><span class="muted">${r.st.text}</span></td>
+            ${arv ? arvalCells(r, defs) : `<td class="res-col">${resultCell(r.result)}</td>`}
+            <td class="td-date">${czDate(r.audit_date)}<span class="muted">platnost ${r.valid_months} měs.</span></td>
+            <td class="td-date"><strong>${czDate(r.next_audit_date)}</strong><span class="muted">${r.st.text}</span></td>
             ${isAdmin ? `<td><button type="button" class="btn-del" data-del="${r.id}" data-name="${esc(r.partner)}" title="Smazat záznam">Smazat</button></td>` : ""}
           </tr>`).join("")}
         </tbody></table></div>` : `<div class="empty">Zatím zde nejsou žádné audity.${brand === "mitsubishi" ? " Import auditů Mitsubishi z PDF/XLS doplníme, až dodáte ukázkový soubor." : isAdmin ? " Nahrajte první audit tlačítkem výše." : ""}</div>`}

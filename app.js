@@ -1,6 +1,6 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
 import { supabase, getProfile } from "./js/supabase.js";
-import { RESULT_BRANDS, loadAudits, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, esc as escR } from "./js/results.js";
+import { RESULT_BRANDS, arvalDefs, loadAudits, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, esc as escR } from "./js/results.js";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
@@ -182,7 +182,7 @@ async function renderResultsBrand(b) {
   const dash = document.getElementById("dash");
   const isAdmin = profile.role === "admin";
   const refresh = async () => {
-    try { dash.innerHTML = dashboardHtml(b.id, await loadAudits(b.id), isAdmin); }
+    try { const defs = b.id === "arval" ? await arvalDefs() : null; dash.innerHTML = dashboardHtml(b.id, await loadAudits(b.id), isAdmin, defs); }
     catch (e) { dash.innerHTML = `<div class="empty">Data se nepodařilo načíst: ${escR(e.message)}</div>`; return; }
     const search = document.getElementById("resSearch");
     if (search) search.oninput = () => { const q = search.value.toLowerCase().trim(); dash.querySelectorAll("tbody tr").forEach(tr => tr.hidden = q && !tr.dataset.q.includes(q)); };
