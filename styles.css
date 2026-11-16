@@ -250,3 +250,48 @@ h1, h2, h3 { font-family: "Poppins", system-ui, sans-serif; }
 .btn-primary { width: 100%; padding: 12px; border: 0; border-radius: 10px; background: var(--ia-red); color: #fff; font: 600 1rem "Poppins", sans-serif; cursor: pointer; }
 .btn-primary:hover { background: #c8101f; }
 .btn-primary:disabled { opacity: .6; cursor: default; }
+
+/* Výsledky auditů */
+.btn-results { display: inline-flex; align-items: center; gap: 10px; margin-top: 22px; padding: 12px 22px; border-radius: 999px; background: var(--ia-red); color: #fff; text-decoration: none; font: 600 1.02rem "Poppins", sans-serif; box-shadow: 0 6px 18px rgba(233,25,41,.35); transition: transform .15s ease, background .15s ease; }
+.btn-results:hover { background: #c8101f; transform: translateY(-2px); }
+.grid-3 { grid-template-columns: repeat(3, 1fr); max-width: 960px; }
+@media (max-width: 760px) { .grid-3 { grid-template-columns: 1fr; } }
+.tile-stats { font-size: .85rem; color: #555; transform: translateZ(20px); text-align: center; }
+.c-exp { color: var(--ia-red); } .c-soon { color: #c77700; }
+.wide-page { max-width: 1200px; }
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 24px 0; }
+@media (max-width: 760px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+.kpi { background: #fff; border-radius: 14px; padding: 16px 18px; box-shadow: 0 6px 16px rgba(0,0,0,.08); border-top: 4px solid var(--ia-gray); display: flex; flex-direction: column; }
+.kpi-n { font: 700 2rem "Poppins", sans-serif; line-height: 1.1; }
+.kpi-l { color: #555; font-size: .88rem; }
+.kpi-expired { border-top-color: var(--ia-red); } .kpi-expired .kpi-n { color: var(--ia-red); }
+.kpi-soon { border-top-color: #f0a000; } .kpi-soon .kpi-n { color: #c77700; }
+.kpi-ok { border-top-color: #2e9e5b; } .kpi-ok .kpi-n { color: #2e7d4f; }
+.res-card { background: #fff; border-radius: 14px; box-shadow: 0 6px 16px rgba(0,0,0,.08); padding: 16px; }
+.res-toolbar input { width: 100%; max-width: 360px; padding: 9px 12px; border: 1px solid #ccc; border-radius: 9px; font: inherit; margin-bottom: 12px; }
+.table-wrap { overflow-x: auto; }
+.res-table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.res-table th { text-align: left; font: 600 .78rem "Poppins", sans-serif; text-transform: uppercase; letter-spacing: .04em; color: #666; padding: 8px 10px; border-bottom: 2px solid var(--ia-light); }
+.res-table td { padding: 10px; border-bottom: 1px solid #eee; vertical-align: top; }
+.res-table .muted, .import-box .muted { display: block; color: #777; font-size: .8rem; }
+tr.st-expired td:first-child { box-shadow: inset 4px 0 0 var(--ia-red); }
+tr.st-soon td:first-child { box-shadow: inset 4px 0 0 #f0a000; }
+.st-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+.st-badge.st-expired { background: #fde3e5; color: #b0101d; }
+.st-badge.st-soon { background: #fff1d6; color: #9a5c00; }
+.st-badge.st-ok { background: #e2f4e9; color: #22663f; }
+.res-col { min-width: 220px; }
+.res-head { font-weight: 700; display: block; }
+.res-head.res-bad { color: var(--ia-red); } .res-head.res-ok { color: #22663f; }
+.res-detail { display: block; color: #666; font-size: .78rem; margin-top: 2px; }
+.import-box { background: #fff; border: 2px dashed var(--ia-blue); border-radius: 14px; padding: 14px 16px; margin-bottom: 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+.import-box > div:first-child { flex: 1 1 300px; }
+.btn-import, .btn-save { display: inline-block; padding: 9px 16px; border-radius: 9px; background: var(--ia-blue); color: #fff; font: 600 .92rem "Open Sans", sans-serif; cursor: pointer; border: 0; }
+.btn-save { background: var(--ia-red); margin: 12px 10px 0 0; }
+.btn-save:disabled { opacity: .6; }
+.import-out { flex-basis: 100%; }
+.import-out:empty { display: none; }
+.res-table.small { font-size: .85rem; }
+.btn-del { border: 1px solid #ddd; background: #fff; color: #888; border-radius: 7px; padding: 4px 9px; cursor: pointer; font-size: .8rem; }
+.btn-del:hover { border-color: var(--ia-red); color: var(--ia-red); }
+.res-table td:nth-child(4), .res-table td:nth-child(5) { white-space: nowrap; }

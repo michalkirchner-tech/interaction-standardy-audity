@@ -1,5 +1,6 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
 import { supabase, getProfile } from "./js/supabase.js";
+import { RESULT_BRANDS, loadAudits, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, esc as escR } from "./js/results.js";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
@@ -91,6 +92,10 @@ function renderHome() {
     <section class="hero">
       <h1>Standardy a audity</h1>
       <p>Vyberte značku</p>
+      <a class="btn-results" href="#vysledky">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        Výsledky auditů
+      </a>
     </section>
     <section class="grid">
       ${BRANDS.map(b => `
@@ -138,11 +143,108 @@ function attachTilt(tile) {
   });
 }
 
+// ---------- Výsledky auditů ----------
+async function renderResultsHome() {
+  document.title = "Výsledky auditů | INTERACTION";
+  app.innerHTML = `
+    <section class="hero"><h1>Výsledky auditů</h1><p>Vyberte značku</p></section>
+    <section class="grid grid-3">
+      ${RESULT_BRANDS.map(b => `
+        <a class="tile" href="#vysledky-${b.id}" aria-label="Výsledky ${b.name}">
+          <span class="tile-logo${b.wide ? " wide" : ""}"><img src="assets/logos/${b.logo.split("/").pop()}" alt="${b.name}"></span>
+          <span class="tile-name">${b.name}</span>
+          <span class="tile-stats" data-stats="${b.id}">načítám…</span>
+        </a>`).join("")}
+    </section>`;
+  app.querySelectorAll(".tile").forEach(attachTilt);
+  try {
+    const rows = latestPerCustomer(await loadAudits());
+    for (const b of RESULT_BRANDS) {
+      const mine = rows.filter(r => r.brand === b.id).map(r => statusOf(r.next_audit_date).key);
+      const ex = mine.filter(k => k === "expired").length, so = mine.filter(k => k === "soon").length;
+      app.querySelector(`[data-stats="${b.id}"]`).innerHTML = !mine.length ? "zatím bez auditů"
+        : `${mine.length} zákazníků${ex ? ` · <b class="c-exp">${ex} propadlé</b>` : ""}${so ? ` · <b class="c-soon">${so} blíží se</b>` : ""}`;
+    }
+  } catch (e) { app.querySelectorAll("[data-stats]").forEach(x => x.textContent = "chyba načtení"); }
+}
+
+async function renderResultsBrand(b) {
+  document.title = `Výsledky ${b.name} | INTERACTION`;
+  app.innerHTML = `
+    <section class="brand-page wide-page">
+      <a class="back" href="#vysledky">← Zpět na výsledky auditů</a>
+      <div class="brand-head">
+        <img src="${b.logo}" alt="${b.name}">
+        <div><h2>Výsledky auditů – ${b.name}</h2><p>Nahoře jsou propadlé audity a audity, kterým se blíží termín.</p></div>
+      </div>
+      <div id="dash"><div class="empty">Načítám…</div></div>
+    </section>`;
+  const dash = document.getElementById("dash");
+  const isAdmin = profile.role === "admin";
+  const refresh = async () => {
+    try { dash.innerHTML = dashboardHtml(b.id, await loadAudits(b.id), isAdmin); }
+    catch (e) { dash.innerHTML = `<div class="empty">Data se nepodařilo načíst: ${escR(e.message)}</div>`; return; }
+    const search = document.getElementById("resSearch");
+    if (search) search.oninput = () => { const q = search.value.toLowerCase().trim(); dash.querySelectorAll("tbody tr").forEach(tr => tr.hidden = q && !tr.dataset.q.includes(q)); };
+    dash.querySelectorAll("[data-del]").forEach(btn => btn.onclick = async () => {
+      if (!confirm(`Opravdu smazat audit zákazníka „${btn.dataset.name}“? Tuto akci nelze vrátit.`)) return;
+      try { await deleteAudit(btn.dataset.del); refresh(); } catch (e) { alert("Smazání se nepodařilo: " + e.message); }
+    });
+    const file = document.getElementById("importFile");
+    if (file) file.onchange = () => handleImport(b, [...file.files], refresh);
+  };
+  refresh();
+}
+
+async function handleImport(b, files, refresh) {
+  const out = document.getElementById("importOut");
+  const recs = [];
+  out.innerHTML = "Zpracovávám…";
+  for (const f of files) {
+    try {
+      const state = JSON.parse(await f.text());
+      const brand = detectBrand(state);
+      if (!brand) throw new Error("soubor nevypadá jako uložený audit z formuláře");
+      if (brand !== b.id) throw new Error(`jde o audit ${brand === "arval" ? "Arval" : "Stellantis"}, ne ${b.name}`);
+      recs.push({ f: f.name, rec: await prepareImport(state, brand) });
+    } catch (e) { recs.push({ f: f.name, err: e.message }); }
+  }
+  const ok = recs.filter(r => r.rec);
+  out.innerHTML = `
+    <table class="res-table small"><thead><tr><th>Soubor</th><th>Zákazník</th><th>Datum auditu</th><th>Platnost</th><th>Výsledek</th></tr></thead><tbody>
+    ${recs.map(r => r.err ? `<tr><td>${escR(r.f)}</td><td colspan="4" class="c-exp">Nelze načíst: ${escR(r.err)}</td></tr>` : `
+      <tr><td>${escR(r.f)}</td><td><strong>${escR(r.rec.partner)}</strong><span class="muted">${r.rec.ic ? "IČ " + escR(r.rec.ic) : ""}</span></td>
+      <td>${czDate(r.rec.audit_date)}</td>
+      <td><select data-valid="${recs.indexOf(r)}">${[12, 24, 36].map(m => `<option value="${m}" ${m === r.rec.valid_months ? "selected" : ""}>${m} měsíců</option>`).join("")}</select></td>
+      <td class="res-col">${escR(r.rec.result.split(" | ")[0])}</td></tr>`).join("")}
+    </tbody></table>
+    ${ok.length ? `<button type="button" class="btn-save" id="importSave">Uložit ${ok.length} ${ok.length === 1 ? "audit" : "audity"} do databáze</button>` : ""}
+    <button type="button" class="btn-logout" id="importCancel">Zrušit</button>`;
+  out.querySelectorAll("[data-valid]").forEach(s => s.onchange = () => recs[+s.dataset.valid].rec.valid_months = +s.value);
+  document.getElementById("importCancel").onclick = () => { out.innerHTML = ""; document.getElementById("importFile").value = ""; };
+  const save = document.getElementById("importSave");
+  if (save) save.onclick = async () => {
+    save.disabled = true;
+    const msgs = [];
+    for (const r of ok) {
+      try { const how = await saveAudit(r.rec); msgs.push(`✓ ${escR(r.rec.partner)} – ${how === "updated" ? "přepsán existující záznam" : "uloženo"}`); }
+      catch (e) { msgs.push(`<span class="c-exp">✗ ${escR(r.rec.partner)} – ${escR(e.message)}</span>`); }
+    }
+    await refresh();
+    const o2 = document.getElementById("importOut");
+    if (o2) o2.innerHTML = msgs.join("<br>");
+  };
+}
+
 function route() {
-  document.body.classList.toggle("is-home", !BRANDS.some(b => "#" + b.id === location.hash));
   const id = location.hash.replace(/^#\/?/, "");
+  document.body.classList.toggle("is-home", !id);
   const brand = BRANDS.find(b => b.id === id);
-  brand ? renderBrand(brand) : renderHome();
+  const rb = RESULT_BRANDS.find(b => "vysledky-" + b.id === id);
+  if (id === "vysledky") renderResultsHome();
+  else if (rb) renderResultsBrand(rb);
+  else if (brand) renderBrand(brand);
+  else renderHome();
 }
 
 async function start() {
