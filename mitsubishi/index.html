@@ -6,8 +6,8 @@
 <title>Audit procesů a vybavení karosárny a lakovny – Mitsubishi</title>
 <style>html.ia-guard body{visibility:hidden}</style>
 <script>document.documentElement.classList.add("ia-guard")</script>
-<script type="module" src="../js/guard.js?v=20261116g"></script>
-<script type="module" src="../js/db-bridge.js?v=20261116g"></script>
+<script type="module" src="../js/guard.js?v=20261116h"></script>
+<script type="module" src="../js/db-bridge.js?v=20261116h"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
@@ -134,8 +134,19 @@ body.t-cert .recert-only{display:none!important}
   .printonly{display:block}
 }
 .item .mark{display:none;justify-self:end;font-weight:700}
-.sig{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:40px}
-.sig div{border-top:1px solid #999;padding-top:4px;font-size:.85rem;color:#555}
+.sigbox{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.sig-lbl{font-size:.82rem;font-weight:600;color:#555}
+.sig-area{width:100%;min-height:74px;border:1px dashed #c9c0cc;border-radius:8px;padding:12px 14px;box-sizing:border-box;background:#fff;color:#0F2C46}
+.sig-area b{display:block;font-size:.95rem;margin-bottom:4px}
+.sig-area.empty{color:#999;font-size:.85rem;display:flex;align-items:center}
+.sig-clear{background:none;border:0;color:#a0153e;font-size:.8rem;cursor:pointer;padding:0;text-decoration:underline}
+.ares{font-size:.76rem;margin-top:3px}
+.ares.ok{color:#1f7a3a}.ares.err{color:#b3261e}.ares.load{color:#666}
+.ares a{color:inherit}
+.result.todo{background:linear-gradient(135deg,#8a6d00,#b8920a)}
+.btn.sig-btn{color:var(--m-deep);border-color:var(--m-deep);background:#fff}
+.btn.sig-btn:hover{background:#f3e6ef}
+@media print{.sig-area{border:1px solid #999}.sig-area.empty{color:transparent}}
 </style>
 </head>
 <body>
@@ -218,7 +229,30 @@ body.t-cert .recert-only{display:none!important}
           <button type="button" id="opFill">Doplnit nesplněné body</button>
         </div>
         <label class="f" style="margin-top:16px">Poznámky<textarea data-root="poznamky" rows="3"></textarea></label>
-        <div class="sig printonly"><div>Podpis auditora</div><div>Podpis partnera</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Podpis</h2>
+      <div class="body">
+        <div class="grid2">
+          <label class="f">Jméno a příjmení auditora<input data-m="auditor" list="auditors"></label>
+          <label class="f">Jméno a příjmení odpovědné osoby (partner)<input data-p="odpovedna"></label>
+        </div>
+        <div class="grid2 sigs" style="margin-top:14px">
+          <div class="sigbox"><div class="sig-lbl">Podpis auditora</div>
+            <button type="button" class="btn sig-btn no-print" data-sign="auditor">Digitálně podepsat</button>
+            <div class="sig-area" id="sig-auditor"></div>
+            <button type="button" class="sig-clear no-print" data-unsign="auditor">Vymazat podpis</button></div>
+          <div class="sigbox"><div class="sig-lbl">Podpis odpovědné osoby</div>
+            <button type="button" class="btn sig-btn no-print" data-sign="odpovedna">Digitálně podepsat</button>
+            <div class="sig-area" id="sig-odpovedna"></div>
+            <button type="button" class="sig-clear no-print" data-unsign="odpovedna">Vymazat podpis</button></div>
+        </div>
+        <div class="grid2" style="margin-top:14px">
+          <label class="f">Místo<input data-p="misto"></label>
+          <label class="f">Datum<input type="date" data-p="datum"></label>
+        </div>
       </div>
     </section>
   </main>
@@ -247,8 +281,10 @@ var saveNoteEl = document.getElementById('saveNote');
 
 function emptyRecert(){ var z=[]; for (var i=0;i<RC.orders;i++) z.push({cislo:'',v:{}}); return {zakazky:z, procesy:{}}; }
 function emptySubject(){ return {nazev:'',ic:'',ulice:'',psc:'',mesto:''}; }
+function todayIso(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function emptyPodpis(){ return {odpovedna:'', misto:'', datum:''}; }
 function emptyState(){
-  return { form:'mitsubishi', meta:{ partner:'', ic:'', datumAuditu:'', auditor:'', platnostMesicu:VALID,
+  return { form:'mitsubishi', podpis:emptyPodpis(), sig:{auditor:null, odpovedna:null}, meta:{ partner:'', ic:'', datumAuditu:todayIso(), auditor:'', platnostMesicu:VALID,
     typAuditu:'cert', prijem:emptySubject(), karosarnaStejna:true, karosarna:emptySubject(), lakovnaStejna:true, lakovna:emptySubject() },
     checks:{}, radky:[], poznamky:'', recert:emptyRecert() };
 }
@@ -305,7 +341,9 @@ function evaluateRecert(){
   for (var z=0; z<RC.orders; z++){ var c={label:'Zakázka '+(z+1),A:0,C:0,N:0}; RC.orderItems.forEach(function(it){ var v=getTri('z'+z+'.'+it.id); if (v){c[v]++;tot[v]++;} else tot.empty++; }); rows.push(c); }
   var p={label:'Procesy a vybavení',A:0,C:0,N:0}; RC.procItems.forEach(function(it){ var v=getTri('p.'+it.id); if (v){p[v]++;tot[v]++;} else tot.empty++; }); rows.push(p);
   var ok = tot.N < RC.rules.neFail && tot.C < RC.rules.castFailFrom;
-  return {ok:ok, rows:rows, tot:tot};
+  // neúspěch je jistý hned (1× Ne nebo 6× Částečně); úspěch až po vyplnění všech bodů
+  var done = !ok || tot.empty === 0;
+  return {ok:ok, done:done, rows:rows, tot:tot};
 }
 function secById(id){ for (var i=0;i<SECTIONS.length;i++) if (SECTIONS[i].id===id) return SECTIONS[i]; }
 
@@ -363,12 +401,12 @@ function renderRecertResult(){
   document.querySelectorAll('[data-cislo]').forEach(function(inp){ inp.value = state.recert.zakazky[+inp.dataset.cislo].cislo || ''; });
   document.getElementById('rcScore').textContent = 'Ano '+r.tot.A+' · Částečně '+r.tot.C+' · Ne '+r.tot.N + (r.tot.empty ? ' · nevyplněno '+r.tot.empty : '');
   var res = document.getElementById('result');
-  res.className = 'result ' + (r.ok ? 'ok' : 'bad');
+  res.className = 'result ' + (!r.done ? 'todo' : r.ok ? 'ok' : 'bad');
   var reasons = [];
   if (r.tot.N) reasons.push('Nesplněno: '+r.tot.N);
   if (r.tot.C) reasons.push('Částečně splněno: '+r.tot.C+(r.tot.C>=RC.rules.castFailFrom?' (6 a více)':' (méně než 6)'));
   if (r.tot.empty) reasons.push('Nevyplněno: '+r.tot.empty);
-  res.innerHTML = '<div class="big">'+(r.ok?'Úspěšný audit':'Neúspěšný audit')+'</div><div style="font-size:.85rem;opacity:.9">Re-certifikační audit</div>' + (reasons.length?'<ul>'+reasons.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>':'');
+  res.innerHTML = '<div class="big">'+(!r.done?'Audit není dokončen':r.ok?'Úspěšný audit':'Neúspěšný audit')+'</div><div style="font-size:.85rem;opacity:.9">Re-certifikační audit'+(!r.done?' – vyplňte všechny body kontrolního listu':'')+'</div>' + (reasons.length?'<ul>'+reasons.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>':'');
   document.getElementById('sumHead').innerHTML = '<tr><th></th><th>Splněno</th><th>Částečně</th><th>Nesplněno</th></tr>';
   document.getElementById('sumBody').innerHTML = r.rows.map(function(x){ return '<tr><td>'+x.label+'</td><td>'+x.A+'</td><td'+(x.C?' class="bad"':'')+'>'+x.C+'</td><td'+(x.N?' class="bad"':'')+'>'+x.N+'</td></tr>'; }).join('');
   document.getElementById('sumFoot').innerHTML = '<tr><td>Celkem</td><td>'+r.tot.A+'</td><td'+(r.tot.C>=RC.rules.castFailFrom?' class="bad"':'')+'>'+r.tot.C+'</td><td'+(r.tot.N?' class="bad"':'')+'>'+r.tot.N+'</td></tr>';
@@ -380,7 +418,18 @@ function renderDates(){
 
 // ---------- formulářová pole ----------
 function bindFields(){
-  document.querySelectorAll('[data-m]').forEach(function(inp){ inp.addEventListener('input', function(){ state.meta[inp.dataset.m] = inp.value; changed(); }); });
+  document.querySelectorAll('[data-m]').forEach(function(inp){ inp.addEventListener('input', function(){ state.meta[inp.dataset.m] = inp.value;
+    document.querySelectorAll('[data-m="'+inp.dataset.m+'"]').forEach(function(o){ if (o!==inp) o.value = inp.value; });
+    if (inp.dataset.m==='datumAuditu') fillPodpis(); changed(); }); });
+  document.querySelectorAll('[data-p]').forEach(function(inp){ inp.addEventListener('input', function(){ state.podpis[inp.dataset.p] = inp.value; changed(true); }); });
+  document.querySelectorAll('[data-sign]').forEach(function(b){ b.onclick = function(){ sign(b.dataset.sign); }; });
+  document.querySelectorAll('[data-unsign]').forEach(function(b){ b.onclick = function(){ state.sig[b.dataset.unsign] = null; renderSigs(); changed(true); }; });
+  document.querySelectorAll('.subject [data-s="ic"]').forEach(function(inp){
+    var st = document.createElement('div'); st.className = 'ares'; inp.parentNode.appendChild(st);
+    var key = inp.closest('.subject').dataset.subject;
+    var go = function(){ var ic = inp.value.replace(/\s+/g,''); if (/^\d{8}$/.test(ic) && ic !== inp.dataset.looked) lookupAres(key, ic, inp, st); };
+    inp.addEventListener('input', go); inp.addEventListener('blur', go);
+  });
   document.querySelectorAll('.subject').forEach(function(box){
     var key = box.dataset.subject;
     box.querySelectorAll('[data-s]').forEach(function(inp){ inp.addEventListener('input', function(){ state.meta[key][inp.dataset.s] = inp.value; changed(); }); });
@@ -396,11 +445,66 @@ function fillFields(){
   });
   document.querySelectorAll('[data-same]').forEach(function(cb){ cb.checked = !!state.meta[cb.dataset.same+'Stejna']; });
   document.querySelector('[data-root="poznamky"]').value = state.poznamky || '';
+  document.querySelectorAll('.ares').forEach(function(st){ st.className='ares'; st.textContent=''; });
+  document.querySelectorAll('.subject [data-s="ic"]').forEach(function(inp){ inp.dataset.looked = inp.value.replace(/\s+/g,''); });
+  fillPodpis();
+  renderSigs();
   renderSame();
   renderOps();
 }
 function renderSame(){
   ['karosarna','lakovna'].forEach(function(k){ document.querySelector('[data-subject="'+k+'"]').classList.toggle('same', !!state.meta[k+'Stejna']); });
+}
+
+// ---------- ARES (doplnění firmy podle IČO) ----------
+function aresUlice(s){ if (!s) return ''; var c = s.cisloDomovni ? String(s.cisloDomovni) : ''; if (s.cisloOrientacni) c += '/' + s.cisloOrientacni + (s.cisloOrientacniPismeno||'');
+  var u = s.nazevUlice || s.nazevCastiObce || s.nazevObce || ''; return (u + ' ' + c).trim(); }
+function aresPsc(p){ p = String(p||'').replace(/\D+/g,''); return p.length===5 ? p.slice(0,3)+' '+p.slice(3) : p; }
+function lookupAres(key, ic, inp, st){
+  inp.dataset.looked = ic;
+  st.className = 'ares load'; st.textContent = 'Načítám údaje z ARES…';
+  fetch('https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/' + ic, {headers:{'Accept':'application/json'}})
+    .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(d){
+      if (!d || (!d.obchodniJmeno && !d.sidlo)) throw new Error('nenalezeno');
+      var o = state.meta[key], s = d.sidlo || {};
+      if (d.obchodniJmeno) o.nazev = d.obchodniJmeno;
+      var u = aresUlice(s); if (u) o.ulice = u;
+      if (s.psc) o.psc = aresPsc(s.psc);
+      if (s.nazevObce) o.mesto = (s.nazevObce==='Praha' && s.nazevMestskehoObvodu) ? s.nazevMestskehoObvodu : s.nazevObce;
+      var box = inp.closest('.subject');
+      box.querySelectorAll('[data-s]').forEach(function(x){ x.value = o[x.dataset.s] || ''; });
+      if (key==='prijem' && !state.podpis.misto) { state.podpis.misto = o.mesto || ''; fillPodpis(); }
+      st.className = 'ares ok'; st.textContent = '✓ Doplněno z ARES';
+      changed(true);
+    })
+    .catch(function(){ st.className = 'ares err';
+      st.innerHTML = 'Nepodařilo se dohledat – vyplňte ručně, nebo zkontrolujte na <a href="https://or.justice.cz/ias/ui/rejstrik-$firma?ico='+ic+'" target="_blank" rel="noopener">justice.cz</a>'; });
+}
+
+// ---------- podpis ----------
+function fillPodpis(){
+  var p = state.podpis;
+  document.querySelectorAll('[data-p]').forEach(function(inp){
+    var k = inp.dataset.p, v = p[k] || '';
+    if (!v && k==='datum') v = state.meta.datumAuditu || '';
+    if (!v && k==='misto') v = (state.meta.prijem||{}).mesto || '';
+    inp.value = v;
+  });
+}
+function sign(who){
+  var jmeno = who==='auditor' ? (state.meta.auditor||'').trim() : (state.podpis.odpovedna||'').trim();
+  if (!jmeno) { alert(who==='auditor' ? 'Nejprve vyplňte jméno auditora.' : 'Nejprve vyplňte jméno a příjmení odpovědné osoby.'); return; }
+  var d = state.meta.datumAuditu || todayIso();
+  state.sig[who] = {jmeno:jmeno, datum:d};
+  renderSigs(); changed(true);
+}
+function renderSigs(){
+  ['auditor','odpovedna'].forEach(function(who){
+    var box = document.getElementById('sig-'+who), s = state.sig[who];
+    if (s && s.jmeno) { box.className = 'sig-area'; box.innerHTML = '<b>Digitálně podepsáno dne '+esc(czDate(new Date(s.datum+'T00:00:00')))+'</b>'+esc(s.jmeno); }
+    else { box.className = 'sig-area empty'; box.textContent = 'Nepodepsáno'; }
+  });
 }
 
 // ---------- opatření ----------
@@ -444,6 +548,8 @@ function syncPartner(){
   var p = state.meta.prijem || {};
   state.meta.partner = (p.nazev||'').trim(); state.meta.ic = (p.ic||'').replace(/\s/g,'');
   state.meta.platnostMesicu = VALID;
+  if (!state.podpis.datum) state.podpis.datum = state.meta.datumAuditu || '';
+  if (!state.podpis.misto) state.podpis.misto = (p.mesto||'').trim();
 }
 function serializeState(){ syncPartner(); return JSON.stringify(state); }
 function saveLocal(){ try { localStorage.setItem(LS_KEY, serializeState()); } catch(e){} }
@@ -459,6 +565,9 @@ function applyLoaded(obj){
   state.checks = Object.assign({}, obj.checks||{});
   state.radky = Array.isArray(obj.radky) ? obj.radky.map(function(r){ return {nedostatek:r.nedostatek||'',opatreni:r.opatreni||'',osoba:r.osoba||'',termin:r.termin||''}; }) : [];
   state.poznamky = obj.poznamky || '';
+  state.meta.datumAuditu = (obj.meta && obj.meta.datumAuditu) || '';
+  state.podpis = Object.assign(emptyPodpis(), obj.podpis||{});
+  state.sig = {auditor:(obj.sig||{}).auditor||null, odpovedna:(obj.sig||{}).odpovedna||null};
   if (obj.recert) { state.recert.procesy = Object.assign({}, obj.recert.procesy||{});
     (obj.recert.zakazky||[]).forEach(function(z,i){ if (state.recert.zakazky[i]) state.recert.zakazky[i] = {cislo:z.cislo||'', v:Object.assign({}, z.v||{})}; }); }
 }
@@ -477,6 +586,7 @@ buildSections();
 buildRecert();
 bindFields();
 try { var saved = localStorage.getItem(LS_KEY); if (saved) applyLoaded(JSON.parse(saved)); } catch(e){}
+if (!state.meta.datumAuditu && !(state.meta.prijem||{}).nazev && !Object.keys(state.checks).length) state.meta.datumAuditu = todayIso();
 renderAll();
 })();
 </script>

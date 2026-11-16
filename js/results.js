@@ -1,5 +1,5 @@
 // Výsledky auditů: přehledy podle značek a import auditů (admin)
-import { supabase } from "./supabase.js?v=20261116g";
+import { supabase } from "./supabase.js?v=20261116h";
 
 export const RESULT_BRANDS = [
   { id: "arval",      name: "Arval",      logo: "assets/logos/arval.png",      wide: true, form: "arval/" },
@@ -140,7 +140,8 @@ export function mitsubishiRecertEval(state, defs) {
 function mitsubishiResult(state, defs) {
   if (state.meta?.typAuditu === "recert") {
     const r = mitsubishiRecertEval(state, defs);
-    return `${r.ok ? "Úspěšný audit" : "Neúspěšný audit"} | Re-certifikace · Ano ${r.tot.A} · Částečně ${r.tot.C} · Ne ${r.tot.N}`;
+    const head = !r.ok ? "Neúspěšný audit" : r.tot.empty ? "Nedokončený audit" : "Úspěšný audit";
+    return `${head} | Re-certifikace · Ano ${r.tot.A} · Částečně ${r.tot.C} · Ne ${r.tot.N}`;
   }
   const r = mitsubishiEval(state, defs);
   return `${r.ok ? "Úspěšný audit" : "Neúspěšný audit"} | KO ${r.tot.KO[0]}/${r.tot.KO[1]} · Povinné ${r.tot.P[0]}/${r.tot.P[1]} · Doporučené ${r.tot.D[0]}/${r.tot.D[1]}`;
