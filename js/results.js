@@ -1,5 +1,5 @@
 // Výsledky auditů: přehledy podle značek a import auditů (admin)
-import { supabase } from "./supabase.js";
+import { supabase } from "./supabase.js?v=20261116b";
 
 export const RESULT_BRANDS = [
   { id: "arval",      name: "Arval",      logo: "assets/logos/arval.png",      wide: true, form: "arval/" },
@@ -52,7 +52,7 @@ async function formDefs(brand) {
   let defs;
   if (brand === "arval") {
     const doc = new DOMParser().parseFromString(html, "text/html");
-    const j = id => JSON.parse(doc.getElementById(id).textContent);
+    const j = id => { const el = doc.getElementById(id); if (!el) throw new Error("Nepodařilo se načíst definice kritérií Arval – obnovte stránku (Ctrl+F5)."); return JSON.parse(el.textContent); };
     defs = { CATEGORIES: j("categories-data"), ESG: j("esg-data"), NAHRADNI: j("nahradni-data") };
   } else {
     const m = html.match(/var AREAS = (\{[\s\S]*?\n\});/);
