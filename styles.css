@@ -220,3 +220,11 @@ h1, h2, h3 { font-family: "Poppins", system-ui, sans-serif; }
   font-size: .85rem;
   text-align: center;
 }
+
+/* Ikona zpět na úvodní stránku */
+.ia-home-fab{position:fixed;left:18px;bottom:18px;z-index:2147483000;width:52px;height:52px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;background:#E91929;color:#fff;text-decoration:none;
+  box-shadow:0 6px 16px rgba(0,0,0,.28),0 2px 4px rgba(0,0,0,.18);transition:transform .15s ease,background .15s ease}
+.ia-home-fab:hover{background:#c8101f;transform:translateY(-2px) scale(1.05)}
+.ia-home-fab:focus-visible{outline:3px solid #0D4798;outline-offset:3px}
+@media print{.ia-home-fab{display:none!important}}

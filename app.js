@@ -42,6 +42,9 @@ function renderBrand(brand) {
           <p>Standardy a audity</p>
         </div>
       </div>
+      <a href="#" class="ia-home-fab" title="Zpět na úvodní stránku" aria-label="Zpět na úvodní stránku">
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5M5.5 9.5V20h5v-6h3v6h5V9.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
       <div class="empty">Obsah pro značku ${brand.name} zatím není připraven – doplníme v dalším kroku.</div>
     </section>`;
   window.scrollTo(0, 0);
