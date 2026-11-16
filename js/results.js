@@ -1,10 +1,10 @@
 // Výsledky auditů: přehledy podle značek a import auditů (admin)
-import { supabase } from "./supabase.js?v=20261116d";
+import { supabase } from "./supabase.js?v=20261116e";
 
 export const RESULT_BRANDS = [
   { id: "arval",      name: "Arval",      logo: "assets/logos/arval.png",      wide: true, form: "arval/" },
   { id: "stellantis", name: "Stellantis", logo: "assets/logos/stellantis.svg", wide: true, form: "stellantis/" },
-  { id: "mitsubishi", name: "Mitsubishi", logo: "assets/logos/mitsubishi.svg" },
+  { id: "mitsubishi", name: "Mitsubishi", logo: "assets/logos/mitsubishi.svg", form: "mitsubishi/" },
 ];
 export const WARN_DAYS = 60; // od kolika dní před termínem je audit „blíží se“
 
@@ -25,7 +25,7 @@ export function statusOf(nextIso) {
 // ---------- Načtení dat ----------
 export async function loadAudits(brand) {
   const cols = "id,brand,partner,ic,audit_date,valid_months,next_audit_date,result,source,created_at"
-    + (brand === "arval" ? ",meta:data->meta,checks:data->checks,esgChecks:data->esgChecks,esgRadio:data->esgRadio" : brand === "stellantis" ? ",meta:data->meta" : "");
+    + (brand === "arval" ? ",meta:data->meta,checks:data->checks,esgChecks:data->esgChecks,esgRadio:data->esgRadio" : (brand === "stellantis" || brand === "mitsubishi") ? ",meta:data->meta" : "");
   let q = supabase.from("audits").select(cols).order("next_audit_date");
   if (brand) q = q.eq("brand", brand);
   const { data, error } = await q;
@@ -51,7 +51,12 @@ async function formDefs(brand) {
   if (defsCache[brand]) return defsCache[brand];
   const html = await fetch(new URL(`../${brand}/index.html`, import.meta.url), { cache: "no-store" }).then(r => r.text());
   let defs;
-  if (brand === "arval") {
+  if (brand === "mitsubishi") {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const el = doc.getElementById("criteria-data");
+    if (!el) throw new Error("Nepodařilo se načíst kritéria Mitsubishi – obnovte stránku (Ctrl+F5).");
+    defs = JSON.parse(el.textContent);
+  } else if (brand === "arval") {
     const doc = new DOMParser().parseFromString(html, "text/html");
     const j = id => { const el = doc.getElementById(id); if (!el) throw new Error("Nepodařilo se načíst definice kritérií Arval – obnovte stránku (Ctrl+F5)."); return JSON.parse(el.textContent); };
     defs = { CATEGORIES: j("categories-data"), ESG: j("esg-data"), NAHRADNI: j("nahradni-data") };
@@ -109,7 +114,29 @@ function stellantisResult(state, { AREAS, RESULT_AREAS, ZINC_BRANDS, BRANDS }) {
   return `${unmet === 0 ? "Úspěšný audit" : "Neúspěšný audit"} | ${parts.join(" · ")}`;
 }
 
+// Mitsubishi: KO nesplněno => neúspěch; 4 a více nesplněných povinných => neúspěch
+export function mitsubishiEval(state, defs) {
+  const tot = { KO: [0, 0], P: [0, 0], D: [0, 0] }, per = [];
+  let failKO = 0, failP = 0;
+  for (const sec of defs.sections) {
+    const s = { KO: [0, 0], P: [0, 0], D: [0, 0] };
+    for (const it of sec.items) {
+      s[it.type][1]++; tot[it.type][1]++;
+      if (state.checks?.[it.id]) { s[it.type][0]++; tot[it.type][0]++; }
+      else if (it.type === "KO") failKO++; else if (it.type === "P") failP++;
+    }
+    per.push({ id: sec.id, title: sec.title, ...s });
+  }
+  const ok = failKO < defs.rules.koFail && failP < defs.rules.povinneFailFrom;
+  return { ok, per, tot, failKO, failP };
+}
+function mitsubishiResult(state, defs) {
+  const r = mitsubishiEval(state, defs);
+  return `${r.ok ? "Úspěšný audit" : "Neúspěšný audit"} | KO ${r.tot.KO[0]}/${r.tot.KO[1]} · Povinné ${r.tot.P[0]}/${r.tot.P[1]} · Doporučené ${r.tot.D[0]}/${r.tot.D[1]}`;
+}
+
 export function detectBrand(state) {
+  if (state?.form === "mitsubishi") return "mitsubishi";
   if (state?.meta && "esgChecks" in state) return "arval";
   if (state?.meta && ("radky" in state || "brands" in state.meta)) return "stellantis";
   return null;
@@ -120,8 +147,8 @@ export async function prepareImport(state, brand) {
   const meta = state.meta || {};
   if (!meta.partner) throw new Error("V souboru chybí název zákazníka (partner).");
   if (!meta.datumAuditu) throw new Error("V souboru chybí datum auditu.");
-  const valid = brand === "arval" ? (parseInt(meta.platnostMesicu, 10) || 36) : null; // Stellantis: bez recertifikační lhůty
-  const result = brand === "arval" ? arvalResult(state, defs) : stellantisResult(state, defs);
+  const valid = brand === "arval" ? (parseInt(meta.platnostMesicu, 10) || 36) : brand === "mitsubishi" ? (defs.validMonths || 36) : null; // Stellantis: bez recertifikační lhůty
+  const result = brand === "arval" ? arvalResult(state, defs) : brand === "mitsubishi" ? mitsubishiResult(state, defs) : stellantisResult(state, defs);
   return { brand, partner: meta.partner.trim(), ic: (meta.ic || "").replace(/\s/g, "") || null, audit_date: meta.datumAuditu, valid_months: valid, result, data: state, source: "import-json" };
 }
 
@@ -188,13 +215,13 @@ export function dashboardHtml(brand, rows, isAdmin, defs) {
           ${list.map(r => `
           <tr class="st-${r.st.key}" data-q="${esc((r.partner + " " + (r.ic || "")).toLowerCase())}">
             <td><span class="st-badge st-${r.st.key}">${r.st.label}</span></td>
-            <td><strong>${esc(r.partner)}</strong>${r.ic ? `<span class="muted">IČ ${esc(r.ic)}</span>` : ""}${r.older ? `<span class="muted">+ ${r.older} starší audit${r.older > 1 ? "y" : ""}</span>` : ""}</td>
+            <td><strong>${esc(r.partner)}</strong>${r.ic ? `<span class="muted">IČ ${esc(r.ic)}</span>` : ""}${r.older ? `<span class="muted">+ ${r.older} starší audit${r.older > 1 ? "y" : ""}</span>` : ""}${brand === "mitsubishi" ? mitExtNote(r.meta) : ""}</td>
             ${arv ? arvalCells(r, defs) : `<td class="res-col">${resultCell(r.result)}</td>`}
             <td class="td-date">${czDate(r.audit_date)}<span class="muted">platnost ${r.valid_months} měs.</span></td>
             <td class="td-date"><strong>${czDate(r.next_audit_date)}</strong><span class="muted">${r.st.text}</span></td>
             ${isAdmin ? `<td><button type="button" class="btn-del" data-del="${r.id}" data-name="${esc(r.partner)}" title="Smazat záznam">Smazat</button></td>` : ""}
           </tr>`).join("")}
-        </tbody></table></div>` : `<div class="empty">Zatím zde nejsou žádné audity.${brand === "mitsubishi" ? " Import auditů Mitsubishi z PDF/XLS doplníme, až dodáte ukázkový soubor." : isAdmin ? " Nahrajte první audit tlačítkem výše." : ""}</div>`}
+        </tbody></table></div>` : `<div class="empty">Zatím zde nejsou žádné audity.${isAdmin ? " Nahrajte první audit tlačítkem výše." : ""}</div>`}
     </div>`;
 }
 
@@ -227,8 +254,13 @@ function stellantisDashboardHtml(rows, isAdmin) {
     </div>`;
 }
 
+function mitExtNote(meta) {
+  if (!meta) return "";
+  return ["karosarna", "lakovna"].filter(k => meta[k + "Stejna"] === false && meta[k]?.nazev)
+    .map(k => `<span class="ext-note">${k === "karosarna" ? "Karosárna" : "Lakovna"}: ${esc(meta[k].nazev)}${meta[k].ic ? `, IČO ${esc(meta[k].ic)}` : ""}</span>`).join("");
+}
+
 function importBoxHtml(brand) {
-  if (brand === "mitsubishi") return `<div class="import-box"><strong>Import (admin):</strong> pro Mitsubishi zatím není k dispozici – připravíme podle ukázkového PDF/XLS.</div>`;
   return `
     <div class="import-box">
       <div><strong>Import auditu (admin)</strong><span class="muted">Soubor JSON uložený z formuláře tlačítkem „Uložit koncept“. Naskenované PDF audity převádí Claude – pošlete je v chatu.</span></div>

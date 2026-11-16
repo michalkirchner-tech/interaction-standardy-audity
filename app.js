@@ -1,6 +1,6 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
-import { supabase, getProfile } from "./js/supabase.js?v=20261116d";
-import { RESULT_BRANDS, arvalDefs, loadAudits, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, esc as escR } from "./js/results.js?v=20261116d";
+import { supabase, getProfile } from "./js/supabase.js?v=20261116e";
+import { RESULT_BRANDS, arvalDefs, loadAudits, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, esc as escR } from "./js/results.js?v=20261116e";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
@@ -9,7 +9,7 @@ const BRANDS = [
   { id: "skoda",      name: "Škoda Auto",  logo: "assets/logos/skoda.svg",      wide: true },
   { id: "porsche-cr", name: "Porsche ČR",  logo: "assets/logos/porsche-cr.svg", wide: true },
   { id: "volvo",      name: "Volvo",       logo: "assets/logos/volvo.svg" },
-  { id: "mitsubishi", name: "Mitsubishi",  logo: "assets/logos/mitsubishi.svg" },
+  { id: "mitsubishi", name: "Mitsubishi",  logo: "assets/logos/mitsubishi.svg", url: "mitsubishi/" },
   { id: "hyundai",    name: "Hyundai",     logo: "assets/logos/hyundai.svg",    wide: true },
 ];
 
@@ -207,7 +207,7 @@ async function handleImport(b, files, refresh) {
       const state = JSON.parse(await f.text());
       const brand = detectBrand(state);
       if (!brand) throw new Error("soubor nevypadá jako uložený audit z formuláře");
-      if (brand !== b.id) throw new Error(`jde o audit ${brand === "arval" ? "Arval" : "Stellantis"}, ne ${b.name}`);
+      if (brand !== b.id) throw new Error(`jde o audit ${{ arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi" }[brand]}, ne ${b.name}`);
       recs.push({ f: f.name, rec: await prepareImport(state, brand) });
     } catch (e) { recs.push({ f: f.name, err: e.message }); }
   }

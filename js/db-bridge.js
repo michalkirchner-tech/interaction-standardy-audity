@@ -1,8 +1,9 @@
 // Propojení formulářů (Arval, Stellantis) s databází: „Uložit koncept“ a „Načíst existující“
-import { supabase } from "./supabase.js?v=20261116d";
-import { prepareImport } from "./results.js?v=20261116d";
+import { supabase } from "./supabase.js?v=20261116e";
+import { prepareImport } from "./results.js?v=20261116e";
 
-const BRAND = location.pathname.includes("/stellantis/") ? "stellantis" : "arval";
+const BRAND = location.pathname.includes("/stellantis/") ? "stellantis" : location.pathname.includes("/mitsubishi/") ? "mitsubishi" : "arval";
+const BRAND_NAME = { arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi" }[BRAND];
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const czDate = iso => { if (!iso) return "—"; const [y, m, d] = iso.slice(0, 10).split("-"); return `${+d}. ${+m}. ${y}`; };
 const czDateTime = ts => { const d = new Date(ts); return d.toLocaleDateString("cs-CZ") + " " + d.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" }); };
@@ -52,7 +53,7 @@ async function openList(apply) {
   const { data, error } = await supabase.from("audits")
     .select("id,partner,ic,audit_date,result,updated_at").eq("brand", BRAND).order("updated_at", { ascending: false });
   if (error) { m.el.innerHTML = `<div class="iadb-err">Seznam se nepodařilo načíst: ${esc(error.message)}</div>`; return; }
-  if (!data.length) { m.el.innerHTML = `<div class="iadb-msg">V databázi zatím nejsou žádné uložené audity ${BRAND === "arval" ? "Arval" : "Stellantis"}.</div>`; return; }
+  if (!data.length) { m.el.innerHTML = `<div class="iadb-msg">V databázi zatím nejsou žádné uložené audity ${BRAND_NAME}.</div>`; return; }
   m.el.innerHTML = `
     <input type="search" placeholder="Hledat zákazníka nebo IČ…" class="iadb-q">
     <table class="iadb-tbl"><thead><tr><th>Zákazník</th><th>Datum auditu</th><th>Naposledy uloženo</th><th></th></tr></thead><tbody>
