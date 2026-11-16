@@ -1,0 +1,222 @@
+/* Barvy podle www.interaction.cz */
+:root {
+  --ia-red: #E91929;
+  --ia-red-dark: #DB1529;
+  --ia-blue: #0D4798;
+  --ia-dark: #1E1E1E;
+  --ia-gray: #A6A6A6;
+  --ia-light: #E2E2E2;
+  --ia-bg: #F2F2F2;
+  --ia-white: #FFFFFF;
+  --ia-text: #1E1E1E;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  font-family: "Open Sans", system-ui, sans-serif;
+  color: var(--ia-text);
+  background: var(--ia-bg);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, h3 { font-family: "Poppins", system-ui, sans-serif; }
+
+/* Horní lišta */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 32px;
+  background: var(--ia-white);
+  border-bottom: 4px solid var(--ia-red);
+}
+.brand img { display: block; height: 48px; width: auto; }
+.topbar-label {
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  color: var(--ia-dark);
+  letter-spacing: .02em;
+}
+
+/* Úvodní pás */
+.hero {
+  background: var(--ia-dark);
+  color: var(--ia-white);
+  padding: 56px 32px 64px;
+  text-align: center;
+}
+.hero h1 {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  font-weight: 700;
+  letter-spacing: .01em;
+}
+.hero h1::after {
+  content: "";
+  display: block;
+  width: 72px;
+  height: 5px;
+  margin: 18px auto 0;
+  background: var(--ia-red);
+  border-radius: 3px;
+}
+.hero p { margin: 18px 0 0; color: var(--ia-light); }
+
+/* Mřížka dlaždic */
+.grid {
+  max-width: 1200px;
+  margin: -32px auto 48px;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 28px;
+  perspective: 1000px;
+}
+@media (max-width: 960px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .grid { grid-template-columns: 1fr; gap: 18px; } }
+
+/* 3D dlaždice */
+.tile {
+  --rx: 0deg;
+  --ry: 0deg;
+  --lift: 0px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  aspect-ratio: 1 / 1;
+  padding: 24px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, #ffffff 0%, #f7f7f7 60%, #ececec 100%);
+  border: 1px solid #ffffff;
+  box-shadow:
+    0 1px 0 #ffffff inset,
+    0 -3px 0 rgba(0,0,0,.06) inset,
+    0 10px 22px rgba(0,0,0,.14),
+    0 2px 4px rgba(0,0,0,.10);
+  text-decoration: none;
+  color: var(--ia-dark);
+  transform-style: preserve-3d;
+  transform: rotateX(var(--rx)) rotateY(var(--ry)) translateZ(var(--lift));
+  transition: transform .18s ease-out, box-shadow .25s ease;
+  cursor: pointer;
+  outline: none;
+}
+.tile::before { /* odlesk */
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at var(--gx, 50%) var(--gy, 0%), rgba(255,255,255,.9), rgba(255,255,255,0) 55%);
+  opacity: .0;
+  transition: opacity .25s ease;
+  pointer-events: none;
+}
+.tile::after { /* červená hrana Interaction */
+  content: "";
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 0;
+  height: 4px;
+  border-radius: 4px 4px 0 0;
+  background: var(--ia-red);
+  transform: scaleX(0);
+  transition: transform .25s ease;
+}
+.tile:hover, .tile:focus-visible {
+  --lift: 24px;
+  box-shadow:
+    0 1px 0 #ffffff inset,
+    0 -3px 0 rgba(0,0,0,.06) inset,
+    0 26px 44px rgba(0,0,0,.24),
+    0 6px 12px rgba(0,0,0,.12);
+}
+.tile:hover::before, .tile:focus-visible::before { opacity: .7; }
+.tile:hover::after, .tile:focus-visible::after { transform: scaleX(1); }
+.tile:focus-visible { box-shadow: 0 0 0 3px var(--ia-blue), 0 26px 44px rgba(0,0,0,.24); }
+.tile:active { --lift: 8px; }
+
+.tile-logo {
+  width: 100%;
+  height: 58%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateZ(40px);
+}
+.tile-logo img {
+  max-width: 82%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 6px rgba(0,0,0,.18));
+}
+.tile-logo.wide img { max-width: 92%; max-height: 34%; }
+.tile-name {
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  font-size: 1.02rem;
+  transform: translateZ(26px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile { transition: none; }
+}
+
+/* Stránka značky */
+.brand-page {
+  max-width: 1000px;
+  margin: 40px auto;
+  padding: 0 24px;
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ia-blue);
+  font-weight: 600;
+  text-decoration: none;
+}
+.back:hover { color: var(--ia-red); }
+.brand-head {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  margin-top: 20px;
+  padding: 28px;
+  background: var(--ia-white);
+  border-radius: 18px;
+  border-left: 6px solid var(--ia-red);
+  box-shadow: 0 10px 22px rgba(0,0,0,.10);
+}
+.brand-head img { width: 180px; max-height: 110px; object-fit: contain; }
+.brand-head h2 { margin: 0; font-size: 1.8rem; }
+.brand-head p { margin: 6px 0 0; color: #555; }
+.empty {
+  margin-top: 24px;
+  padding: 28px;
+  border: 2px dashed var(--ia-gray);
+  border-radius: 14px;
+  color: #555;
+  text-align: center;
+  background: rgba(255,255,255,.6);
+}
+@media (max-width: 600px) {
+  .brand-head { flex-direction: column; text-align: center; }
+}
+
+.footer {
+  margin-top: auto;
+  padding: 18px 32px;
+  background: var(--ia-dark);
+  color: var(--ia-gray);
+  font-size: .85rem;
+  text-align: center;
+}
