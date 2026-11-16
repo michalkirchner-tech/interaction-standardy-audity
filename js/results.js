@@ -1,5 +1,5 @@
 // Výsledky auditů: přehledy podle značek a import auditů (admin)
-import { supabase } from "./supabase.js?v=20261116h";
+import { supabase } from "./supabase.js?v=20261116i";
 
 export const RESULT_BRANDS = [
   { id: "arval",      name: "Arval",      logo: "assets/logos/arval.png",      wide: true, form: "arval/" },
@@ -51,10 +51,10 @@ async function formDefs(brand) {
   if (defsCache[brand]) return defsCache[brand];
   const html = await fetch(new URL(`../${brand}/index.html`, import.meta.url), { cache: "no-store" }).then(r => r.text());
   let defs;
-  if (brand === "mitsubishi") {
+  if (brand === "mitsubishi" || brand === "hyundai") {
     const doc = new DOMParser().parseFromString(html, "text/html");
     const el = doc.getElementById("criteria-data");
-    if (!el) throw new Error("Nepodařilo se načíst kritéria Mitsubishi – obnovte stránku (Ctrl+F5).");
+    if (!el) throw new Error("Nepodařilo se načíst kritéria formuláře – obnovte stránku (Ctrl+F5).");
     defs = JSON.parse(el.textContent);
   } else if (brand === "arval") {
     const doc = new DOMParser().parseFromString(html, "text/html");
@@ -147,8 +147,26 @@ function mitsubishiResult(state, defs) {
   return `${r.ok ? "Úspěšný audit" : "Neúspěšný audit"} | KO ${r.tot.KO[0]}/${r.tot.KO[1]} · Povinné ${r.tot.P[0]}/${r.tot.P[1]} · Doporučené ${r.tot.D[0]}/${r.tot.D[1]}`;
 }
 
+// Hyundai: v každé oblasti všechna N a alespoň minimum P
+export function hyundaiEval(state, defs) {
+  let ok = true;
+  const per = defs.sections.map(sec => {
+    const c = { N: [0, 0], P: [0, 0], D: [0, 0] };
+    for (const it of sec.items) { c[it.type][1]++; if (state.checks?.[it.id]) c[it.type][0]++; }
+    const sOk = c.N[0] === c.N[1] && c.P[0] >= sec.minP;
+    if (!sOk) ok = false;
+    return { title: sec.title, ok: sOk, ...c, minP: sec.minP };
+  });
+  return { ok, per };
+}
+function hyundaiResult(state, defs) {
+  const r = hyundaiEval(state, defs);
+  return `${r.ok ? "Úspěšný audit" : "Neúspěšný audit"} | ${r.per.map(s => `${s.title} ${s.ok ? "✔" : "✘"}`).join(" · ")}`;
+}
+
 export function detectBrand(state) {
   if (state?.form === "mitsubishi") return "mitsubishi";
+  if (state?.form === "hyundai") return "hyundai";
   if (state?.meta && "esgChecks" in state) return "arval";
   if (state?.meta && ("radky" in state || "brands" in state.meta)) return "stellantis";
   return null;
@@ -160,7 +178,7 @@ export async function prepareImport(state, brand) {
   if (!meta.partner) throw new Error("V souboru chybí název zákazníka (partner).");
   if (!meta.datumAuditu) throw new Error("V souboru chybí datum auditu.");
   const valid = brand === "arval" ? (parseInt(meta.platnostMesicu, 10) || 36) : brand === "mitsubishi" ? (defs.validMonths || 36) : null; // Stellantis: bez recertifikační lhůty
-  const result = brand === "arval" ? arvalResult(state, defs) : brand === "mitsubishi" ? mitsubishiResult(state, defs) : stellantisResult(state, defs);
+  const result = brand === "arval" ? arvalResult(state, defs) : brand === "mitsubishi" ? mitsubishiResult(state, defs) : brand === "hyundai" ? hyundaiResult(state, defs) : stellantisResult(state, defs);
   return { brand, partner: meta.partner.trim(), ic: (meta.ic || "").replace(/\s/g, "") || null, audit_date: meta.datumAuditu, valid_months: valid, result, data: state, source: "import-json" };
 }
 
