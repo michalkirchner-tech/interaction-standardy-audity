@@ -1,5 +1,5 @@
 // Výsledky auditů: přehledy podle značek a import auditů (admin)
-import { supabase } from "./supabase.js?v=20261116i";
+import { supabase } from "./supabase.js?v=20261116j";
 
 export const RESULT_BRANDS = [
   { id: "arval",      name: "Arval",      logo: "assets/logos/arval.png",      wide: true, form: "arval/" },
@@ -237,7 +237,7 @@ export function dashboardHtml(brand, rows, isAdmin, defs) {
     </div>
     ${isAdmin ? importBoxHtml(brand) : ""}
     <div class="res-card">
-      <div class="res-toolbar"><input type="search" id="resSearch" placeholder="Hledat zákazníka nebo IČ…"></div>
+      <div class="res-toolbar"><input type="search" id="resSearch" placeholder="Hledat zákazníka nebo IČ…"><span class="res-exp">${list.length ? `<button type="button" class="btn-exp" data-export="pdf">Export do PDF</button><button type="button" class="btn-exp" data-export="xlsx">Export do Excelu</button>` : ""}</span></div>
       ${list.length ? `
       <div class="table-wrap"><table class="res-table${arv ? " res-arval" : ""}">
         <thead><tr><th>Stav</th><th>Zákazník</th>${arv ? defs.CATEGORIES.map(c => `<th class="th-lvl">${esc(c.title)}</th>`).join("") + `<th class="th-lvl">ESG a CSR</th>` : "<th>Výsledek</th>"}<th>Datum auditu</th><th>Příští audit</th>${isAdmin ? "<th></th>" : ""}</tr></thead>
@@ -267,7 +267,7 @@ function stellantisDashboardHtml(rows, isAdmin) {
     </div>
     ${isAdmin ? importBoxHtml("stellantis") : ""}
     <div class="res-card">
-      <div class="res-toolbar"><input type="search" id="resSearch" placeholder="Hledat zákazníka nebo IČ…"></div>
+      <div class="res-toolbar"><input type="search" id="resSearch" placeholder="Hledat zákazníka nebo IČ…"><span class="res-exp">${list.length ? `<button type="button" class="btn-exp" data-export="pdf">Export do PDF</button><button type="button" class="btn-exp" data-export="xlsx">Export do Excelu</button>` : ""}</span></div>
       ${list.length ? `
       <div class="table-wrap"><table class="res-table">
         <thead><tr><th>Zákazník</th><th>Výsledek</th><th>Hodnocení oblastí</th><th>Datum auditu</th>${isAdmin ? "<th></th>" : ""}</tr></thead>
@@ -297,6 +297,54 @@ function importBoxHtml(brand) {
       <label class="btn-import">Vybrat soubor JSON<input type="file" id="importFile" accept=".json,application/json" multiple hidden></label>
       <div id="importOut" class="import-out"></div>
     </div>`;
+}
+
+// ---------- Export přehledu (PDF / Excel) ----------
+function sortedList(brand, rows) {
+  const list = latestPerCustomer(rows);
+  if (brand === "stellantis") return list.sort((a, b) => b.audit_date.localeCompare(a.audit_date));
+  return list.map(r => ({ ...r, st: statusOf(r.next_audit_date) }))
+    .sort((a, b) => a.st.order - b.st.order || a.next_audit_date.localeCompare(b.next_audit_date));
+}
+function extText(meta, brand) {
+  if (!meta) return ["", ""];
+  if (brand === "mitsubishi") return ["karosarna", "lakovna"].map(k => meta[k + "Stejna"] === false && meta[k]?.nazev ? `${meta[k].nazev}${meta[k].ic ? `, IČO ${meta[k].ic}` : ""}` : "");
+  if (brand === "stellantis") return [meta.karosarnaExterni === "externi" ? `${meta.ext?.nazev || "neuvedeno"}${meta.ext?.ic ? `, IČO ${meta.ext.ic}` : ""}` : ""];
+  return [];
+}
+export function exportTable(brand, rows, defs, query) {
+  const q = (query || "").toLowerCase().trim();
+  const list = sortedList(brand, rows).filter(r => !q || (r.partner + " " + (r.ic || "")).toLowerCase().includes(q));
+  const name = { arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi" }[brand] || brand;
+  const today = new Date();
+  const subtitle = `Stav k ${today.getDate()}. ${today.getMonth() + 1}. ${today.getFullYear()} · ${list.length} zákazník${list.length === 1 ? "" : list.length < 5 && list.length ? "y" : "ů"}${q ? ` · filtr „${query.trim()}“` : ""}`;
+  const head = [], body = [], rowClass = [];
+  const split = r => { const [h, d] = (r.result || "—").split(" | "); return [h, d || ""]; };
+  if (brand === "arval") {
+    head.push("Stav", "Zákazník", "IČ", ...defs.CATEGORIES.map(c => c.title), "ESG a CSR", "Datum auditu", "Příští audit");
+    for (const r of list) {
+      const b = (r.checks || r.meta) ? arvalBreakdown({ meta: r.meta, checks: r.checks, esgChecks: r.esgChecks, esgRadio: r.esgRadio }, defs) : null;
+      const cats = b ? b.cats.map(c => c.label + (c.ext ? `\nExterní: ${c.ext.name || "neuvedeno"}${c.ext.ico ? `, IČO ${c.ext.ico}` : ""}` : "")) : defs.CATEGORIES.map(() => "—");
+      body.push([r.st.label, r.partner, r.ic || "", ...cats, b ? `${b.esg.label} (${b.esg.points}/${b.esg.max} b.)` : "—", czDate(r.audit_date), `${czDate(r.next_audit_date)}\n${r.st.text}`]);
+      rowClass.push("st-" + r.st.key);
+    }
+  } else if (brand === "mitsubishi") {
+    head.push("Stav", "Zákazník", "IČ", "Výsledek", "Hodnocení", "Externí karosárna", "Externí lakovna", "Datum auditu", "Příští audit");
+    for (const r of list) {
+      const [h, d] = split(r), [ek, el] = extText(r.meta, brand);
+      body.push([r.st.label, r.partner, r.ic || "", h, d, ek, el, czDate(r.audit_date), `${czDate(r.next_audit_date)}\n${r.st.text}`]);
+      rowClass.push("st-" + r.st.key);
+    }
+  } else {
+    head.push("Zákazník", "IČ", "Výsledek", "Hodnocení oblastí", "Externí karosárna", "Datum auditu");
+    for (const r of list) {
+      const [h, d] = split(r), [ek] = extText(r.meta, brand);
+      body.push([r.partner, r.ic || "", h, d, ek, czDate(r.audit_date)]);
+      rowClass.push(/^Úspěšný/.test(h) ? "st-ok" : "st-expired");
+    }
+  }
+  const stamp = today.toISOString().slice(0, 10);
+  return { title: `Výsledky auditů – ${name}`, subtitle, sheet: name, head, rows: body, rowClass, file: `vysledky_auditu_${brand}_${stamp}` };
 }
 
 export { esc, czDate, addMonths };

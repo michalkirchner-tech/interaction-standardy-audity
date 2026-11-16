@@ -309,3 +309,27 @@ tr.st-soon td:first-child { box-shadow: inset 4px 0 0 #f0a000; }
 .kpis-3 { grid-template-columns: repeat(3, 1fr); }
 .muted-cell { color: #555; font-size: .85rem; }
 .ext-note { display: block; font-size: .78rem; color: #0D4798; margin-top: 3px; }
+
+/* Export přehledu výsledků */
+.res-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.res-toolbar input { margin-bottom: 0; flex: 1 1 260px; }
+.res-exp { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-exp { border: 1px solid #1e1e1e; background: #fff; color: #1e1e1e; border-radius: 9px; padding: 8px 14px; font: 600 .88rem inherit; font-family: inherit; cursor: pointer; }
+.btn-exp:hover { background: #1e1e1e; color: #fff; }
+#printExport { display: none; }
+@media print {
+  body.printing-export > *:not(#printExport) { display: none !important; }
+  body.printing-export #printExport { display: block; font-family: Arial, sans-serif; color: #111; }
+  #printExport .px-head { display: flex; align-items: center; gap: 14px; border-bottom: 3px solid #E91929; padding-bottom: 8px; margin-bottom: 10px; }
+  #printExport .px-head img { height: 34px; }
+  #printExport h1 { font-size: 15pt; margin: 0; }
+  #printExport p { margin: 2px 0 0; font-size: 9pt; color: #555; }
+  #printExport .px-table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+  #printExport .px-table th { background: #1e1e1e; color: #fff; text-align: left; padding: 5px 6px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  #printExport .px-table td { border-bottom: 1px solid #ddd; padding: 4px 6px; vertical-align: top; }
+  #printExport .px-table tr { break-inside: avoid; }
+  #printExport tr.st-expired td:first-child { color: #b0101d; font-weight: 700; }
+  #printExport tr.st-soon td:first-child { color: #a86500; font-weight: 700; }
+  #printExport tr.st-ok td:first-child { color: #1d7a45; font-weight: 700; }
+  #printExport thead { display: table-header-group; }
+}

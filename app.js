@@ -1,6 +1,7 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
-import { supabase, getProfile } from "./js/supabase.js?v=20261116i";
-import { RESULT_BRANDS, arvalDefs, loadAudits, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, esc as escR } from "./js/results.js?v=20261116i";
+import { supabase, getProfile } from "./js/supabase.js?v=20261116j";
+import { exportPdf, exportXlsx } from "./js/export.js?v=20261116j";
+import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, esc as escR } from "./js/results.js?v=20261116j";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
@@ -184,8 +185,14 @@ async function renderResultsBrand(b) {
   const dash = document.getElementById("dash");
   const isAdmin = profile.role === "admin";
   const refresh = async () => {
-    try { const defs = b.id === "arval" ? await arvalDefs() : null; dash.innerHTML = dashboardHtml(b.id, await loadAudits(b.id), isAdmin, defs); }
+    let defs = null, rows = [];
+    try { defs = b.id === "arval" ? await arvalDefs() : null; rows = await loadAudits(b.id); dash.innerHTML = dashboardHtml(b.id, rows, isAdmin, defs); }
     catch (e) { dash.innerHTML = `<div class="empty">Data se nepodařilo načíst: ${escR(e.message)}</div>`; return; }
+    dash.querySelectorAll("[data-export]").forEach(btn => btn.onclick = () => {
+      const t = exportTable(b.id, rows, defs, document.getElementById("resSearch")?.value);
+      if (!t.rows.length) return alert("Žádní zákazníci k exportu (zkontrolujte vyhledávání).");
+      if (btn.dataset.export === "pdf") exportPdf(t); else exportXlsx(t, t.file + ".xlsx");
+    });
     const search = document.getElementById("resSearch");
     if (search) search.oninput = () => { const q = search.value.toLowerCase().trim(); dash.querySelectorAll("tbody tr").forEach(tr => tr.hidden = q && !tr.dataset.q.includes(q)); };
     dash.querySelectorAll("[data-del]").forEach(btn => btn.onclick = async () => {
