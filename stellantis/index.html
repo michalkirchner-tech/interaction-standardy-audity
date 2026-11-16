@@ -294,12 +294,20 @@ button{font-family:inherit;}
   #missing-report .mr-row{display:grid; grid-template-columns:14mm 55mm 1fr; border-bottom:1px solid #999; padding:3px 4px; break-inside:avoid;}
   #missing-report .mr-empty{font-style:italic; color:#555;}
 }
+
+/* Interaction: ikona zpět na úvodní stránku */
+.ia-home-btn{flex:0 0 auto;width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  background:#E91929;color:#fff;text-decoration:none;align-self:center;box-shadow:0 2px 6px rgba(0,0,0,.25);transition:background .15s ease,transform .15s ease}
+.ia-home-btn:hover{background:#c8101f;transform:scale(1.08)}
+.ia-home-btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+@media print{.ia-home-btn{display:none!important}}
 </style>
 </head>
 <body>
 <div class="app">
   <div class="topbar no-print">
     <div class="brand">
+      <a href="../" class="ia-home-btn" title="Zpět na úvodní stránku" aria-label="Zpět na úvodní stránku"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5M5.5 9.5V20h5v-6h3v6h5V9.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
       <span class="name">STELLANTIS</span>
       <span class="sub">Certifikační audit karosárny · verze 1/2023</span>
     </div>
@@ -1095,17 +1103,5 @@ loadLocal();
 if(FS_OK){ getFolder(false).catch(function(e){ console.log('No previously connected folder', e); }); }
 })();
 </script>
-<!-- Interaction: ikona zpět na úvodní stránku Standardy a audity -->
-<a href="../" class="ia-home-fab" title="Zpět na úvodní stránku" aria-label="Zpět na úvodní stránku">
-  <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5M5.5 9.5V20h5v-6h3v6h5V9.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-</a>
-<style>
-.ia-home-fab{position:fixed;left:18px;bottom:18px;z-index:2147483000;width:52px;height:52px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;background:#E91929;color:#fff;text-decoration:none;
-  box-shadow:0 6px 16px rgba(0,0,0,.28),0 2px 4px rgba(0,0,0,.18);transition:transform .15s ease,background .15s ease}
-.ia-home-fab:hover{background:#c8101f;transform:translateY(-2px) scale(1.05)}
-.ia-home-fab:focus-visible{outline:3px solid #0D4798;outline-offset:3px}
-@media print{.ia-home-fab{display:none!important}}
-</style>
 </body>
 </html>
