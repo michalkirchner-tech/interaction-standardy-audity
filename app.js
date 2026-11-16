@@ -1,6 +1,6 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
-import { supabase, getProfile } from "./js/supabase.js?v=20261116b";
-import { RESULT_BRANDS, arvalDefs, loadAudits, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, esc as escR } from "./js/results.js?v=20261116b";
+import { supabase, getProfile } from "./js/supabase.js?v=20261116d";
+import { RESULT_BRANDS, arvalDefs, loadAudits, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, esc as escR } from "./js/results.js?v=20261116d";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
@@ -160,10 +160,12 @@ async function renderResultsHome() {
   try {
     const rows = latestPerCustomer(await loadAudits());
     for (const b of RESULT_BRANDS) {
-      const mine = rows.filter(r => r.brand === b.id).map(r => statusOf(r.next_audit_date).key);
+      const own = rows.filter(r => r.brand === b.id);
+      const mine = own.map(r => statusOf(r.next_audit_date).key);
       const ex = mine.filter(k => k === "expired").length, so = mine.filter(k => k === "soon").length;
+      const fail = b.id === "stellantis" ? own.filter(r => !/^Úspěšný/.test(r.result || "")).length : 0;
       app.querySelector(`[data-stats="${b.id}"]`).innerHTML = !mine.length ? "zatím bez auditů"
-        : `${mine.length} zákazníků${ex ? ` · <b class="c-exp">${ex} propadlé</b>` : ""}${so ? ` · <b class="c-soon">${so} blíží se</b>` : ""}`;
+        : `${mine.length} zákazníků${ex ? ` · <b class="c-exp">${ex} propadlé</b>` : ""}${so ? ` · <b class="c-soon">${so} blíží se</b>` : ""}${fail ? ` · <b class="c-exp">${fail} neúspěšné</b>` : ""}`;
     }
   } catch (e) { app.querySelectorAll("[data-stats]").forEach(x => x.textContent = "chyba načtení"); }
 }
@@ -175,7 +177,7 @@ async function renderResultsBrand(b) {
       <a class="back" href="#vysledky">← Zpět na výsledky auditů</a>
       <div class="brand-head">
         <img src="${b.logo}" alt="${b.name}">
-        <div><h2>Výsledky auditů – ${b.name}</h2><p>Nahoře jsou propadlé audity a audity, kterým se blíží termín.</p></div>
+        <div><h2>Výsledky auditů – ${b.name}</h2><p>${b.id === "stellantis" ? "Výsledek je úspěšný nebo neúspěšný; recertifikační lhůta se neuvádí." : "Nahoře jsou propadlé audity a audity, kterým se blíží termín."}</p></div>
       </div>
       <div id="dash"><div class="empty">Načítám…</div></div>
     </section>`;
@@ -215,7 +217,7 @@ async function handleImport(b, files, refresh) {
     ${recs.map(r => r.err ? `<tr><td>${escR(r.f)}</td><td colspan="4" class="c-exp">Nelze načíst: ${escR(r.err)}</td></tr>` : `
       <tr><td>${escR(r.f)}</td><td><strong>${escR(r.rec.partner)}</strong><span class="muted">${r.rec.ic ? "IČ " + escR(r.rec.ic) : ""}</span></td>
       <td>${czDate(r.rec.audit_date)}</td>
-      <td><select data-valid="${recs.indexOf(r)}">${[12, 24, 36].map(m => `<option value="${m}" ${m === r.rec.valid_months ? "selected" : ""}>${m} měsíců</option>`).join("")}</select></td>
+      <td>${r.rec.valid_months ? `<select data-valid="${recs.indexOf(r)}">${[12, 24, 36].map(m => `<option value="${m}" ${m === r.rec.valid_months ? "selected" : ""}>${m} měsíců</option>`).join("")}</select>` : "—"}</td>
       <td class="res-col">${escR(r.rec.result.split(" | ")[0])}</td></tr>`).join("")}
     </tbody></table>
     ${ok.length ? `<button type="button" class="btn-save" id="importSave">Uložit ${ok.length} ${ok.length === 1 ? "audit" : "audity"} do databáze</button>` : ""}

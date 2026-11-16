@@ -305,3 +305,7 @@ tr.st-soon td:first-child { box-shadow: inset 4px 0 0 #f0a000; }
 .lvl-3 { background: #dff3e6; color: #1d6b3d; }
 .lvl-cell .ext { display: block; font-size: .74rem; color: #555; margin-top: 4px; line-height: 1.25; }
 .res-arval td, .res-arval th { padding-left: 7px; padding-right: 7px; }
+
+.kpis-3 { grid-template-columns: repeat(3, 1fr); }
+.muted-cell { color: #555; font-size: .85rem; }
+.ext-note { display: block; font-size: .78rem; color: #0D4798; margin-top: 3px; }

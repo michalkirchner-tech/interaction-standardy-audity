@@ -1,6 +1,6 @@
 // Propojení formulářů (Arval, Stellantis) s databází: „Uložit koncept“ a „Načíst existující“
-import { supabase } from "./supabase.js?v=20261116b";
-import { prepareImport } from "./results.js?v=20261116b";
+import { supabase } from "./supabase.js?v=20261116d";
+import { prepareImport } from "./results.js?v=20261116d";
 
 const BRAND = location.pathname.includes("/stellantis/") ? "stellantis" : "arval";
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -78,8 +78,6 @@ async function openList(apply) {
 // ---------- Uložit koncept ----------
 async function writeRecord(rec, overwriteId) {
   if (overwriteId) {
-    const { data: old } = await supabase.from("audits").select("valid_months").eq("id", overwriteId).single();
-    if (old && BRAND !== "arval") rec.valid_months = old.valid_months; // u Stellantis ponechat zvolenou platnost
     const { data, error } = await supabase.from("audits").update(rec).eq("id", overwriteId).select("id");
     if (error) throw error;
     if (!data?.length) throw new Error("Tento audit uložil jiný uživatel – přepsat ho může jen on nebo admin. Uložte ho jako nový.");

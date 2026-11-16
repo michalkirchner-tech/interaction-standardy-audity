@@ -1,5 +1,5 @@
 // Výsledky auditů: přehledy podle značek a import auditů (admin)
-import { supabase } from "./supabase.js?v=20261116b";
+import { supabase } from "./supabase.js?v=20261116d";
 
 export const RESULT_BRANDS = [
   { id: "arval",      name: "Arval",      logo: "assets/logos/arval.png",      wide: true, form: "arval/" },
@@ -15,6 +15,7 @@ const daysTo = iso => Math.round((new Date(iso + "T00:00:00") - today()) / 86400
 const addMonths = (iso, m) => { const d = new Date(iso + "T00:00:00"); const day = d.getDate(); d.setMonth(d.getMonth() + m); if (d.getDate() < day) d.setDate(0); return d.toISOString().slice(0, 10); };
 
 export function statusOf(nextIso) {
+  if (!nextIso) return { key: "none", label: "", text: "", order: 3, n: null };
   const n = daysTo(nextIso);
   if (n < 0) return { key: "expired", label: "Propadlý", text: `propadl před ${-n} ${n === -1 ? "dnem" : "dny"}`, order: 0, n };
   if (n <= WARN_DAYS) return { key: "soon", label: "Blíží se", text: n === 0 ? "dnes" : `za ${n} ${n === 1 ? "den" : n < 5 ? "dny" : "dní"}`, order: 1, n };
@@ -24,7 +25,7 @@ export function statusOf(nextIso) {
 // ---------- Načtení dat ----------
 export async function loadAudits(brand) {
   const cols = "id,brand,partner,ic,audit_date,valid_months,next_audit_date,result,source,created_at"
-    + (brand === "arval" ? ",meta:data->meta,checks:data->checks,esgChecks:data->esgChecks,esgRadio:data->esgRadio" : "");
+    + (brand === "arval" ? ",meta:data->meta,checks:data->checks,esgChecks:data->esgChecks,esgRadio:data->esgRadio" : brand === "stellantis" ? ",meta:data->meta" : "");
   let q = supabase.from("audits").select(cols).order("next_audit_date");
   if (brand) q = q.eq("brand", brand);
   const { data, error } = await q;
@@ -105,7 +106,7 @@ function stellantisResult(state, { AREAS, RESULT_AREAS, ZINC_BRANDS, BRANDS }) {
     let d = 0, m = 0; r.ids.forEach(a => AREAS[a].items.forEach(it => { m++; if (met(it[0])) d++; else unmet++; }));
     return `${r.label}: ${d}/${m}`;
   });
-  return `${unmet === 0 ? "Splněno ve všech oblastech" : `Nutná náprava (${unmet} nesplněných)`} | ${parts.join(" · ")}`;
+  return `${unmet === 0 ? "Úspěšný audit" : "Neúspěšný audit"} | ${parts.join(" · ")}`;
 }
 
 export function detectBrand(state) {
@@ -119,7 +120,7 @@ export async function prepareImport(state, brand) {
   const meta = state.meta || {};
   if (!meta.partner) throw new Error("V souboru chybí název zákazníka (partner).");
   if (!meta.datumAuditu) throw new Error("V souboru chybí datum auditu.");
-  const valid = brand === "arval" ? (parseInt(meta.platnostMesicu, 10) || 36) : 12;
+  const valid = brand === "arval" ? (parseInt(meta.platnostMesicu, 10) || 36) : null; // Stellantis: bez recertifikační lhůty
   const result = brand === "arval" ? arvalResult(state, defs) : stellantisResult(state, defs);
   return { brand, partner: meta.partner.trim(), ic: (meta.ic || "").replace(/\s/g, "") || null, audit_date: meta.datumAuditu, valid_months: valid, result, data: state, source: "import-json" };
 }
@@ -165,6 +166,7 @@ function arvalCells(r, defs) {
 }
 
 export function dashboardHtml(brand, rows, isAdmin, defs) {
+  if (brand === "stellantis") return stellantisDashboardHtml(rows, isAdmin);
   const arv = brand === "arval" && defs;
   const list = latestPerCustomer(rows).map(r => ({ ...r, st: statusOf(r.next_audit_date) }))
     .sort((a, b) => a.st.order - b.st.order || a.next_audit_date.localeCompare(b.next_audit_date));
@@ -196,11 +198,40 @@ export function dashboardHtml(brand, rows, isAdmin, defs) {
     </div>`;
 }
 
+function stellantisDashboardHtml(rows, isAdmin) {
+  const list = latestPerCustomer(rows).sort((a, b) => b.audit_date.localeCompare(a.audit_date));
+  const ok = r => /^Úspěšný/.test(r.result || "");
+  const nOk = list.filter(ok).length;
+  return `
+    <div class="kpis kpis-3">
+      <div class="kpi"><span class="kpi-n">${list.length}</span><span class="kpi-l">Auditovaných zákazníků</span></div>
+      <div class="kpi kpi-ok"><span class="kpi-n">${nOk}</span><span class="kpi-l">Úspěšný audit</span></div>
+      <div class="kpi kpi-expired"><span class="kpi-n">${list.length - nOk}</span><span class="kpi-l">Neúspěšný audit</span></div>
+    </div>
+    ${isAdmin ? importBoxHtml("stellantis") : ""}
+    <div class="res-card">
+      <div class="res-toolbar"><input type="search" id="resSearch" placeholder="Hledat zákazníka nebo IČ…"></div>
+      ${list.length ? `
+      <div class="table-wrap"><table class="res-table">
+        <thead><tr><th>Zákazník</th><th>Výsledek</th><th>Hodnocení oblastí</th><th>Datum auditu</th>${isAdmin ? "<th></th>" : ""}</tr></thead>
+        <tbody>
+          ${list.map(r => { const [head, detail] = (r.result || "—").split(" | "); return `
+          <tr data-q="${esc((r.partner + " " + (r.ic || "")).toLowerCase())}">
+            <td><strong>${esc(r.partner)}</strong>${r.ic ? `<span class="muted">IČ ${esc(r.ic)}</span>` : ""}${r.older ? `<span class="muted">+ ${r.older} starší audit${r.older > 1 ? "y" : ""}</span>` : ""}${r.meta?.karosarnaExterni === "externi" ? `<span class="ext-note">Externí karosárna: ${esc(r.meta.ext?.nazev || "neuvedeno")}${r.meta.ext?.ic ? `, IČO ${esc(r.meta.ext.ic)}` : ""}</span>` : ""}</td>
+            <td><span class="lvl ${ok(r) ? "lvl-3" : "lvl-0"}">${esc(head)}</span></td>
+            <td class="muted-cell">${esc(detail || "")}</td>
+            <td class="td-date">${czDate(r.audit_date)}</td>
+            ${isAdmin ? `<td><button type="button" class="btn-del" data-del="${r.id}" data-name="${esc(r.partner)}" title="Smazat záznam">Smazat</button></td>` : ""}
+          </tr>`; }).join("")}
+        </tbody></table></div>` : `<div class="empty">Zatím zde nejsou žádné audity.</div>`}
+    </div>`;
+}
+
 function importBoxHtml(brand) {
   if (brand === "mitsubishi") return `<div class="import-box"><strong>Import (admin):</strong> pro Mitsubishi zatím není k dispozici – připravíme podle ukázkového PDF/XLS.</div>`;
   return `
     <div class="import-box">
-      <div><strong>Import auditu (admin)</strong><span class="muted">Soubor JSON uložený z formuláře tlačítkem „Uložit koncept“. Import z PDF/XLS doplníme v dalším kroku.</span></div>
+      <div><strong>Import auditu (admin)</strong><span class="muted">Soubor JSON uložený z formuláře tlačítkem „Uložit koncept“. Naskenované PDF audity převádí Claude – pošlete je v chatu.</span></div>
       <label class="btn-import">Vybrat soubor JSON<input type="file" id="importFile" accept=".json,application/json" multiple hidden></label>
       <div id="importOut" class="import-out"></div>
     </div>`;
