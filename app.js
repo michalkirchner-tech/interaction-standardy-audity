@@ -1,7 +1,7 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
 const BRANDS = [
-  { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true },
-  { id: "stellantis", name: "Stellantis",  logo: "assets/logos/stellantis.svg", wide: true },
+  { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
+  { id: "stellantis", name: "Stellantis",  logo: "assets/logos/stellantis.svg", wide: true, url: "stellantis/" },
   { id: "mercedes",   name: "Mercedes-Benz", logo: "assets/logos/mercedes.svg" },
   { id: "skoda",      name: "Škoda Auto",  logo: "assets/logos/skoda.svg",      wide: true },
   { id: "porsche-cr", name: "Porsche ČR",  logo: "assets/logos/porsche-cr.svg", wide: true },
@@ -22,7 +22,7 @@ function renderHome() {
     </section>
     <section class="grid">
       ${BRANDS.map(b => `
-        <a class="tile" href="#${b.id}" aria-label="${b.name}">
+        <a class="tile" href="${b.url || "#" + b.id}" aria-label="${b.name}">
           <span class="tile-logo${b.wide ? " wide" : ""}"><img src="${b.logo}" alt="${b.name}"></span>
           <span class="tile-name">${b.name}</span>
         </a>`).join("")}
