@@ -7,6 +7,7 @@
 <style>html.ia-guard body{visibility:hidden}</style>
 <script>document.documentElement.classList.add("ia-guard")</script>
 <script type="module" src="../js/guard.js"></script>
+<script type="module" src="../js/db-bridge.js"></script>
 
 <style>
 /* Layout: sticky top bar + section sidebar + single-column form; print renders every section as the A4 audit sheet. */
@@ -1050,8 +1051,9 @@ document.getElementById('loadFileInput').addEventListener('change', function(e){
 });
 
 /* ================= Top bar actions ================= */
-document.getElementById('btnSave').addEventListener('click', saveDraftAction);
-document.getElementById('btnLoad').addEventListener('click', loadAction);
+// Interaction: ukládání a načítání z databáze (místo OneDrivu)
+document.getElementById('btnSave').addEventListener('click', function(){ if (!window.IA_DB) return alert('Připojení k databázi se ještě načítá, zkuste to za okamžik.'); window.IA_DB.save(serializeState(), function(t){ note(t, 3000); }); });
+document.getElementById('btnLoad').addEventListener('click', function(){ if (!window.IA_DB) return alert('Připojení k databázi se ještě načítá, zkuste to za okamžik.'); window.IA_DB.open(function(l){ applyLoaded(l); renderAll(); saveLocal(true); note('Načteno z databáze ✓', 3000); }); });
 document.getElementById('btnExport').addEventListener('click', function(){ window.print(); });
 document.getElementById('btnEmail').addEventListener('click', function(){
   window.print();

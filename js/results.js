@@ -48,7 +48,7 @@ export function latestPerCustomer(rows) {
 let defsCache = {};
 async function formDefs(brand) {
   if (defsCache[brand]) return defsCache[brand];
-  const html = await fetch(`${brand}/index.html`, { cache: "no-store" }).then(r => r.text());
+  const html = await fetch(new URL(`../${brand}/index.html`, import.meta.url), { cache: "no-store" }).then(r => r.text());
   let defs;
   if (brand === "arval") {
     const doc = new DOMParser().parseFromString(html, "text/html");

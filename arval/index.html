@@ -7,6 +7,7 @@
 <style>html.ia-guard body{visibility:hidden}</style>
 <script>document.documentElement.classList.add("ia-guard")</script>
 <script type="module" src="../js/guard.js"></script>
+<script type="module" src="../js/db-bridge.js"></script>
 
 <style>
 :root{
@@ -2101,8 +2102,9 @@ document.getElementById('folderPickerOverlay').addEventListener('click', functio
 });
 
 /* ---------------- Top bar actions ---------------- */
-document.getElementById('btnSave').addEventListener('click', function(){ saveDraftToFolder(); });
-document.getElementById('btnLoadExisting').addEventListener('click', function(){ openLoadModal(); });
+// Interaction: ukládání a načítání z databáze (místo OneDrivu)
+document.getElementById('btnSave').addEventListener('click', function(){ if (!window.IA_DB) return alert('Připojení k databázi se ještě načítá, zkuste to za okamžik.'); window.IA_DB.save(serializeState(), function(t){ if (saveNoteEl){ saveNoteEl.textContent = t; setTimeout(function(){ saveNoteEl.textContent = ''; }, 3000); } }); });
+document.getElementById('btnLoadExisting').addEventListener('click', function(){ if (!window.IA_DB) return alert('Připojení k databázi se ještě načítá, zkuste to za okamžik.'); window.IA_DB.open(function(loaded){ applyLoadedState(loaded); renderAll(); saveDraft(true); if (saveNoteEl){ saveNoteEl.textContent = 'Načteno z databáze \u2713'; setTimeout(function(){ saveNoteEl.textContent = ''; }, 3000); } }); });
 document.getElementById('loadFileInput').addEventListener('change', function(e){
   var file = e.target.files && e.target.files[0];
   e.target.value = ''; // allow picking the same file again next time
