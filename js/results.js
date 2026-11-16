@@ -1,5 +1,5 @@
 // Výsledky auditů: přehledy podle značek a import auditů (admin)
-import { supabase } from "./supabase.js?v=20261116e";
+import { supabase } from "./supabase.js?v=20261116f";
 
 export const RESULT_BRANDS = [
   { id: "arval",      name: "Arval",      logo: "assets/logos/arval.png",      wide: true, form: "arval/" },
@@ -130,7 +130,18 @@ export function mitsubishiEval(state, defs) {
   const ok = failKO < defs.rules.koFail && failP < defs.rules.povinneFailFrom;
   return { ok, per, tot, failKO, failP };
 }
+export function mitsubishiRecertEval(state, defs) {
+  const rc = defs.recert, tot = { A: 0, C: 0, N: 0, empty: 0 };
+  const count = (o, items) => items.forEach(it => { const v = o?.[it.id]; if (v) tot[v]++; else tot.empty++; });
+  for (let z = 0; z < rc.orders; z++) count(state.recert?.zakazky?.[z]?.v, rc.orderItems);
+  count(state.recert?.procesy, rc.procItems);
+  return { ok: tot.N < rc.rules.neFail && tot.C < rc.rules.castFailFrom, tot };
+}
 function mitsubishiResult(state, defs) {
+  if (state.meta?.typAuditu === "recert") {
+    const r = mitsubishiRecertEval(state, defs);
+    return `${r.ok ? "Úspěšný audit" : "Neúspěšný audit"} | Re-certifikace · Ano ${r.tot.A} · Částečně ${r.tot.C} · Ne ${r.tot.N}`;
+  }
   const r = mitsubishiEval(state, defs);
   return `${r.ok ? "Úspěšný audit" : "Neúspěšný audit"} | KO ${r.tot.KO[0]}/${r.tot.KO[1]} · Povinné ${r.tot.P[0]}/${r.tot.P[1]} · Doporučené ${r.tot.D[0]}/${r.tot.D[1]}`;
 }
