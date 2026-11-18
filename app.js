@@ -1,7 +1,7 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
-import { supabase, getProfile } from "./js/supabase.js?v=20261116k";
-import { exportPdf, exportXlsx } from "./js/export.js?v=20261116k";
-import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, esc as escR } from "./js/results.js?v=20261116k";
+import { supabase, getProfile } from "./js/supabase.js?v=20261118a";
+import { exportPdf, exportXlsx } from "./js/export.js?v=20261118a";
+import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, esc as escR } from "./js/results.js?v=20261118a";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
@@ -12,7 +12,7 @@ const BRANDS = [
   { id: "volvo",      name: "Volvo",       logo: "assets/logos/volvo.svg" },
   { id: "mitsubishi", name: "Mitsubishi",  logo: "assets/logos/mitsubishi.svg", url: "mitsubishi/" },
   { id: "hyundai",    name: "Hyundai",     logo: "assets/logos/hyundai.svg",    wide: true, url: "hyundai/" },
-  { id: "byd",        name: "BYD",         logo: "assets/logos/byd.svg",        wide: true },
+  { id: "byd",        name: "BYD",         logo: "assets/logos/byd.svg",        wide: true, url: "byd/" },
   { id: "tesla",      name: "Tesla",       logo: "assets/logos/tesla.svg" },
   { id: "ford",       name: "Ford",        logo: "assets/logos/ford.svg",       wide: true },
   { id: "toyota",     name: "Toyota",      logo: "assets/logos/toyota.svg",     wide: true },
