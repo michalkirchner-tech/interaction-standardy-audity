@@ -1,7 +1,9 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
-import { supabase, getProfile } from "./js/supabase.js?v=20261118a";
-import { exportPdf, exportXlsx } from "./js/export.js?v=20261118a";
-import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, esc as escR } from "./js/results.js?v=20261118a";
+import { supabase, getProfile } from "./js/supabase.js?v=20261118c";
+import { exportPdf, exportXlsx } from "./js/export.js?v=20261118c";
+import { registerSW, canInstall, install, onInstallChange } from "./js/pwa.js?v=20261118c";
+import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261118c";
+import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, esc as escR } from "./js/results.js?v=20261118c";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
@@ -86,7 +88,7 @@ function renderUserBox() {
   const name = profile.full_name || profile.email;
   userBox.innerHTML = `
     <span class="user-name" title="${esc(profile.email)}">${esc(name)}</span>
-    ${profile.role === "admin" ? `<span class="badge-admin">Admin</span>` : ""}
+    ${profile.role === "admin" ? `<a class="btn-backup" href="#zalohy" title="Zálohy dat">💾<span class="bk-txt"> Zálohy</span></a><span class="badge-admin">Admin</span>` : ""}
     <button type="button" class="btn-logout" id="btnLogout">Odhlásit</button>`;
   document.getElementById("btnLogout").onclick = async () => { await supabase.auth.signOut(); profile = null; location.hash = ""; renderAuth(); };
 }
@@ -101,7 +103,11 @@ function renderHome() {
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
         Výsledky auditů
       </a>
+      <div><button type="button" class="btn-install" id="btnInstall" hidden>
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM12 7v7m-3-3 3 3 3-3M10 19h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Nainstalovat do mobilu</button></div>
     </section>
+    <div id="backupRemind"></div>
     <section class="grid">
       ${BRANDS.map(b => `
         <a class="tile" href="${b.url || "#" + b.id}" aria-label="${b.name}">
@@ -110,6 +116,11 @@ function renderHome() {
         </a>`).join("")}
     </section>`;
   app.querySelectorAll(".tile").forEach(attachTilt);
+  const ib = document.getElementById("btnInstall");
+  const upd = () => { if (document.body.contains(ib)) ib.hidden = !canInstall(); };
+  upd(); onInstallChange(upd);
+  ib.onclick = () => install();
+  if (profile.role === "admin") backupReminderHtml().then(h => { const el = document.getElementById("backupRemind"); if (el) el.innerHTML = h; });
 }
 
 function renderBrand(brand) {
@@ -254,7 +265,8 @@ function route() {
   document.body.classList.toggle("is-home", !id);
   const brand = BRANDS.find(b => b.id === id);
   const rb = RESULT_BRANDS.find(b => "vysledky-" + b.id === id);
-  if (id === "vysledky") renderResultsHome();
+  if (id === "zalohy" && profile.role === "admin") renderBackups(app);
+  else if (id === "vysledky") renderResultsHome();
   else if (rb) renderResultsBrand(rb);
   else if (brand) renderBrand(brand);
   else renderHome();
@@ -270,4 +282,5 @@ async function start() {
 }
 
 window.addEventListener("hashchange", () => { if (profile) route(); });
+registerSW();
 start();
