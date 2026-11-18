@@ -1,9 +1,9 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
-import { supabase, getProfile } from "./js/supabase.js?v=20261118c";
-import { exportPdf, exportXlsx } from "./js/export.js?v=20261118c";
-import { registerSW, canInstall, install, onInstallChange } from "./js/pwa.js?v=20261118c";
-import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261118c";
-import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, esc as escR } from "./js/results.js?v=20261118c";
+import { supabase, getProfile } from "./js/supabase.js?v=20261118d";
+import { exportPdf, exportXlsx } from "./js/export.js?v=20261118d";
+import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261118d";
+import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261118d";
+import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, esc as escR } from "./js/results.js?v=20261118d";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
@@ -24,6 +24,7 @@ const app = document.getElementById("app");
 const userBox = document.getElementById("userBox");
 document.getElementById("year").textContent = new Date().getFullYear();
 let profile = null;
+let justSignedIn = false;
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -79,6 +80,7 @@ function renderAuth(mode = "login", msg = "") {
         const { error } = await supabase.auth.signInWithPassword({ email: f.email.trim(), password: f.password });
         if (error) throw error;
       }
+      justSignedIn = true;
       await start();
     } catch (err) { out.textContent = czErr(err); btn.disabled = false; }
   };
@@ -279,6 +281,8 @@ async function start() {
   const next = new URLSearchParams(location.search).get("next");
   if (next && /^[a-z-]+\/$/.test(next)) { location.replace(next); return; }
   route();
+  offerInstall({ force: justSignedIn });
+  justSignedIn = false;
 }
 
 window.addEventListener("hashchange", () => { if (profile) route(); });

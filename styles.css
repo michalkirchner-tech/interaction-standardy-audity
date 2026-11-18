@@ -367,3 +367,9 @@ tr.st-soon td:first-child { box-shadow: inset 4px 0 0 #f0a000; }
   .user-box { gap: 6px; }
   .badge-admin { font-size: .62rem; padding: 3px 6px; }
 }
+.pwa-offer { text-align: center; }
+.pwa-offer img { border-radius: 18px; box-shadow: 0 6px 16px rgba(0,0,0,.15); margin-bottom: 10px; }
+.pwa-offer p { color: #444; font-size: .93rem; margin: 0 0 16px; }
+.pwa-actions { display: flex; flex-direction: column; gap: 8px; }
+.pwa-later { border: 0; background: none; color: #666; font: 600 .92rem "Open Sans", sans-serif; cursor: pointer; padding: 8px; }
+.pwa-offer .pwa-note { font-size: .78rem; color: #888; margin: 12px 0 0; }
