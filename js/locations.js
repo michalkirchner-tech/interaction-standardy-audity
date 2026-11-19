@@ -1,11 +1,11 @@
 // Základní údaje auditu: „Příjem do servisu“ a „Mechanická dílna“ – v místě sídla, nebo na jiné adrese.
 // Formulář dá k dispozici window.IA_FORM = { state(), changed() } a do stránky vloží prázdné <div class="ialoc-slot">.
 // Tento modul do nich bloky vykreslí (i po každém překreslení formuláře).
-import { krajFromAddress } from "./results.js?v=20261119e";
+import { krajFromAddress } from "./results.js?v=20261119f";
 
 const BLOCKS = [
   { key: "mistoPrijmu", title: "Příjem do servisu", kraj: true },
-  { key: "mistoDilny", title: "Mechanická dílna", kraj: false },
+  { key: "mistoDilny", title: "Mechanická dílna", kraj: false, extra: "dilnaField" }, // formulář může přidat pole (Arval: počet mechaniků)
 ];
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const empty = () => ({ jinde: false, ulice: "", psc: "", mesto: "", kraj: "" });
@@ -30,13 +30,17 @@ function renderBlock(slot, b) {
   const o = getObj(b.key);
   if (!o) return;
   const n = "ialoc" + (++uid);
+  const st = window.IA_FORM.state(), xf = b.extra ? window.IA_FORM[b.extra] : null;
   const card = document.createElement("div");
   card.className = (slot.dataset.card || "card") + " ialoc";
   card.innerHTML = `
     <h3>${esc(b.title)}</h3>
-    <div class="ialoc-opts">
-      <label><input type="radio" name="${n}" value="0"${o.jinde ? "" : " checked"}> V místě sídla</label>
-      <label><input type="radio" name="${n}" value="1"${o.jinde ? " checked" : ""}> Na jiné adrese</label>
+    <div class="ialoc-top">
+      <div class="ialoc-opts">
+        <label><input type="radio" name="${n}" value="0"${o.jinde ? "" : " checked"}> V místě sídla</label>
+        <label><input type="radio" name="${n}" value="1"${o.jinde ? " checked" : ""}> Na jiné adrese</label>
+      </div>
+      ${xf ? `<label class="ialoc-f ialoc-extra">${esc(xf.label)}<input data-x="1" type="${xf.type || "text"}" value="${esc(st.meta[xf.key] ?? "")}"></label>` : ""}
     </div>
     <div class="ialoc-addr"${o.jinde ? "" : " hidden"}>
       <div class="ialoc-grid">
@@ -60,6 +64,8 @@ function renderBlock(slot, b) {
     if (my !== seq) return;
     o.kraj = k || ""; kr.innerHTML = krajLine(o, k ? null : "fail"); changed();
   };
+  const xi = card.querySelector("input[data-x]");
+  if (xi) xi.addEventListener("input", () => { window.IA_FORM.state().meta[xf.key] = xi.value; changed(); });
   card.querySelectorAll("input[data-k]").forEach(inp => {
     inp.addEventListener("input", () => { o[inp.dataset.k] = inp.value; if (b.kraj) { o.kraj = ""; clearTimeout(timer); timer = setTimeout(lookup, 1200); } changed(); });
     inp.addEventListener("click", e => e.stopPropagation());
@@ -79,6 +85,9 @@ new MutationObserver(fillNew).observe(document.body, { childList: true, subtree:
 
 const css = `
 .ialoc h3{margin-top:0}
+.ialoc-top{display:grid;grid-template-columns:2fr 1fr 1.4fr;gap:12px 16px;align-items:end}
+.ialoc-top .ialoc-opts{align-self:center}
+.ialoc-extra{grid-column:2 / span 2}
 .ialoc-opts{display:flex;flex-wrap:wrap;gap:10px 22px;margin:4px 0 2px}
 .ialoc-opts label{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:500}
 .ialoc-opts input{width:18px;height:18px;margin:0;accent-color:currentColor}
@@ -89,7 +98,7 @@ const css = `
 .ialoc-f input:focus{outline:2px solid rgba(0,0,0,.15);border-color:#888}
 .ialoc-kraj{margin-top:10px;font-size:.86rem}
 .ialoc-muted{color:#777}.ialoc-bad{color:#b0101d}
-@media(max-width:700px){.ialoc-grid{grid-template-columns:1fr 1fr}.ialoc-wide{grid-column:1/-1}}
+@media(max-width:700px){.ialoc-grid{grid-template-columns:1fr 1fr}.ialoc-wide{grid-column:1/-1}.ialoc-top{grid-template-columns:1fr}.ialoc-extra{grid-column:auto}}
 @media print{.ialoc-opts label:has(input:not(:checked)){display:none}.ialoc-opts input{display:none}.ialoc-kraj .ialoc-muted{display:none}}`;
 { const s = document.createElement("style"); s.textContent = css; document.head.appendChild(s); }
 

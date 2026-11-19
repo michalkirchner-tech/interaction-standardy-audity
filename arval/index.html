@@ -14,10 +14,10 @@
 <title>Certifikační audit ARVAL</title>
 <style>html.ia-guard body{visibility:hidden}</style>
 <script>document.documentElement.classList.add("ia-guard")</script>
-<script type="module" src="../js/guard.js?v=20261119e"></script>
-<script type="module" src="../js/db-bridge.js?v=20261119e"></script>
-<script type="module" src="../js/photos.js?v=20261119e"></script>
-<script type="module" src="../js/locations.js?v=20261119e"></script>
+<script type="module" src="../js/guard.js?v=20261119f"></script>
+<script type="module" src="../js/db-bridge.js?v=20261119f"></script>
+<script type="module" src="../js/photos.js?v=20261119f"></script>
+<script type="module" src="../js/locations.js?v=20261119f"></script>
 
 <style>
 :root{
@@ -1023,7 +1023,6 @@ function renderZaklad(container){
   g4.appendChild(fieldYesNo('Platforma AudaFlow', state.meta, 'audaflow'));
   g4.appendChild(fieldYesNo('Platforma TEC CONTROL', state.meta, 'teccontrol'));
   g4.appendChild(fieldYesNo('Bodové opravy laku', state.meta, 'bodoveOpravy'));
-  g4.appendChild(fieldText('Počet mechaniků', state.meta, 'pocetMechaniku', {type:'number'}));
   c4.appendChild(g4);
   container.appendChild(c4);
 }
@@ -1260,7 +1259,7 @@ function photoButton(itemId){
   if (window.IA_PHOTOS) wrap.appendChild(window.IA_PHOTOS.button(itemId, function(){ return state; }, { changed: function(){ scheduleAutosave(); } }));
   return wrap;
 }
-window.IA_FORM = { state: function(){ return state; }, changed: function(){ scheduleAutosave(); } };
+window.IA_FORM = { state: function(){ return state; }, changed: function(){ scheduleAutosave(); }, dilnaField: {label:'Počet mechaniků', key:'pocetMechaniku', type:'number'} };
 document.addEventListener('ia-photos-ready', function(){ window.IA_PHOTOS.onRerender(renderAll); renderAll(); });
 if (window.IA_PHOTOS) window.IA_PHOTOS.onRerender(function(){ renderAll(); });
 
