@@ -1,11 +1,12 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
-import { supabase, getProfile } from "./js/supabase.js?v=20261119f";
-import { exportPdf, exportXlsx } from "./js/export.js?v=20261119f";
-import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261119f";
-import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261119f";
-import { renderUsers } from "./js/users.js?v=20261119f";
-import { openGallery } from "./js/gallery.js?v=20261119f";
-import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261119f";
+import { supabase, getProfile } from "./js/supabase.js?v=20261119g";
+import { exportPdf, exportXlsx } from "./js/export.js?v=20261119g";
+import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261119g";
+import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261119g";
+import { renderUsers } from "./js/users.js?v=20261119g";
+import { openGallery } from "./js/gallery.js?v=20261119g";
+import { renderMultibrand } from "./js/multibrand.js?v=20261119g";
+import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261119g";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
@@ -106,6 +107,10 @@ function renderHome() {
       <a class="btn-results" href="#vysledky">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
         Výsledky auditů
+      </a>
+      <a class="btn-results btn-multi" href="#multibrand" title="Rozdílový list mezi standardy značek">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="9" height="12" rx="2"/><rect x="12.5" y="8" width="9" height="12" rx="2"/><path d="M15.5 14h3M17 12.5v3"/></g></svg>
+        Multi brand
       </a>
       <div><button type="button" class="btn-install" id="btnInstall" hidden>
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM12 7v7m-3-3 3 3 3-3M10 19h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -298,6 +303,7 @@ function route() {
   if (id === "zalohy" && profile.role === "admin") renderBackups(app);
   else if (id === "uzivatele" && profile.role === "admin") renderUsers(app, profile);
   else if (id === "vysledky") renderResultsHome();
+  else if (id === "multibrand") renderMultibrand(app);
   else if (rb) renderResultsBrand(rb);
   else if (brand) renderBrand(brand);
   else renderHome();
