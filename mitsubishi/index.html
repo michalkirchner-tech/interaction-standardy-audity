@@ -14,8 +14,9 @@
 <title>Audit procesů a vybavení karosárny a lakovny – Mitsubishi</title>
 <style>html.ia-guard body{visibility:hidden}</style>
 <script>document.documentElement.classList.add("ia-guard")</script>
-<script type="module" src="../js/guard.js?v=20261119b"></script>
-<script type="module" src="../js/db-bridge.js?v=20261119b"></script>
+<script type="module" src="../js/guard.js?v=20261119c"></script>
+<script type="module" src="../js/db-bridge.js?v=20261119c"></script>
+<script type="module" src="../js/photos.js?v=20261119c"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
@@ -65,7 +66,7 @@ label.f input:focus,label.f textarea:focus{outline:2px solid var(--m-purple);bor
 .legend{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:.82rem;color:#555;margin:0 0 6px}
 
 .group{padding:8px 18px;background:var(--m-soft);color:var(--m-deep);font-weight:700;font-size:.85rem;border-top:1px solid var(--m-line);border-bottom:1px solid var(--m-line)}
-.item{display:grid;grid-template-columns:42px minmax(0,1fr) 98px 64px;gap:10px;align-items:center;padding:9px 18px;border-bottom:1px solid #f0e6ee;cursor:pointer}
+.item{display:grid;grid-template-columns:42px minmax(0,1fr) 98px 36px 64px;gap:10px;align-items:center;padding:9px 18px;border-bottom:1px solid #f0e6ee;cursor:pointer}
 .item:hover{background:#fcf7fa}
 .item .n{font-weight:700;color:var(--m-purple);font-size:.88rem}
 .item .t{font-size:.92rem;line-height:1.35}
@@ -294,7 +295,7 @@ function emptyPodpis(){ return {odpovedna:'', misto:'', datum:''}; }
 function emptyState(){
   return { form:'mitsubishi', podpis:emptyPodpis(), sig:{auditor:null, odpovedna:null}, meta:{ partner:'', ic:'', datumAuditu:todayIso(), auditor:'', platnostMesicu:VALID,
     typAuditu:'cert', prijem:emptySubject(), karosarnaStejna:true, karosarna:emptySubject(), lakovnaStejna:true, lakovna:emptySubject() },
-    checks:{}, radky:[], poznamky:'', recert:emptyRecert() };
+    checks:{}, photos:{}, radky:[], poznamky:'', recert:emptyRecert() };
 }
 var state = emptyState();
 
@@ -310,7 +311,7 @@ function buildSections(){
       if ((it.group||null) !== g){ g = it.group||null; if (g) html += '<div class="group">'+esc(g)+'</div>'; }
       html += '<div class="item" data-id="'+it.id+'" data-type="'+it.type+'" role="switch" tabindex="0">'
         + '<span class="n">'+esc(it.n)+'</span><span class="t">'+esc(it.text)+'</span>'
-        + '<span class="badge b-'+it.type+'">'+TYPE_LABEL[it.type]+'</span><span class="toggle" aria-hidden="true"></span><span class="mark"></span></div>';
+        + '<span class="badge b-'+it.type+'">'+TYPE_LABEL[it.type]+'</span><span class="ph no-print" data-ph="'+it.id+'"></span><span class="toggle" aria-hidden="true"></span><span class="mark"></span></div>';
     });
     html += '<div class="sec-tools no-print"><button type="button" data-all="'+sec.id+'">Vše splněno</button><button type="button" data-none="'+sec.id+'">Zrušit vše</button></div></section>';
   });
@@ -571,6 +572,7 @@ function applyLoaded(obj){
   Object.keys(base.meta).forEach(function(k){ if (obj.meta && obj.meta[k]!==undefined) state.meta[k] = obj.meta[k]; });
   ['prijem','karosarna','lakovna'].forEach(function(k){ state.meta[k] = Object.assign(emptySubject(), (obj.meta||{})[k]||{}); });
   state.checks = Object.assign({}, obj.checks||{});
+  state.photos = Object.assign({}, obj.photos||{});
   state.radky = Array.isArray(obj.radky) ? obj.radky.map(function(r){ return {nedostatek:r.nedostatek||'',opatreni:r.opatreni||'',osoba:r.osoba||'',termin:r.termin||''}; }) : [];
   state.poznamky = obj.poznamky || '';
   state.meta.datumAuditu = (obj.meta && obj.meta.datumAuditu) || '';
@@ -579,7 +581,17 @@ function applyLoaded(obj){
   if (obj.recert) { state.recert.procesy = Object.assign({}, obj.recert.procesy||{});
     (obj.recert.zakazky||[]).forEach(function(z,i){ if (state.recert.zakazky[i]) state.recert.zakazky[i] = {cislo:z.cislo||'', v:Object.assign({}, z.v||{})}; }); }
 }
-function renderAll(){ fillFields(); renderResult(); }
+function renderAll(){ fillFields(); renderResult(); renderPhotos(); }
+// Fotky ke kritériím (js/photos.js): miniatura místo foťáku, fotka v úložišti ve složce zákazníka
+function renderPhotos(){
+  if (!window.IA_PHOTOS) return;
+  document.querySelectorAll('[data-ph]').forEach(function(slot){
+    slot.innerHTML = '';
+    slot.appendChild(window.IA_PHOTOS.button(slot.dataset.ph, function(){ return state; }, {
+      partner: function(){ return (state.meta.prijem||{}).nazev; }, ic: function(){ return (state.meta.prijem||{}).ic; }, changed: function(){ saveLocal(); } }));
+  });
+}
+document.addEventListener('ia-photos-ready', function(){ window.IA_PHOTOS.onRerender(renderPhotos); renderPhotos(); });
 
 document.getElementById('btnNew').onclick = function(){
   if (!confirm('Začít nový prázdný audit? Neuložené změny v aktuálním formuláři se ztratí.')) return;

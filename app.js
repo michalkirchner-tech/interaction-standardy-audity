@@ -1,10 +1,10 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
-import { supabase, getProfile } from "./js/supabase.js?v=20261119b";
-import { exportPdf, exportXlsx } from "./js/export.js?v=20261119b";
-import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261119b";
-import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261119b";
-import { renderUsers } from "./js/users.js?v=20261119b";
-import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, esc as escR } from "./js/results.js?v=20261119b";
+import { supabase, getProfile } from "./js/supabase.js?v=20261119c";
+import { exportPdf, exportXlsx } from "./js/export.js?v=20261119c";
+import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261119c";
+import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261119c";
+import { renderUsers } from "./js/users.js?v=20261119c";
+import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261119c";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
@@ -177,10 +177,11 @@ async function renderResultsHome() {
     </section>`;
   app.querySelectorAll(".tile").forEach(attachTilt);
   try {
-    const rows = latestPerCustomer((await loadAudits()).filter(r => (r.audit_kind || "ostry") === "ostry"));
+    const [all, inact] = await Promise.all([loadAudits(), loadInactive()]);
+    const rows = latestPerCustomer(markInactive(all, inact).filter(r => (r.audit_kind || "ostry") === "ostry"));
     for (const b of RESULT_BRANDS) {
       const own = rows.filter(r => r.brand === b.id);
-      const mine = own.map(r => statusOf(r.next_audit_date).key);
+      const mine = own.map(r => stOf(r).key);
       const ex = mine.filter(k => k === "expired").length, so = mine.filter(k => k === "soon").length;
       const fail = b.id === "stellantis" ? own.filter(r => !/^Úspěšný/.test(r.result || "")).length : 0;
       app.querySelector(`[data-stats="${b.id}"]`).innerHTML = !mine.length ? "zatím bez auditů"
@@ -223,21 +224,24 @@ async function renderResultsBrand(b) {
       filt.kraje = [...dash.querySelectorAll("#fKraj input:checked")].map(x => x.value); draw();
     });
     const clr = dash.querySelector("[data-kraj-clear]"); if (clr) clr.onclick = () => { filt.kraje = []; draw(); };
-    dash.querySelectorAll("[data-del-cust]").forEach(btn => btn.onclick = async () => {
-      const mine = rows.filter(r => custKey(r) === btn.dataset.delCust);
-      const no = mine.filter(r => r.audit_kind !== "nulty").length, nn = mine.length - no;
-      const what = [no ? `${no} ostr${no === 1 ? "ý audit" : no < 5 ? "é audity" : "ých auditů"}` : "", nn ? `${nn} nult${nn === 1 ? "ý audit" : nn < 5 ? "é audity" : "ých auditů"}` : ""].filter(Boolean).join(" a ");
-      if (!confirm(`Odstranit servis „${btn.dataset.name}“ ze seznamu ${b.name}?\n\nSmaže se ${what} tohoto servisu (jen u značky ${b.name}).\nV případě omylu jde audit obnovit v Zálohy → Historie změn.`)) return;
-      btn.disabled = true; btn.textContent = "Odstraňuji…";
-      const { error } = await supabase.from("audits").delete().in("id", mine.map(r => r.id));
-      if (error) { alert("Odstranění se nepodařilo: " + error.message); btn.disabled = false; btn.textContent = "Odstranit servis"; return; }
-      refresh();
-    });
+    const toggle = (btn, inactive) => async () => {
+      const r = rows.find(x => custKey(x) === (inactive ? btn.dataset.inactCust : btn.dataset.actCust));
+      if (!r) return;
+      const msg = inactive
+        ? `Označit zákazníka „${btn.dataset.name}“ jako neaktivního (${b.name})?\n\nAudity se nesmažou. ${b.id === "stellantis" ? "" : "Zákazník přestane hlásit termín a propadlý audit, "}V seznamu bude dole s označením „Neaktivní“ a dál se započítává do celkového počtu. Kdykoli ho můžete znovu aktivovat.`
+        : `Znovu aktivovat zákazníka „${btn.dataset.name}“? Bude zase hlásit termíny příštích auditů.`;
+      if (!confirm(msg)) return;
+      btn.disabled = true;
+      try { await setInactive(b.id, r, inactive); refresh(); }
+      catch (e) { alert("Změna se nepodařila: " + e.message); btn.disabled = false; }
+    };
+    dash.querySelectorAll("[data-inact-cust]").forEach(btn => btn.onclick = toggle(btn, true));
+    dash.querySelectorAll("[data-act-cust]").forEach(btn => btn.onclick = toggle(btn, false));
     const file = document.getElementById("importFile");
     if (file) file.onchange = () => handleImport(b, [...file.files], refresh);
   };
   const refresh = async () => {
-    try { defs = b.id === "arval" ? await arvalDefs() : null; rows = await loadAudits(b.id); }
+    try { defs = b.id === "arval" ? await arvalDefs() : null; const [a, inact] = await Promise.all([loadAudits(b.id), loadInactive()]); rows = markInactive(a, inact); }
     catch (e) { dash.innerHTML = `<div class="empty">Data se nepodařilo načíst: ${escR(e.message)}</div>`; return; }
     draw();
   };

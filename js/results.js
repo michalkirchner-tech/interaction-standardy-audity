@@ -1,5 +1,5 @@
 // Výsledky auditů: přehledy podle značek a import auditů (admin)
-import { supabase } from "./supabase.js?v=20261119b";
+import { supabase } from "./supabase.js?v=20261119c";
 
 export const RESULT_BRANDS = [
   { id: "arval",      name: "Arval",      logo: "assets/logos/arval.png",      wide: true, form: "arval/" },
@@ -16,7 +16,27 @@ const addMonths = (iso, m) => { const d = new Date(iso + "T00:00:00"); const day
 
 // Nultý audit je jednorázový – nemá termín příštího auditu
 export const NULTY_ST = { key: "none", label: "Nultý audit", text: "jednorázový audit, neopakuje se", order: 3, n: null };
-export const stOf = r => (r.audit_kind === "nulty" ? NULTY_ST : statusOf(r.next_audit_date));
+const inactiveSt = r => ({ key: "inactive", label: "Neaktivní", text: `neaktivní od ${czDate(r.inactive.slice(0, 10))}`, order: 9, n: null });
+export const stOf = r => (r.inactive ? inactiveSt(r) : r.audit_kind === "nulty" ? NULTY_ST : statusOf(r.next_audit_date));
+
+// Neaktivní zákazníci: audity zůstávají, jen nevyskakují v termínech (klíč = IČ, jinak název)
+export async function loadInactive() {
+  const { data, error } = await supabase.from("inactive_customers").select("brand,cust_key,since");
+  if (error) throw error;
+  return new Map(data.map(x => [x.brand + "|" + x.cust_key, x.since]));
+}
+export function markInactive(rows, map) {
+  for (const r of rows) r.inactive = map.get(r.brand + "|" + custKey(r)) || null;
+  return rows;
+}
+export async function setInactive(brand, r, inactive) {
+  const key = custKey(r);
+  const q = inactive
+    ? supabase.from("inactive_customers").upsert({ brand, cust_key: key, partner: r.partner })
+    : supabase.from("inactive_customers").delete().eq("brand", brand).eq("cust_key", key);
+  const { error } = await q;
+  if (error) throw error;
+}
 export const custKey = r => r.ic || r.partner.toLowerCase().trim();
 const byStatus = (a, b) => a.st.order - b.st.order || (a.next_audit_date || "9999").localeCompare(b.next_audit_date || "9999") || b.audit_date.localeCompare(a.audit_date);
 
@@ -67,7 +87,7 @@ export function filterList(brand, rows, f = defaultFilter()) {
   let list = latestPerCustomer(r);
   if (f.period && brand !== "stellantis" && f.kind !== "nulty") {
     const lim = addMonths(todayIso(), +f.period); // už propadlé + ty, kterým termín skončí do zvoleného data
-    list = list.filter(x => x.next_audit_date && x.next_audit_date <= lim);
+    list = list.filter(x => !x.inactive && x.next_audit_date && x.next_audit_date <= lim);
   }
   if (f.q) { const q = f.q.toLowerCase().trim(); list = list.filter(x => (x.partner + " " + (x.ic || "")).toLowerCase().includes(q)); }
   return list;
@@ -298,9 +318,9 @@ export function dashboardHtml(brand, rows, isAdmin, defs, f = defaultFilter()) {
   const list = filterList(brand, rows, { ...f, q: "" }).map(r => ({ ...r, st: stOf(r) })).sort(byStatus);
   const cnt = k => list.filter(r => r.st.key === k).length;
   return `
-    ${f.kind === "nulty" ? `<div class="kpis kpis-1"><div class="kpi"><span class="kpi-n">${list.length}</span><span class="kpi-l">Zákazníků s nultým auditem</span></div></div>` : `
+    ${f.kind === "nulty" ? `<div class="kpis kpis-1"><div class="kpi"><span class="kpi-n">${list.length}</span><span class="kpi-l">Zákazníků s nultým auditem${inactNote(list)}</span></div></div>` : `
     <div class="kpis">
-      <div class="kpi"><span class="kpi-n">${list.length}</span><span class="kpi-l">Auditovaných zákazníků</span></div>
+      <div class="kpi"><span class="kpi-n">${list.length}</span><span class="kpi-l">Auditovaných zákazníků${inactNote(list)}</span></div>
       <div class="kpi kpi-expired"><span class="kpi-n">${cnt("expired")}</span><span class="kpi-l">Propadlé audity</span></div>
       <div class="kpi kpi-soon"><span class="kpi-n">${cnt("soon")}</span><span class="kpi-l">Blíží se (do ${WARN_DAYS} dní)</span></div>
       <div class="kpi kpi-ok"><span class="kpi-n">${cnt("ok")}</span><span class="kpi-l">Platné</span></div>
@@ -327,14 +347,14 @@ export function dashboardHtml(brand, rows, isAdmin, defs, f = defaultFilter()) {
 
 function stellantisDashboardHtml(rows, isAdmin, f) {
   const brand = "stellantis";
-  const list = filterList(brand, rows, { ...f, q: "" }).sort((a, b) => b.audit_date.localeCompare(a.audit_date));
+  const list = filterList(brand, rows, { ...f, q: "" }).sort((a, b) => (!!a.inactive - !!b.inactive) || b.audit_date.localeCompare(a.audit_date));
   const ok = r => /^Úspěšný/.test(r.result || "");
-  const nOk = list.filter(ok).length;
+  const act = list.filter(r => !r.inactive), nOk = act.filter(ok).length;
   return `
     <div class="kpis kpis-3">
-      <div class="kpi"><span class="kpi-n">${list.length}</span><span class="kpi-l">Auditovaných zákazníků</span></div>
+      <div class="kpi"><span class="kpi-n">${list.length}</span><span class="kpi-l">Auditovaných zákazníků${inactNote(list)}</span></div>
       <div class="kpi kpi-ok"><span class="kpi-n">${nOk}</span><span class="kpi-l">Úspěšný audit</span></div>
-      <div class="kpi kpi-expired"><span class="kpi-n">${list.length - nOk}</span><span class="kpi-l">Neúspěšný audit</span></div>
+      <div class="kpi kpi-expired"><span class="kpi-n">${act.length - nOk}</span><span class="kpi-l">Neúspěšný audit</span></div>
     </div>
     ${isAdmin ? importBoxHtml("stellantis") : ""}
     <div class="res-card">
@@ -345,8 +365,8 @@ function stellantisDashboardHtml(rows, isAdmin, f) {
         <thead><tr><th>Zákazník</th><th>Výsledek</th><th>Hodnocení oblastí</th><th>Datum auditu</th></tr></thead>
         <tbody>
           ${list.map(r => { const [head, detail] = (r.result || "—").split(" | "); return `
-          <tr data-q="${esc((r.partner + " " + (r.ic || "")).toLowerCase())}">
-            <td><strong>${esc(r.partner)}</strong>${r.ic ? `<span class="muted">IČ ${esc(r.ic)}</span>` : ""}${r.older ? `<span class="muted">+ ${r.older} starší audit${r.older > 1 ? "y" : ""}</span>` : ""}${rowExtra(r, f)}${r.meta?.karosarnaExterni === "externi" ? `<span class="ext-note">Externí karosárna: ${esc(r.meta.ext?.nazev || "neuvedeno")}${r.meta.ext?.ic ? `, IČO ${esc(r.meta.ext.ic)}` : ""}</span>` : ""}${isAdmin ? delBtn(r) : ""}</td>
+          <tr class="${r.inactive ? "st-inactive" : ""}" data-q="${esc((r.partner + " " + (r.ic || "")).toLowerCase())}">
+            <td>${r.inactive ? `<span class="st-badge st-inactive">Neaktivní</span><span class="muted">${stOf(r).text}</span>` : ""}<strong>${esc(r.partner)}</strong>${r.ic ? `<span class="muted">IČ ${esc(r.ic)}</span>` : ""}${r.older ? `<span class="muted">+ ${r.older} starší audit${r.older > 1 ? "y" : ""}</span>` : ""}${rowExtra(r, f)}${r.meta?.karosarnaExterni === "externi" ? `<span class="ext-note">Externí karosárna: ${esc(r.meta.ext?.nazev || "neuvedeno")}${r.meta.ext?.ic ? `, IČO ${esc(r.meta.ext.ic)}` : ""}</span>` : ""}${isAdmin ? delBtn(r) : ""}</td>
             <td><span class="lvl ${ok(r) ? "lvl-3" : "lvl-0"}">${esc(head)}</span></td>
             <td class="muted-cell">${esc(detail || "")}</td>
             <td class="td-date">${czDate(r.audit_date)}</td>
@@ -356,7 +376,13 @@ function stellantisDashboardHtml(rows, isAdmin, f) {
 }
 
 function delBtn(r) {
-  return `<button type="button" class="btn-delcust" data-del-cust="${esc(custKey(r))}" data-name="${esc(r.partner)}" title="Odstraní servis ze seznamu (smaže všechny jeho audity této značky)">Odstranit servis</button>`;
+  return r.inactive
+    ? `<button type="button" class="btn-actcust" data-act-cust="${esc(custKey(r))}" data-name="${esc(r.partner)}" title="Zákazník se znovu zobrazí v termínech a přehledech">Aktivovat</button>`
+    : `<button type="button" class="btn-delcust" data-inact-cust="${esc(custKey(r))}" data-name="${esc(r.partner)}" title="Zákazník už není partnerem – audity zůstanou, jen nebude hlásit termíny">Neaktivní</button>`;
+}
+function inactNote(list) {
+  const n = list.filter(r => r.inactive).length;
+  return n ? `<small class="kpi-sub">z toho ${n} neaktivní${n === 1 ? "" : n < 5 ? "" : "ch"}</small>` : "";
 }
 
 function mitExtNote(meta) {
@@ -377,7 +403,7 @@ function importBoxHtml(brand) {
 // ---------- Export přehledu (PDF / Excel) ----------
 function sortedList(brand, rows, f) {
   const list = filterList(brand, rows, f);
-  if (brand === "stellantis") return list.sort((a, b) => b.audit_date.localeCompare(a.audit_date));
+  if (brand === "stellantis") return list.sort((a, b) => (!!a.inactive - !!b.inactive) || b.audit_date.localeCompare(a.audit_date));
   return list.map(r => ({ ...r, st: stOf(r) })).sort(byStatus);
 }
 function extText(meta, brand) {
@@ -413,8 +439,8 @@ export function exportTable(brand, rows, defs, f = defaultFilter()) {
     head.push("Zákazník", "IČ", "Kraj", "Výsledek", "Hodnocení oblastí", "Externí karosárna", "Datum auditu");
     for (const r of list) {
       const [h, d] = split(r), [ek] = extText(r.meta, brand);
-      body.push([r.partner, r.ic || "", r.kraj || "", h, d, ek, czDate(r.audit_date)]);
-      rowClass.push(/^Úspěšný/.test(h) ? "st-ok" : "st-expired");
+      body.push([r.partner + (r.inactive ? "\n(neaktivní)" : ""), r.ic || "", r.kraj || "", h, d, ek, czDate(r.audit_date)]);
+      rowClass.push(r.inactive ? "st-inactive" : /^Úspěšný/.test(h) ? "st-ok" : "st-expired");
     }
   }
   const stamp = today.toISOString().slice(0, 10);

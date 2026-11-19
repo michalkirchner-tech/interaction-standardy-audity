@@ -14,8 +14,9 @@
 <title>Certifikační audit karosárny Stellantis</title>
 <style>html.ia-guard body{visibility:hidden}</style>
 <script>document.documentElement.classList.add("ia-guard")</script>
-<script type="module" src="../js/guard.js?v=20261119b"></script>
-<script type="module" src="../js/db-bridge.js?v=20261119b"></script>
+<script type="module" src="../js/guard.js?v=20261119c"></script>
+<script type="module" src="../js/db-bridge.js?v=20261119c"></script>
+<script type="module" src="../js/photos.js?v=20261119c"></script>
 
 <style>
 /* Layout: sticky top bar + section sidebar + single-column form; print renders every section as the A4 audit sheet. */
@@ -481,7 +482,7 @@ function newState(){
       datumAuditu:todayIso(), auditor:'', auditorCustom:false, brands:{},
       karosarnaExterni:'vlastni', smlouva:false, smlouvaDolozena:false,
       ext:{ nazev:'', ic:'', ulice:'', psc:'', mesto:'', vedeni:'', pocet:'' } },
-    checks:{}, photographed:{}, radky:emptyRows(), poznamky:'',
+    checks:{}, photographed:{}, photos:{}, radky:emptyRows(), poznamky:'',
     vedeniJmeno:'', sig:{ auditor:null, vedeni:null }
   };
 }
@@ -690,20 +691,14 @@ function auditorPicker(){
   return wrap;
 }
 
-function photoButton(id){
-  var done=!!state.photographed[id];
-  var wrap=h('div',{class:'photo-btn no-print'+(done?' done':''), title: done?'Fotka pořízena':'Vyfotit'});
-  var input=h('input',{type:'file', accept:'image/*', style:'display:none'}); input.setAttribute('capture','environment');
-  input.addEventListener('change', function(e){
-    var f=e.target.files && e.target.files[0]; e.target.value='';
-    if(!f) return;
-    state.photographed[id]=true; scheduleAutosave(); renderAll();
-  });
-  var btn=h('button',{type:'button', class:'photo-btn-icon', 'aria-label':'Vyfotit kritérium '+id, html:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>'});
-  btn.addEventListener('click', function(){ input.click(); });
-  wrap.appendChild(input); wrap.appendChild(btn);
+function photoButton(itemId){
+  // Fotka se zmenší a uloží do úložiště aplikace (složka podle zákazníka), u kritéria se ukáže miniatura
+  var wrap = h('div',{class:'photo-btn no-print'});
+  if (window.IA_PHOTOS) wrap.appendChild(window.IA_PHOTOS.button(itemId, function(){ return state; }, { changed: function(){ scheduleAutosave(); } }));
   return wrap;
 }
+document.addEventListener('ia-photos-ready', function(){ window.IA_PHOTOS.onRerender(renderAll); renderAll(); });
+if (window.IA_PHOTOS) window.IA_PHOTOS.onRerender(function(){ renderAll(); });
 
 function specPanel(it){
   var sp=SPEC[it[0]];
@@ -928,7 +923,7 @@ function applyLoaded(l){
   state.meta=Object.assign(base.meta, l.meta||{});
   state.meta.brands=Object.assign({}, (l.meta&&l.meta.brands)||{});
   state.meta.ext=Object.assign(base.meta.ext, (l.meta&&l.meta.ext)||{});
-  state.checks=l.checks||{}; state.photographed=l.photographed||{}; state.radky=emptyRows(); if(Array.isArray(l.radky)){ while(state.radky.length<l.radky.length) state.radky.push(newRow()); l.radky.forEach(function(r,i){ state.radky[i]=Object.assign(newRow(), r||{}); }); }
+  state.checks=l.checks||{}; state.photographed=l.photographed||{}; state.photos=l.photos||{}; state.radky=emptyRows(); if(Array.isArray(l.radky)){ while(state.radky.length<l.radky.length) state.radky.push(newRow()); l.radky.forEach(function(r,i){ state.radky[i]=Object.assign(newRow(), r||{}); }); }
   state.poznamky=l.poznamky||''; state.vedeniJmeno=l.vedeniJmeno||'';
   state.sig=Object.assign({auditor:null, vedeni:null}, l.sig||{});
 }

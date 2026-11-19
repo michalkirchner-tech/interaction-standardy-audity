@@ -14,8 +14,9 @@
 <title>Certifikační audit ARVAL</title>
 <style>html.ia-guard body{visibility:hidden}</style>
 <script>document.documentElement.classList.add("ia-guard")</script>
-<script type="module" src="../js/guard.js?v=20261119b"></script>
-<script type="module" src="../js/db-bridge.js?v=20261119b"></script>
+<script type="module" src="../js/guard.js?v=20261119c"></script>
+<script type="module" src="../js/db-bridge.js?v=20261119c"></script>
+<script type="module" src="../js/photos.js?v=20261119c"></script>
 
 <style>
 :root{
@@ -653,7 +654,8 @@ var state = {
   checks: {},      // itemId -> bool   (category criteria, incl. shared nahradni-* ids)
   esgChecks: {},   // itemId -> bool   (ESG ano/ne items)
   esgRadio: {},    // groupItemId -> option index
-  photographed: {}, // itemId -> bool  ("fotka pořízena" marker only, never the photo itself)
+  photographed: {}, // starší verze: jen značka „fotka pořízena do zařízení“
+  photos: {},       // itemId -> {p: cesta v úložišti, t: miniatura, at, kb, up}
   doporuceni: "",
   kontakty: {
     auditorJmeno:"", auditorTel:"", auditorEmail:"",
@@ -1249,45 +1251,15 @@ function criterionRow(it){
   return row;
 }
 
-/* ---------------- Photo marker (camera icon) ----------------
-   Opens the device camera (on phones/tablets) so the auditor can snap a
-   reference photo for a criterion. The photo itself is never read, stored,
-   or attached anywhere by this app — taking it through the native camera
-   capture flow already saves it to the device's own photo gallery, same
-   as using the camera app directly. We only remember a small true/false
-   "photographed" flag per criterion (not the image) so the camera icon
-   stays marked after the fact, including across save/load and print is
-   excluded (no-print) since no actual photo exists to show there.
-*/
+/* ---------------- Fotka ke kritériu: viz js/photos.js (zmenšení, uložení do úložiště, miniatura) ---------------- */
 function photoButton(itemId){
-  var wrap = el('div',{class:'photo-btn no-print' + (state.photographed[itemId] ? ' done' : ''), title: state.photographed[itemId] ? 'Fotka pořízena' : 'Vyfotit'});
-  var photoId = 'photo-'+itemId;
-  var input = el('input',{type:'file', accept:'image/*', capture:'environment', id:photoId, style:'display:none'});
-  input.addEventListener('change', function(e){
-    var file = e.target.files && e.target.files[0];
-    e.target.value = ''; // allow photographing again next time
-    if (!file) return; // user cancelled
-    state.photographed[itemId] = true;
-    scheduleAutosave();
-    renderAll();
-  });
-  wrap.appendChild(input);
-  var btn = el('button',{type:'button', class:'photo-btn-icon', 'aria-label':'Vyfotit kritérium'});
-  var SVGNS = 'http://www.w3.org/2000/svg';
-  var svg = document.createElementNS(SVGNS, 'svg');
-  svg.setAttribute('width','16'); svg.setAttribute('height','16'); svg.setAttribute('viewBox','0 0 24 24');
-  svg.setAttribute('fill','none'); svg.setAttribute('stroke','currentColor');
-  svg.setAttribute('stroke-width','2'); svg.setAttribute('stroke-linecap','round'); svg.setAttribute('stroke-linejoin','round');
-  var pathEl = document.createElementNS(SVGNS, 'path');
-  pathEl.setAttribute('d','M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z');
-  var circleEl = document.createElementNS(SVGNS, 'circle');
-  circleEl.setAttribute('cx','12'); circleEl.setAttribute('cy','13'); circleEl.setAttribute('r','4');
-  svg.appendChild(pathEl); svg.appendChild(circleEl);
-  btn.appendChild(svg);
-  btn.addEventListener('click', function(){ input.click(); });
-  wrap.appendChild(btn);
+  // Fotka se zmenší a uloží do úložiště aplikace (složka podle zákazníka), u kritéria se ukáže miniatura
+  var wrap = el('div',{class:'photo-btn no-print'});
+  if (window.IA_PHOTOS) wrap.appendChild(window.IA_PHOTOS.button(itemId, function(){ return state; }, { changed: function(){ scheduleAutosave(); } }));
   return wrap;
 }
+document.addEventListener('ia-photos-ready', function(){ window.IA_PHOTOS.onRerender(renderAll); renderAll(); });
+if (window.IA_PHOTOS) window.IA_PHOTOS.onRerender(function(){ renderAll(); });
 
 /* ------- ESG ------- */
 function renderEsg(container){
@@ -1686,6 +1658,7 @@ function applyLoadedState(loaded){
   state.esgChecks = loaded.esgChecks || {};
   state.esgRadio = loaded.esgRadio || {};
   state.photographed = loaded.photographed || {};
+  state.photos = loaded.photos || {};
   state.doporuceni = loaded.doporuceni || "";
   Object.assign(state.kontakty, loaded.kontakty||{});
   state.sig = loaded.sig || {auditor:null, odpovedna:null};
@@ -2173,7 +2146,7 @@ document.getElementById('btnEmailExport').addEventListener('click', function(){
 document.getElementById('btnReset').addEventListener('click', function(){
   if (!confirm('Opravdu vymazat všechna zadaná data formuláře? Tato akce je nevratná.')) return;
   state.meta = {partner:"",ic:"",ulice:"",psc:"",auditor:"",datumAuditu:todayIso(),pocetMechaniku:"",pocetKaroseru:"",pocetLakyrniku:"",karoserieExterni:"vlastni",dodavatelKarosarna:"",dodavatelKarosarnaIco:"",dodavatelKarosarnaUlice:"",dodavatelKarosarnaPsc:"",lakovnaExterni:"vlastni",dodavatelLakovna:"",dodavatelLakovnaIco:"",dodavatelLakovnaUlice:"",dodavatelLakovnaPsc:"",lakovnaZnackaMaterialu:"",nahradniPocet:"",nahradniStari:"",nahradniVlastnik:"",platnostMesicu:"36",audaflow:"ne",teccontrol:"ne",bodoveOpravy:"ano",cng:"ne"};
-  state.checks = {}; state.esgChecks = {}; state.esgRadio = {}; state.photographed = {};
+  state.checks = {}; state.esgChecks = {}; state.esgRadio = {}; state.photographed = {}; state.photos = {};
   state.doporuceni = ""; state.kontakty = {auditorJmeno:"",auditorTel:"",auditorEmail:"",odpovednaJmeno:"",odpovednaTel:"",odpovednaEmail:"",misto:"",datumPodpisu:""};
   state.sig = {auditor:null, odpovedna:null};
   saveDraft(false);
