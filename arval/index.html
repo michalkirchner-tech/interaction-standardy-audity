@@ -14,9 +14,10 @@
 <title>Certifikační audit ARVAL</title>
 <style>html.ia-guard body{visibility:hidden}</style>
 <script>document.documentElement.classList.add("ia-guard")</script>
-<script type="module" src="../js/guard.js?v=20261119c"></script>
-<script type="module" src="../js/db-bridge.js?v=20261119c"></script>
-<script type="module" src="../js/photos.js?v=20261119c"></script>
+<script type="module" src="../js/guard.js?v=20261119d"></script>
+<script type="module" src="../js/db-bridge.js?v=20261119d"></script>
+<script type="module" src="../js/photos.js?v=20261119d"></script>
+<script type="module" src="../js/locations.js?v=20261119d"></script>
 
 <style>
 :root{
@@ -971,13 +972,14 @@ function renderZaklad(container){
   var c1 = el('div',{class:'card'});
   c1.appendChild(el('h3',{},[text('Základní údaje')]));
   var g1 = el('div',{class:'field-grid'});
-  g1.appendChild(fieldText('Název partnera', state.meta, 'partner'));
+  g1.appendChild(fieldText('Název partnera (sídlo)', state.meta, 'partner'));
   g1.appendChild(fieldIcoLookup('IČ', state.meta, {icoKey:'ic', nameKey:'partner', uliceKey:'ulice', pscKey:'psc', statusKey:'Partner'}));
   g1.appendChild(fieldText('Ulice', state.meta, 'ulice'));
   g1.appendChild(fieldText('PSČ, město', state.meta, 'psc'));
   g1.appendChild(fieldText('Datum certifikace / auditu', state.meta, 'datumAuditu', {type:'date'}));
   c1.appendChild(g1);
   container.appendChild(c1);
+  container.appendChild(el('div',{class:'ialoc-slot', 'data-card':'card'})); // Příjem do servisu + Mechanická dílna (js/locations.js)
 
   var c2b = el('div',{class:'card card-karoserie'});
   c2b.appendChild(el('h3',{},[text('Karosárna — obsazení a zajištění')]));
@@ -1258,6 +1260,7 @@ function photoButton(itemId){
   if (window.IA_PHOTOS) wrap.appendChild(window.IA_PHOTOS.button(itemId, function(){ return state; }, { changed: function(){ scheduleAutosave(); } }));
   return wrap;
 }
+window.IA_FORM = { state: function(){ return state; }, changed: function(){ scheduleAutosave(); } };
 document.addEventListener('ia-photos-ready', function(){ window.IA_PHOTOS.onRerender(renderAll); renderAll(); });
 if (window.IA_PHOTOS) window.IA_PHOTOS.onRerender(function(){ renderAll(); });
 
@@ -1654,6 +1657,8 @@ function serializeState(){
 
 function applyLoadedState(loaded){
   Object.assign(state.meta, loaded.meta||{});
+  state.meta.mistoPrijmu = (loaded.meta||{}).mistoPrijmu || null;
+  state.meta.mistoDilny = (loaded.meta||{}).mistoDilny || null;
   state.checks = loaded.checks || {};
   state.esgChecks = loaded.esgChecks || {};
   state.esgRadio = loaded.esgRadio || {};
@@ -1670,6 +1675,9 @@ async function saveDraft(silent){
       await window.storage.set('arval-audit-draft', serializeState(), false);
       if (saveNoteEl) saveNoteEl.textContent = silent ? 'Koncept uložen \u2713' : 'Uloženo \u2713';
       setTimeout(function(){ if (saveNoteEl) saveNoteEl.textContent = ''; }, 2500);
+    } else {
+      // běžný prohlížeč: rozpracovaný audit se průběžně ukládá do tohoto zařízení
+      localStorage.setItem('arval-audit-draft', serializeState());
     }
   }catch(err){
     if (saveNoteEl) saveNoteEl.textContent = 'Uložení se nezdařilo';
@@ -1684,6 +1692,9 @@ async function loadDraft(){
       if (res && res.value){
         applyLoadedState(JSON.parse(res.value));
       }
+    } else {
+      var ls = localStorage.getItem('arval-audit-draft');
+      if (ls) applyLoadedState(JSON.parse(ls));
     }
   }catch(err){
     console.log('No draft found or load failed', err);

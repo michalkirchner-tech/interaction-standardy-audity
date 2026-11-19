@@ -14,9 +14,10 @@
 <title>Audit procesů a vybavení karosárny a lakovny – Mitsubishi</title>
 <style>html.ia-guard body{visibility:hidden}</style>
 <script>document.documentElement.classList.add("ia-guard")</script>
-<script type="module" src="../js/guard.js?v=20261119c"></script>
-<script type="module" src="../js/db-bridge.js?v=20261119c"></script>
-<script type="module" src="../js/photos.js?v=20261119c"></script>
+<script type="module" src="../js/guard.js?v=20261119d"></script>
+<script type="module" src="../js/db-bridge.js?v=20261119d"></script>
+<script type="module" src="../js/photos.js?v=20261119d"></script>
+<script type="module" src="../js/locations.js?v=20261119d"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
@@ -192,7 +193,7 @@ body.t-cert .recert-only{display:none!important}
         <datalist id="auditors"><option value="Karel Trachta"><option value="Michal Kirchner"><option value="Radek Richter"></datalist>
 
         <div class="subject" data-subject="prijem">
-          <h3>Příjem vozidla (auditovaný partner)</h3>
+          <h3>Auditovaný partner – sídlo</h3>
           <div class="grid2 grid-sub">
             <label class="f">Název partnera<input data-s="nazev"></label>
             <label class="f">IČ<input data-s="ic" inputmode="numeric"></label>
@@ -200,9 +201,10 @@ body.t-cert .recert-only{display:none!important}
             <div class="grid2" style="gap:12px"><label class="f">PSČ<input data-s="psc"></label><label class="f">Město<input data-s="mesto"></label></div>
           </div>
         </div>
+        <div class="ialoc-slot" data-card="subject"></div>
         <div class="subject" data-subject="karosarna">
-          <h3>Karosárna <label class="no-print"><input type="checkbox" data-same="karosarna"> stejný subjekt jako příjem vozidla</label></h3>
-          <div class="same-info">Stejný subjekt jako příjem vozidla.</div>
+          <h3>Karosárna <label class="no-print"><input type="checkbox" data-same="karosarna"> stejný subjekt jako auditovaný partner</label></h3>
+          <div class="same-info">Stejný subjekt jako auditovaný partner.</div>
           <div class="grid2 grid-sub">
             <label class="f">Název partnera<input data-s="nazev"></label>
             <label class="f">IČ<input data-s="ic" inputmode="numeric"></label>
@@ -211,8 +213,8 @@ body.t-cert .recert-only{display:none!important}
           </div>
         </div>
         <div class="subject" data-subject="lakovna">
-          <h3>Lakovna <label class="no-print"><input type="checkbox" data-same="lakovna"> stejný subjekt jako příjem vozidla</label></h3>
-          <div class="same-info">Stejný subjekt jako příjem vozidla.</div>
+          <h3>Lakovna <label class="no-print"><input type="checkbox" data-same="lakovna"> stejný subjekt jako auditovaný partner</label></h3>
+          <div class="same-info">Stejný subjekt jako auditovaný partner.</div>
           <div class="grid2 grid-sub">
             <label class="f">Název partnera<input data-s="nazev"></label>
             <label class="f">IČ<input data-s="ic" inputmode="numeric"></label>
@@ -294,7 +296,7 @@ function todayIso(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMo
 function emptyPodpis(){ return {odpovedna:'', misto:'', datum:''}; }
 function emptyState(){
   return { form:'mitsubishi', podpis:emptyPodpis(), sig:{auditor:null, odpovedna:null}, meta:{ partner:'', ic:'', datumAuditu:todayIso(), auditor:'', platnostMesicu:VALID,
-    typAuditu:'cert', prijem:emptySubject(), karosarnaStejna:true, karosarna:emptySubject(), lakovnaStejna:true, lakovna:emptySubject() },
+    typAuditu:'cert', mistoPrijmu:null, mistoDilny:null, prijem:emptySubject(), karosarnaStejna:true, karosarna:emptySubject(), lakovnaStejna:true, lakovna:emptySubject() },
     checks:{}, photos:{}, radky:[], poznamky:'', recert:emptyRecert() };
 }
 var state = emptyState();
@@ -581,7 +583,8 @@ function applyLoaded(obj){
   if (obj.recert) { state.recert.procesy = Object.assign({}, obj.recert.procesy||{});
     (obj.recert.zakazky||[]).forEach(function(z,i){ if (state.recert.zakazky[i]) state.recert.zakazky[i] = {cislo:z.cislo||'', v:Object.assign({}, z.v||{})}; }); }
 }
-function renderAll(){ fillFields(); renderResult(); renderPhotos(); }
+function renderAll(){ fillFields(); renderResult(); renderPhotos(); if (window.IA_LOC) window.IA_LOC.refresh(); }
+window.IA_FORM = { state: function(){ return state; }, changed: function(){ saveLocal(); } };
 // Fotky ke kritériím (js/photos.js): miniatura místo foťáku, fotka v úložišti ve složce zákazníka
 function renderPhotos(){
   if (!window.IA_PHOTOS) return;

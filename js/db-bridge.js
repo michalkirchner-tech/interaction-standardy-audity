@@ -1,6 +1,6 @@
 // Propojení formulářů (Arval, Stellantis) s databází: „Uložit koncept“ a „Načíst existující“
-import { supabase } from "./supabase.js?v=20261119c";
-import { prepareImport, krajFromIc } from "./results.js?v=20261119c";
+import { supabase } from "./supabase.js?v=20261119d";
+import { prepareImport, krajFromIc, krajFromAddress } from "./results.js?v=20261119d";
 
 const BRAND = location.pathname.includes("/stellantis/") ? "stellantis" : location.pathname.includes("/mitsubishi/") ? "mitsubishi" : location.pathname.includes("/hyundai/") ? "hyundai" : "arval";
 const BRAND_NAME = { arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi", hyundai: "Hyundai" }[BRAND];
@@ -132,7 +132,10 @@ async function save(stateJson, note) {
   if (!kind) return;
   rec.audit_kind = kind;
   if (kind === "nulty") rec.valid_months = null; // nultý audit je jednorázový, termín příštího auditu nemá
-  const kraj = await krajFromIc(rec.ic); // kraj sídla podle IČ z ARES (pro filtr v přehledu)
+  // Kraj pro filtr v přehledu: podle adresy příjmu do servisu, je-li jiná než sídlo; jinak podle sídla (IČ v ARES)
+  const mp = state.meta?.mistoPrijmu;
+  let kraj = mp?.jinde && (mp.mesto || mp.psc) ? (mp.kraj || await krajFromAddress(mp)) : null;
+  if (!kraj) kraj = await krajFromIc(rec.ic);
   if (kraj) rec.kraj = kraj;
   const { data: same, error } = await supabase.from("audits").select("id,partner,ic,audit_date,updated_at,audit_kind").eq("brand", BRAND).eq("audit_kind", kind).order("updated_at", { ascending: false });
   if (error) { alert("Databáze není dostupná: " + error.message); return; }

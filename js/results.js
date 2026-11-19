@@ -1,5 +1,5 @@
 // Výsledky auditů: přehledy podle značek a import auditů (admin)
-import { supabase } from "./supabase.js?v=20261119c";
+import { supabase } from "./supabase.js?v=20261119d";
 
 export const RESULT_BRANDS = [
   { id: "arval",      name: "Arval",      logo: "assets/logos/arval.png",      wide: true, form: "arval/" },
@@ -132,6 +132,25 @@ export async function krajFromIc(ic) {
     if (!r.ok) return null;
     return (await r.json())?.sidlo?.nazevKraje || null;
   } catch { return null; }
+}
+
+// Kraj podle adresy (ARES – standardizace adres z RÚIAN). Nejdřív celá adresa, pak jen PSČ + obec.
+export async function krajFromAddress(a) {
+  if (!a) return null;
+  const ask = async (textovaAdresa, typ) => {
+    try {
+      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 6000);
+      const r = await fetch("https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/standardizovane-adresy/vyhledat", {
+        method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, signal: ctl.signal,
+        body: JSON.stringify({ textovaAdresa, typStandardizaceAdresy: typ, pocet: 1 }) });
+      clearTimeout(t);
+      if (!r.ok) return null;
+      return (await r.json())?.standardizovaneAdresy?.[0]?.nazevKraje || null;
+    } catch { return null; }
+  };
+  const psc = String(a.psc || "").replace(/\s/g, ""), mesto = String(a.mesto || "").trim(), ulice = String(a.ulice || "").trim();
+  if (!mesto && !psc) return null;
+  return (ulice && await ask(`${ulice}, ${psc} ${mesto}`.trim(), "VYHOVUJICI_ADRESY")) || await ask(`${psc} ${mesto}`.trim(), "UPLNA_STANDARDIZACE");
 }
 
 // ---------- Výpočet výsledku z JSON formuláře ----------
@@ -272,7 +291,11 @@ export async function prepareImport(state, brand) {
 }
 
 export async function saveAudit(rec) {
-  if (!rec.kraj && rec.ic) { const k = await krajFromIc(rec.ic); if (k) rec.kraj = k; }
+  if (!rec.kraj) {
+    const mp = rec.data?.meta?.mistoPrijmu;
+    const k = (mp?.jinde && (mp.mesto || mp.psc) ? (mp.kraj || await krajFromAddress(mp)) : null) || (rec.ic ? await krajFromIc(rec.ic) : null);
+    if (k) rec.kraj = k;
+  }
   // stejný zákazník + stejné datum auditu = přepsat existující záznam
   let q = supabase.from("audits").select("id").eq("brand", rec.brand).eq("audit_date", rec.audit_date);
   q = rec.ic ? q.eq("ic", rec.ic) : q.eq("partner", rec.partner);

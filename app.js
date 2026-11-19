@@ -1,10 +1,10 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
-import { supabase, getProfile } from "./js/supabase.js?v=20261119c";
-import { exportPdf, exportXlsx } from "./js/export.js?v=20261119c";
-import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261119c";
-import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261119c";
-import { renderUsers } from "./js/users.js?v=20261119c";
-import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261119c";
+import { supabase, getProfile } from "./js/supabase.js?v=20261119d";
+import { exportPdf, exportXlsx } from "./js/export.js?v=20261119d";
+import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261119d";
+import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261119d";
+import { renderUsers } from "./js/users.js?v=20261119d";
+import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261119d";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },

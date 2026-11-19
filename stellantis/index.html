@@ -14,9 +14,10 @@
 <title>Certifikační audit karosárny Stellantis</title>
 <style>html.ia-guard body{visibility:hidden}</style>
 <script>document.documentElement.classList.add("ia-guard")</script>
-<script type="module" src="../js/guard.js?v=20261119c"></script>
-<script type="module" src="../js/db-bridge.js?v=20261119c"></script>
-<script type="module" src="../js/photos.js?v=20261119c"></script>
+<script type="module" src="../js/guard.js?v=20261119d"></script>
+<script type="module" src="../js/db-bridge.js?v=20261119d"></script>
+<script type="module" src="../js/photos.js?v=20261119d"></script>
+<script type="module" src="../js/locations.js?v=20261119d"></script>
 
 <style>
 /* Layout: sticky top bar + section sidebar + single-column form; print renders every section as the A4 audit sheet. */
@@ -619,7 +620,7 @@ function renderZaklad(c){
 
   var c1=h('div',{class:'card'},[h('h3',{},['Základní informace'])]);
   var g=h('div',{class:'field-grid'});
-  g.appendChild(fText('Název dealera', m, 'partner'));
+  g.appendChild(fText('Název dealera (sídlo)', m, 'partner'));
   g.appendChild(fText('Číslo dealera', m, 'cisloDealera'));
   g.appendChild(fIco('IČ', {obj:m, ic:'ic', name:'partner', ulice:'ulice', psc:'psc', mesto:'mesto', status:'dealer'}));
   g.appendChild(fText('Ulice', m, 'ulice'));
@@ -630,6 +631,7 @@ function renderZaklad(c){
   g.appendChild(fText('Servisní poradce', m, 'poradce'));
   c1.appendChild(g);
   c.appendChild(c1);
+  c.appendChild(h('div',{class:'ialoc-slot', 'data-card':'card'})); // Příjem do servisu + Mechanická dílna (js/locations.js)
 
   var c2=h('div',{class:'card'},[h('h3',{},['Zastoupené značky'])]);
   var bg=h('div',{class:'brand-grid'});
@@ -697,6 +699,7 @@ function photoButton(itemId){
   if (window.IA_PHOTOS) wrap.appendChild(window.IA_PHOTOS.button(itemId, function(){ return state; }, { changed: function(){ scheduleAutosave(); } }));
   return wrap;
 }
+window.IA_FORM = { state: function(){ return state; }, changed: function(){ scheduleAutosave(); } };
 document.addEventListener('ia-photos-ready', function(){ window.IA_PHOTOS.onRerender(renderAll); renderAll(); });
 if (window.IA_PHOTOS) window.IA_PHOTOS.onRerender(function(){ renderAll(); });
 
