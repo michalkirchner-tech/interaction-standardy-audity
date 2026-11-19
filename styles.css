@@ -412,3 +412,37 @@ tr.st-inactive .st-badge { display: inline-block; margin-bottom: 4px; }
 .btn-delcust { color: #555; border-color: #ccc; }
 .btn-delcust:hover { background: #555; border-color: #555; }
 @media print { .btn-actcust { display: none !important; } #printExport tr.st-inactive td { color: #888; } }
+
+/* Galerie fotek zákazníka */
+.row-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.row-btns .btn-delcust, .row-btns .btn-actcust { margin-top: 0; }
+.btn-photos { border: 1px solid #1e1e1e; background: #fff; color: #1e1e1e; border-radius: 7px; padding: 3px 9px; cursor: pointer; font: 600 .76rem "Open Sans", system-ui, sans-serif; white-space: nowrap; }
+.btn-photos:hover { background: #1e1e1e; color: #fff; }
+body.gal-open { overflow: hidden; }
+.gal-back { position: fixed; inset: 0; z-index: 1000; background: rgba(20,20,20,.6); display: flex; align-items: flex-start; justify-content: center; padding: 4vh 14px; }
+.gal { background: #fff; border-radius: 16px; width: min(1100px, 100%); max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.35); }
+.gal-head { display: flex; align-items: center; gap: 14px; padding: 14px 20px; border-bottom: 4px solid var(--ia-red, #E21F25); }
+.gal-head > div { flex: 1; min-width: 0; }
+.gal-head h3 { margin: 0; font-size: 1.15rem; }
+.gal-sub { color: #666; font-size: .9rem; }
+.gal-x { border: 0; background: none; font-size: 1.8rem; line-height: 1; cursor: pointer; color: #777; }
+.gal-body { padding: 8px 20px 20px; overflow: auto; }
+.gal-sec h4 { margin: 16px 0 10px; font-size: 1rem; }
+.gal-sec h4 span { color: #888; font-weight: 400; font-size: .85rem; margin-left: 6px; }
+.gal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+.gal-tile { border: 1px solid #e3e3e3; border-radius: 10px; background: #fff; padding: 0; overflow: hidden; cursor: pointer; text-align: left; display: flex; flex-direction: column; font: inherit; color: inherit; }
+.gal-tile:hover { border-color: #1e1e1e; box-shadow: 0 4px 14px rgba(0,0,0,.12); }
+.gal-img { display: block; aspect-ratio: 4 / 3; background: #eee center / cover no-repeat; position: relative; }
+.gal-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gal-img em { position: absolute; left: 6px; bottom: 6px; background: rgba(176,16,29,.9); color: #fff; font-size: .7rem; font-style: normal; padding: 2px 6px; border-radius: 5px; }
+.gal-cap { margin: 7px 9px 9px; font-size: .78rem; line-height: 1.3; color: #333; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.gal-lb { position: fixed; inset: 0; z-index: 1001; background: rgba(10,10,10,.92); display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px; }
+.gal-lb figure { margin: 0; max-width: min(1200px, 88vw); display: flex; flex-direction: column; align-items: center; }
+.gal-lb img { max-width: 100%; max-height: 78vh; object-fit: contain; border-radius: 6px; background: #222; }
+.gal-lb figcaption { color: #eee; text-align: center; margin-top: 10px; font-size: .9rem; }
+.gal-lb figcaption span { display: block; color: #aaa; font-size: .8rem; margin-top: 3px; }
+.gal-lb-x { position: absolute; top: 10px; right: 14px; border: 0; background: none; color: #fff; font-size: 2.2rem; cursor: pointer; }
+.gal-nav { border: 0; background: rgba(255,255,255,.12); color: #fff; font-size: 2.4rem; width: 52px; height: 72px; border-radius: 10px; cursor: pointer; flex-shrink: 0; }
+.gal-nav:disabled { opacity: .2; cursor: default; }
+@media (max-width: 600px) { .gal-grid { grid-template-columns: repeat(2, 1fr); } .gal-nav { position: absolute; bottom: 14px; width: 60px; height: 52px; } .gal-prev { left: 20%; } .gal-next { right: 20%; } .gal-head { flex-wrap: wrap; } }
+@media print { .btn-photos, .row-btns { display: none !important; } }

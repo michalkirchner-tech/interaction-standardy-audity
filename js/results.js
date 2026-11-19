@@ -1,5 +1,5 @@
 // Výsledky auditů: přehledy podle značek a import auditů (admin)
-import { supabase } from "./supabase.js?v=20261119d";
+import { supabase } from "./supabase.js?v=20261119e";
 
 export const RESULT_BRANDS = [
   { id: "arval",      name: "Arval",      logo: "assets/logos/arval.png",      wide: true, form: "arval/" },
@@ -50,7 +50,7 @@ export function statusOf(nextIso) {
 
 // ---------- Načtení dat ----------
 export async function loadAudits(brand) {
-  const cols = "id,brand,partner,ic,audit_date,valid_months,next_audit_date,result,source,created_at,audit_kind,kraj"
+  const cols = "id,brand,partner,ic,audit_date,valid_months,next_audit_date,result,source,created_at,audit_kind,kraj,photo_count"
     + (brand === "arval" ? ",meta:data->meta,checks:data->checks,esgChecks:data->esgChecks,esgRadio:data->esgRadio" : (brand === "stellantis" || brand === "mitsubishi") ? ",meta:data->meta" : "");
   let q = supabase.from("audits").select(cols).order("next_audit_date");
   if (brand) q = q.eq("brand", brand);
@@ -326,6 +326,22 @@ export function resultCell(result) {
 
 export async function arvalDefs() { return formDefs("arval"); }
 
+// Názvy kritérií pro galerii fotek: id kritéria → { label, order }
+export async function criteriaLabels(brand) {
+  const d = await formDefs(brand), map = {};
+  let i = 0;
+  const add = (id, label) => { map[id] = { label, order: i++ }; };
+  if (brand === "arval") {
+    for (const c of d.CATEGORIES) for (const it of c.items) add(it.id, `${c.title} – ${it.group}${it.desc ? ": " + it.desc : ""}`);
+    for (const it of d.NAHRADNI.items || []) add(it.id, `Náhradní vozidla – ${it.group || ""}${it.desc ? ": " + it.desc : ""}`);
+  } else if (brand === "stellantis") {
+    for (const a of Object.values(d.AREAS)) for (const it of a.items) add(it[0], `${a.title} – ${it[0]} ${it[1]}`);
+  } else {
+    for (const sec of d.sections || []) for (const it of sec.items) add(it.id, `${sec.title} – ${it.n}. ${it.text}`);
+  }
+  return map;
+}
+
 function lvlBadge(level, label) { return `<span class="lvl lvl-${level}">${esc(label)}</span>`; }
 
 function arvalCells(r, defs) {
@@ -359,7 +375,7 @@ export function dashboardHtml(brand, rows, isAdmin, defs, f = defaultFilter()) {
           ${list.map(r => `
           <tr class="st-${r.st.key}" data-q="${esc((r.partner + " " + (r.ic || "")).toLowerCase())}">
             <td><span class="st-badge st-${r.st.key}">${r.st.label}</span></td>
-            <td><strong>${esc(r.partner)}</strong>${r.ic ? `<span class="muted">IČ ${esc(r.ic)}</span>` : ""}${r.older ? `<span class="muted">+ ${r.older} starší audit${r.older > 1 ? "y" : ""}</span>` : ""}${rowExtra(r, f)}${brand === "mitsubishi" ? mitExtNote(r.meta) : ""}${isAdmin ? delBtn(r) : ""}</td>
+            <td><strong>${esc(r.partner)}</strong>${r.ic ? `<span class="muted">IČ ${esc(r.ic)}</span>` : ""}${r.older ? `<span class="muted">+ ${r.older} starší audit${r.older > 1 ? "y" : ""}</span>` : ""}${rowExtra(r, f)}${brand === "mitsubishi" ? mitExtNote(r.meta) : ""}<span class="row-btns">${photoBtn(r, rows)}${isAdmin ? delBtn(r) : ""}</span></td>
             ${arv ? arvalCells(r, defs) : `<td class="res-col">${resultCell(r.result)}</td>`}
             <td class="td-date">${czDate(r.audit_date)}${r.valid_months && r.audit_kind !== "nulty" ? `<span class="muted">platnost ${r.valid_months} měs.</span>` : ""}</td>
             <td class="td-date"><strong>${czDate(r.next_audit_date)}</strong><span class="muted">${r.st.text}</span></td>
@@ -389,13 +405,19 @@ function stellantisDashboardHtml(rows, isAdmin, f) {
         <tbody>
           ${list.map(r => { const [head, detail] = (r.result || "—").split(" | "); return `
           <tr class="${r.inactive ? "st-inactive" : ""}" data-q="${esc((r.partner + " " + (r.ic || "")).toLowerCase())}">
-            <td>${r.inactive ? `<span class="st-badge st-inactive">Neaktivní</span><span class="muted">${stOf(r).text}</span>` : ""}<strong>${esc(r.partner)}</strong>${r.ic ? `<span class="muted">IČ ${esc(r.ic)}</span>` : ""}${r.older ? `<span class="muted">+ ${r.older} starší audit${r.older > 1 ? "y" : ""}</span>` : ""}${rowExtra(r, f)}${r.meta?.karosarnaExterni === "externi" ? `<span class="ext-note">Externí karosárna: ${esc(r.meta.ext?.nazev || "neuvedeno")}${r.meta.ext?.ic ? `, IČO ${esc(r.meta.ext.ic)}` : ""}</span>` : ""}${isAdmin ? delBtn(r) : ""}</td>
+            <td>${r.inactive ? `<span class="st-badge st-inactive">Neaktivní</span><span class="muted">${stOf(r).text}</span>` : ""}<strong>${esc(r.partner)}</strong>${r.ic ? `<span class="muted">IČ ${esc(r.ic)}</span>` : ""}${r.older ? `<span class="muted">+ ${r.older} starší audit${r.older > 1 ? "y" : ""}</span>` : ""}${rowExtra(r, f)}${r.meta?.karosarnaExterni === "externi" ? `<span class="ext-note">Externí karosárna: ${esc(r.meta.ext?.nazev || "neuvedeno")}${r.meta.ext?.ic ? `, IČO ${esc(r.meta.ext.ic)}` : ""}</span>` : ""}<span class="row-btns">${photoBtn(r, rows)}${isAdmin ? delBtn(r) : ""}</span></td>
             <td><span class="lvl ${ok(r) ? "lvl-3" : "lvl-0"}">${esc(head)}</span></td>
             <td class="muted-cell">${esc(detail || "")}</td>
             <td class="td-date">${czDate(r.audit_date)}</td>
           </tr>`; }).join("")}
         </tbody></table></div>` : emptyHtml(rows.length, false)}
     </div>`;
+}
+
+// Tlačítko galerie: počet fotek ze všech auditů zákazníka u této značky
+function photoBtn(r, rows) {
+  const k = custKey(r), n = rows.filter(x => custKey(x) === k).reduce((a, x) => a + (x.photo_count || 0), 0);
+  return n ? `<button type="button" class="btn-photos" data-gal="${esc(k)}" data-name="${esc(r.partner)}" title="Otevřít galerii fotek z auditů">📷 Fotky (${n})</button>` : "";
 }
 
 function delBtn(r) {

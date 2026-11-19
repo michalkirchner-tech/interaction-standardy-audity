@@ -1,10 +1,11 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
-import { supabase, getProfile } from "./js/supabase.js?v=20261119d";
-import { exportPdf, exportXlsx } from "./js/export.js?v=20261119d";
-import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261119d";
-import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261119d";
-import { renderUsers } from "./js/users.js?v=20261119d";
-import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261119d";
+import { supabase, getProfile } from "./js/supabase.js?v=20261119e";
+import { exportPdf, exportXlsx } from "./js/export.js?v=20261119e";
+import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261119e";
+import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261119e";
+import { renderUsers } from "./js/users.js?v=20261119e";
+import { openGallery } from "./js/gallery.js?v=20261119e";
+import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261119e";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
@@ -235,6 +236,7 @@ async function renderResultsBrand(b) {
       try { await setInactive(b.id, r, inactive); refresh(); }
       catch (e) { alert("Změna se nepodařila: " + e.message); btn.disabled = false; }
     };
+    dash.querySelectorAll("[data-gal]").forEach(btn => btn.onclick = () => openGallery(b.id, btn.dataset.name, rows.filter(r => custKey(r) === btn.dataset.gal)));
     dash.querySelectorAll("[data-inact-cust]").forEach(btn => btn.onclick = toggle(btn, true));
     dash.querySelectorAll("[data-act-cust]").forEach(btn => btn.onclick = toggle(btn, false));
     const file = document.getElementById("importFile");
