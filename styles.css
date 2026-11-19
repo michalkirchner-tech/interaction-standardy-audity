@@ -394,3 +394,9 @@ tr.st-soon td:first-child { box-shadow: inset 4px 0 0 #f0a000; }
 .f-note { margin: -4px 0 12px; font-size: .85rem; color: #555; }
 .kind-badge { display: inline-block; margin-top: 3px; background: #FFF1D6; color: #8a5a00; border-radius: 6px; padding: 1px 7px; font-size: .74rem; font-weight: 600; }
 @media (max-width: 600px) { .f-field, .f-field select, .f-kraj summary { width: 100%; min-width: 0; } .res-filters { flex-direction: column; align-items: stretch; } .f-kraj-list { width: 100%; } }
+.st-badge.st-none { background: #FFF1D6; color: #8a5a00; }
+.kpis.kpis-1 { grid-template-columns: minmax(0, 320px); }
+.btn-delcust { display: inline-block; margin-top: 6px; border: 1px solid #e3b4b8; background: #fff; color: #b0101d; border-radius: 7px; padding: 3px 9px; cursor: pointer; font: 600 .76rem "Open Sans", system-ui, sans-serif; }
+.btn-delcust:hover { background: #b0101d; color: #fff; border-color: #b0101d; }
+.btn-delcust:disabled { opacity: .6; cursor: default; }
+@media print { .btn-delcust { display: none !important; } }

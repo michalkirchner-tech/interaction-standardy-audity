@@ -1,5 +1,5 @@
 // Výsledky auditů: přehledy podle značek a import auditů (admin)
-import { supabase } from "./supabase.js?v=20261119a";
+import { supabase } from "./supabase.js?v=20261119b";
 
 export const RESULT_BRANDS = [
   { id: "arval",      name: "Arval",      logo: "assets/logos/arval.png",      wide: true, form: "arval/" },
@@ -13,6 +13,12 @@ const czDate = iso => { if (!iso) return "—"; const [y, m, d] = iso.split("-")
 const today = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
 const daysTo = iso => Math.round((new Date(iso + "T00:00:00") - today()) / 86400000);
 const addMonths = (iso, m) => { const d = new Date(iso + "T00:00:00"); const day = d.getDate(); d.setMonth(d.getMonth() + m); if (d.getDate() < day) d.setDate(0); return d.toISOString().slice(0, 10); };
+
+// Nultý audit je jednorázový – nemá termín příštího auditu
+export const NULTY_ST = { key: "none", label: "Nultý audit", text: "jednorázový audit, neopakuje se", order: 3, n: null };
+export const stOf = r => (r.audit_kind === "nulty" ? NULTY_ST : statusOf(r.next_audit_date));
+export const custKey = r => r.ic || r.partner.toLowerCase().trim();
+const byStatus = (a, b) => a.st.order - b.st.order || (a.next_audit_date || "9999").localeCompare(b.next_audit_date || "9999") || b.audit_date.localeCompare(a.audit_date);
 
 export function statusOf(nextIso) {
   if (!nextIso) return { key: "none", label: "", text: "", order: 3, n: null };
@@ -59,7 +65,7 @@ export function filterList(brand, rows, f = defaultFilter()) {
   if (f.kind) r = r.filter(x => (x.audit_kind || "ostry") === f.kind);
   if (f.kraje?.length) r = r.filter(x => f.kraje.includes(x.kraj || NO_KRAJ));
   let list = latestPerCustomer(r);
-  if (f.period && brand !== "stellantis") {
+  if (f.period && brand !== "stellantis" && f.kind !== "nulty") {
     const lim = addMonths(todayIso(), +f.period); // už propadlé + ty, kterým termín skončí do zvoleného data
     list = list.filter(x => x.next_audit_date && x.next_audit_date <= lim);
   }
@@ -77,7 +83,7 @@ function filtersHtml(brand, rows, f) {
       <label class="f-field"><span>Typ auditu</span><select id="fKind">
         ${[["ostry", "Ostré audity"], ["nulty", "Nulté audity"], ["", "Ostré i nulté audity"]].map(([v, t]) => `<option value="${v}"${f.kind === v ? " selected" : ""}>${t}</option>`).join("")}
       </select></label>
-      ${brand === "stellantis" ? "" : `<label class="f-field"><span>Termín příštího auditu</span><select id="fPeriod">
+      ${brand === "stellantis" || f.kind === "nulty" ? "" : `<label class="f-field"><span>Termín příštího auditu</span><select id="fPeriod">
         ${Object.entries(PERIODS).map(([v, t]) => `<option value="${v}"${f.period === v ? " selected" : ""}>${t}</option>`).join("")}
       </select></label>`}
       <div class="f-field"><span>Kraj</span><details class="f-kraj" id="fKraj"><summary>${esc(krajLabel)}</summary>
@@ -86,7 +92,8 @@ function filtersHtml(brand, rows, f) {
           <div class="f-kraj-act"><button type="button" class="btn-exp" data-kraj-clear>Všechny kraje</button></div>
         </div></details></div>
     </div>
-    ${f.period && brand !== "stellantis" ? `<p class="f-note">Zobrazeny jsou servisy, kterým termín příštího auditu skončí ${PERIODS[f.period].toLowerCase()} (do ${czDate(addMonths(todayIso(), +f.period))}), včetně těch, které už propadly.</p>` : ""}`;
+    ${f.kind === "nulty" ? `<p class="f-note">Nultý audit je jednorázový – nemá platnost ani termín příštího auditu.</p>` : ""}
+    ${f.period && brand !== "stellantis" && f.kind !== "nulty" ? `<p class="f-note">Zobrazeny jsou servisy, kterým termín příštího auditu skončí ${PERIODS[f.period].toLowerCase()} (do ${czDate(addMonths(todayIso(), +f.period))}), včetně těch, které už propadly.</p>` : ""}`;
 }
 function emptyHtml(total, isAdmin) {
   return total ? `<div class="empty">Zvoleným filtrům neodpovídá žádný audit.</div>` : `<div class="empty">Zatím zde nejsou žádné audity.${isAdmin ? " Nahrajte první audit tlačítkem výše." : ""}</div>`;
@@ -288,32 +295,31 @@ function arvalCells(r, defs) {
 export function dashboardHtml(brand, rows, isAdmin, defs, f = defaultFilter()) {
   if (brand === "stellantis") return stellantisDashboardHtml(rows, isAdmin, f);
   const arv = brand === "arval" && defs;
-  const list = filterList(brand, rows, { ...f, q: "" }).map(r => ({ ...r, st: statusOf(r.next_audit_date) }))
-    .sort((a, b) => a.st.order - b.st.order || a.next_audit_date.localeCompare(b.next_audit_date));
+  const list = filterList(brand, rows, { ...f, q: "" }).map(r => ({ ...r, st: stOf(r) })).sort(byStatus);
   const cnt = k => list.filter(r => r.st.key === k).length;
   return `
+    ${f.kind === "nulty" ? `<div class="kpis kpis-1"><div class="kpi"><span class="kpi-n">${list.length}</span><span class="kpi-l">Zákazníků s nultým auditem</span></div></div>` : `
     <div class="kpis">
       <div class="kpi"><span class="kpi-n">${list.length}</span><span class="kpi-l">Auditovaných zákazníků</span></div>
       <div class="kpi kpi-expired"><span class="kpi-n">${cnt("expired")}</span><span class="kpi-l">Propadlé audity</span></div>
       <div class="kpi kpi-soon"><span class="kpi-n">${cnt("soon")}</span><span class="kpi-l">Blíží se (do ${WARN_DAYS} dní)</span></div>
       <div class="kpi kpi-ok"><span class="kpi-n">${cnt("ok")}</span><span class="kpi-l">Platné</span></div>
-    </div>
+    </div>`}
     ${isAdmin ? importBoxHtml(brand) : ""}
     <div class="res-card">
       ${filtersHtml(brand, rows, f)}
       <div class="res-toolbar"><input type="search" id="resSearch" placeholder="Hledat zákazníka nebo IČ…" value="${esc(f.q)}"><span class="res-exp">${list.length ? `<button type="button" class="btn-exp" data-export="pdf">Export do PDF</button><button type="button" class="btn-exp" data-export="xlsx">Export do Excelu</button>` : ""}</span></div>
       ${list.length ? `
       <div class="table-wrap"><table class="res-table${arv ? " res-arval" : ""}">
-        <thead><tr><th>Stav</th><th>Zákazník</th>${arv ? defs.CATEGORIES.map(c => `<th class="th-lvl">${esc(c.title)}</th>`).join("") + `<th class="th-lvl">ESG a CSR</th>` : "<th>Výsledek</th>"}<th>Datum auditu</th><th>Příští audit</th>${isAdmin ? "<th></th>" : ""}</tr></thead>
+        <thead><tr><th>Stav</th><th>Zákazník</th>${arv ? defs.CATEGORIES.map(c => `<th class="th-lvl">${esc(c.title)}</th>`).join("") + `<th class="th-lvl">ESG a CSR</th>` : "<th>Výsledek</th>"}<th>Datum auditu</th><th>Příští audit</th></tr></thead>
         <tbody>
           ${list.map(r => `
           <tr class="st-${r.st.key}" data-q="${esc((r.partner + " " + (r.ic || "")).toLowerCase())}">
             <td><span class="st-badge st-${r.st.key}">${r.st.label}</span></td>
-            <td><strong>${esc(r.partner)}</strong>${r.ic ? `<span class="muted">IČ ${esc(r.ic)}</span>` : ""}${r.older ? `<span class="muted">+ ${r.older} starší audit${r.older > 1 ? "y" : ""}</span>` : ""}${rowExtra(r, f)}${brand === "mitsubishi" ? mitExtNote(r.meta) : ""}</td>
+            <td><strong>${esc(r.partner)}</strong>${r.ic ? `<span class="muted">IČ ${esc(r.ic)}</span>` : ""}${r.older ? `<span class="muted">+ ${r.older} starší audit${r.older > 1 ? "y" : ""}</span>` : ""}${rowExtra(r, f)}${brand === "mitsubishi" ? mitExtNote(r.meta) : ""}${isAdmin ? delBtn(r) : ""}</td>
             ${arv ? arvalCells(r, defs) : `<td class="res-col">${resultCell(r.result)}</td>`}
-            <td class="td-date">${czDate(r.audit_date)}<span class="muted">platnost ${r.valid_months} měs.</span></td>
+            <td class="td-date">${czDate(r.audit_date)}${r.valid_months && r.audit_kind !== "nulty" ? `<span class="muted">platnost ${r.valid_months} měs.</span>` : ""}</td>
             <td class="td-date"><strong>${czDate(r.next_audit_date)}</strong><span class="muted">${r.st.text}</span></td>
-            ${isAdmin ? `<td><button type="button" class="btn-del" data-del="${r.id}" data-name="${esc(r.partner)}" title="Smazat záznam">Smazat</button></td>` : ""}
           </tr>`).join("")}
         </tbody></table></div>` : emptyHtml(rows.length, isAdmin)}
     </div>`;
@@ -336,18 +342,21 @@ function stellantisDashboardHtml(rows, isAdmin, f) {
       <div class="res-toolbar"><input type="search" id="resSearch" placeholder="Hledat zákazníka nebo IČ…" value="${esc(f.q)}"><span class="res-exp">${list.length ? `<button type="button" class="btn-exp" data-export="pdf">Export do PDF</button><button type="button" class="btn-exp" data-export="xlsx">Export do Excelu</button>` : ""}</span></div>
       ${list.length ? `
       <div class="table-wrap"><table class="res-table">
-        <thead><tr><th>Zákazník</th><th>Výsledek</th><th>Hodnocení oblastí</th><th>Datum auditu</th>${isAdmin ? "<th></th>" : ""}</tr></thead>
+        <thead><tr><th>Zákazník</th><th>Výsledek</th><th>Hodnocení oblastí</th><th>Datum auditu</th></tr></thead>
         <tbody>
           ${list.map(r => { const [head, detail] = (r.result || "—").split(" | "); return `
           <tr data-q="${esc((r.partner + " " + (r.ic || "")).toLowerCase())}">
-            <td><strong>${esc(r.partner)}</strong>${r.ic ? `<span class="muted">IČ ${esc(r.ic)}</span>` : ""}${r.older ? `<span class="muted">+ ${r.older} starší audit${r.older > 1 ? "y" : ""}</span>` : ""}${rowExtra(r, f)}${r.meta?.karosarnaExterni === "externi" ? `<span class="ext-note">Externí karosárna: ${esc(r.meta.ext?.nazev || "neuvedeno")}${r.meta.ext?.ic ? `, IČO ${esc(r.meta.ext.ic)}` : ""}</span>` : ""}</td>
+            <td><strong>${esc(r.partner)}</strong>${r.ic ? `<span class="muted">IČ ${esc(r.ic)}</span>` : ""}${r.older ? `<span class="muted">+ ${r.older} starší audit${r.older > 1 ? "y" : ""}</span>` : ""}${rowExtra(r, f)}${r.meta?.karosarnaExterni === "externi" ? `<span class="ext-note">Externí karosárna: ${esc(r.meta.ext?.nazev || "neuvedeno")}${r.meta.ext?.ic ? `, IČO ${esc(r.meta.ext.ic)}` : ""}</span>` : ""}${isAdmin ? delBtn(r) : ""}</td>
             <td><span class="lvl ${ok(r) ? "lvl-3" : "lvl-0"}">${esc(head)}</span></td>
             <td class="muted-cell">${esc(detail || "")}</td>
             <td class="td-date">${czDate(r.audit_date)}</td>
-            ${isAdmin ? `<td><button type="button" class="btn-del" data-del="${r.id}" data-name="${esc(r.partner)}" title="Smazat záznam">Smazat</button></td>` : ""}
           </tr>`; }).join("")}
         </tbody></table></div>` : emptyHtml(rows.length, false)}
     </div>`;
+}
+
+function delBtn(r) {
+  return `<button type="button" class="btn-delcust" data-del-cust="${esc(custKey(r))}" data-name="${esc(r.partner)}" title="Odstraní servis ze seznamu (smaže všechny jeho audity této značky)">Odstranit servis</button>`;
 }
 
 function mitExtNote(meta) {
@@ -369,8 +378,7 @@ function importBoxHtml(brand) {
 function sortedList(brand, rows, f) {
   const list = filterList(brand, rows, f);
   if (brand === "stellantis") return list.sort((a, b) => b.audit_date.localeCompare(a.audit_date));
-  return list.map(r => ({ ...r, st: statusOf(r.next_audit_date) }))
-    .sort((a, b) => a.st.order - b.st.order || a.next_audit_date.localeCompare(b.next_audit_date));
+  return list.map(r => ({ ...r, st: stOf(r) })).sort(byStatus);
 }
 function extText(meta, brand) {
   if (!meta) return ["", ""];
@@ -380,7 +388,7 @@ function extText(meta, brand) {
 }
 export function exportTable(brand, rows, defs, f = defaultFilter()) {
   const list = sortedList(brand, rows, f), q = (f.q || "").trim();
-  const fdesc = [f.kind ? KINDS[f.kind] : "ostré i nulté audity", f.period && brand !== "stellantis" ? `termín ${PERIODS[f.period].toLowerCase()}` : "", f.kraje.length ? f.kraje.join(", ") : ""].filter(Boolean).join(" · ");
+  const fdesc = [f.kind ? KINDS[f.kind] : "ostré i nulté audity", f.period && brand !== "stellantis" && f.kind !== "nulty" ? `termín ${PERIODS[f.period].toLowerCase()}` : "", f.kraje.length ? f.kraje.join(", ") : ""].filter(Boolean).join(" · ");
   const name = { arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi" }[brand] || brand;
   const today = new Date();
   const subtitle = `Stav k ${today.getDate()}. ${today.getMonth() + 1}. ${today.getFullYear()} · ${list.length} zákazník${list.length === 1 ? "" : list.length < 5 && list.length ? "y" : "ů"}${fdesc ? ` · ${fdesc}` : ""}${q ? ` · hledání „${q}“` : ""}`;

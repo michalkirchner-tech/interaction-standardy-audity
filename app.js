@@ -1,9 +1,10 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
-import { supabase, getProfile } from "./js/supabase.js?v=20261119a";
-import { exportPdf, exportXlsx } from "./js/export.js?v=20261119a";
-import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261119a";
-import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261119a";
-import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, esc as escR } from "./js/results.js?v=20261119a";
+import { supabase, getProfile } from "./js/supabase.js?v=20261119b";
+import { exportPdf, exportXlsx } from "./js/export.js?v=20261119b";
+import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261119b";
+import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261119b";
+import { renderUsers } from "./js/users.js?v=20261119b";
+import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, esc as escR } from "./js/results.js?v=20261119b";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
@@ -90,7 +91,7 @@ function renderUserBox() {
   const name = profile.full_name || profile.email;
   userBox.innerHTML = `
     <span class="user-name" title="${esc(profile.email)}">${esc(name)}</span>
-    ${profile.role === "admin" ? `<a class="btn-backup" href="#zalohy" title="Zálohy dat">💾<span class="bk-txt"> Zálohy</span></a><span class="badge-admin">Admin</span>` : ""}
+    ${profile.role === "admin" ? `<a class="btn-backup" href="#uzivatele" title="Registrovaní uživatelé">👥<span class="bk-txt"> Uživatelé</span></a><a class="btn-backup" href="#zalohy" title="Zálohy dat">💾<span class="bk-txt"> Zálohy</span></a><span class="badge-admin">Admin</span>` : ""}
     <button type="button" class="btn-logout" id="btnLogout">Odhlásit</button>`;
   document.getElementById("btnLogout").onclick = async () => { await supabase.auth.signOut(); profile = null; location.hash = ""; renderAuth(); };
 }
@@ -222,9 +223,15 @@ async function renderResultsBrand(b) {
       filt.kraje = [...dash.querySelectorAll("#fKraj input:checked")].map(x => x.value); draw();
     });
     const clr = dash.querySelector("[data-kraj-clear]"); if (clr) clr.onclick = () => { filt.kraje = []; draw(); };
-    dash.querySelectorAll("[data-del]").forEach(btn => btn.onclick = async () => {
-      if (!confirm(`Opravdu smazat audit zákazníka „${btn.dataset.name}“? Tuto akci nelze vrátit.`)) return;
-      try { await deleteAudit(btn.dataset.del); refresh(); } catch (e) { alert("Smazání se nepodařilo: " + e.message); }
+    dash.querySelectorAll("[data-del-cust]").forEach(btn => btn.onclick = async () => {
+      const mine = rows.filter(r => custKey(r) === btn.dataset.delCust);
+      const no = mine.filter(r => r.audit_kind !== "nulty").length, nn = mine.length - no;
+      const what = [no ? `${no} ostr${no === 1 ? "ý audit" : no < 5 ? "é audity" : "ých auditů"}` : "", nn ? `${nn} nult${nn === 1 ? "ý audit" : nn < 5 ? "é audity" : "ých auditů"}` : ""].filter(Boolean).join(" a ");
+      if (!confirm(`Odstranit servis „${btn.dataset.name}“ ze seznamu ${b.name}?\n\nSmaže se ${what} tohoto servisu (jen u značky ${b.name}).\nV případě omylu jde audit obnovit v Zálohy → Historie změn.`)) return;
+      btn.disabled = true; btn.textContent = "Odstraňuji…";
+      const { error } = await supabase.from("audits").delete().in("id", mine.map(r => r.id));
+      if (error) { alert("Odstranění se nepodařilo: " + error.message); btn.disabled = false; btn.textContent = "Odstranit servis"; return; }
+      refresh();
     });
     const file = document.getElementById("importFile");
     if (file) file.onchange = () => handleImport(b, [...file.files], refresh);
@@ -283,6 +290,7 @@ function route() {
   const brand = BRANDS.find(b => b.id === id);
   const rb = RESULT_BRANDS.find(b => "vysledky-" + b.id === id);
   if (id === "zalohy" && profile.role === "admin") renderBackups(app);
+  else if (id === "uzivatele" && profile.role === "admin") renderUsers(app, profile);
   else if (id === "vysledky") renderResultsHome();
   else if (rb) renderResultsBrand(rb);
   else if (brand) renderBrand(brand);

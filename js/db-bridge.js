@@ -1,6 +1,6 @@
 // Propojení formulářů (Arval, Stellantis) s databází: „Uložit koncept“ a „Načíst existující“
-import { supabase } from "./supabase.js?v=20261119a";
-import { prepareImport, krajFromIc } from "./results.js?v=20261119a";
+import { supabase } from "./supabase.js?v=20261119b";
+import { prepareImport, krajFromIc } from "./results.js?v=20261119b";
 
 const BRAND = location.pathname.includes("/stellantis/") ? "stellantis" : location.pathname.includes("/mitsubishi/") ? "mitsubishi" : location.pathname.includes("/hyundai/") ? "hyundai" : "arval";
 const BRAND_NAME = { arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi", hyundai: "Hyundai" }[BRAND];
@@ -59,17 +59,19 @@ function modal(title, html) {
 
 // ---------- Načíst existující ----------
 async function openList(apply) {
-  const m = modal("Uložené audity v databázi", `<div class="iadb-msg">Načítám…</div>`);
+  const kind = await askKind("", true);
+  if (!kind) return;
+  const m = modal(`Uložené ${kind === "nulty" ? "nulté" : "ostré"} audity v databázi`, `<div class="iadb-msg">Načítám…</div>`);
   const { data, error } = await supabase.from("audits")
-    .select("id,partner,ic,audit_date,result,updated_at,audit_kind").eq("brand", BRAND).order("updated_at", { ascending: false });
+    .select("id,partner,ic,audit_date,result,updated_at,audit_kind").eq("brand", BRAND).eq("audit_kind", kind).order("updated_at", { ascending: false });
   if (error) { m.el.innerHTML = `<div class="iadb-err">Seznam se nepodařilo načíst: ${esc(error.message)}</div>`; return; }
-  if (!data.length) { m.el.innerHTML = `<div class="iadb-msg">V databázi zatím nejsou žádné uložené audity ${BRAND_NAME}.</div>`; return; }
+  if (!data.length) { m.el.innerHTML = `<div class="iadb-msg">V databázi zatím nejsou žádné uložené ${kind === "nulty" ? "nulté" : "ostré"} audity ${BRAND_NAME}.</div>`; return; }
   m.el.innerHTML = `
     <input type="search" placeholder="Hledat zákazníka nebo IČ…" class="iadb-q">
-    <table class="iadb-tbl"><thead><tr><th>Zákazník</th><th>Typ</th><th>Datum auditu</th><th>Naposledy uloženo</th><th></th></tr></thead><tbody>
+    <table class="iadb-tbl"><thead><tr><th>Zákazník</th><th>Datum auditu</th><th>Naposledy uloženo</th><th></th></tr></thead><tbody>
     ${data.map(r => `<tr data-q="${esc(norm(r.partner + " " + (r.ic || "")))}">
       <td><strong>${esc(r.partner)}</strong><span class="mut">${r.ic ? "IČ " + esc(r.ic) : ""}</span></td>
-      <td><span class="iadb-tag ${r.audit_kind}">${KIND_NAME[r.audit_kind] || ""}</span></td><td>${czDate(r.audit_date)}</td><td>${czDateTime(r.updated_at)}</td>
+      <td>${czDate(r.audit_date)}</td><td>${czDateTime(r.updated_at)}</td>
       <td><button type="button" class="iadb-btn" data-id="${r.id}">Načíst</button></td></tr>`).join("")}
     </tbody></table>
     <p class="iadb-msg">Načtením se nahradí obsah právě otevřeného formuláře.</p>`;
@@ -88,13 +90,13 @@ async function openList(apply) {
 
 // ---------- Uložit koncept ----------
 // 1. krok: nultý, nebo ostrý audit? (vrátí "nulty" / "ostry", nebo null = zrušeno)
-function askKind(partner) {
+function askKind(partner, load) {
   return new Promise(resolve => {
-    const m = modal("Jak audit uložit?", `
-      <p>Ukládáte audit zákazníka <strong>${esc(partner)}</strong>. Jde o nultý, nebo ostrý audit?</p>
+    const m = modal(load ? "Který audit načíst?" : "Jak audit uložit?", `
+      <p>${load ? "Načíst z databáze ostrých, nebo nultých auditů?" : `Ukládáte audit zákazníka <strong>${esc(partner)}</strong>. Jde o nultý, nebo ostrý audit?`}</p>
       <div class="iadb-kinds">
-        <button type="button" class="iadb-kind${currentKind === "nulty" ? " sel" : ""}" data-kind="nulty"><strong>Nultý audit</strong><span>V přehledu výsledků se zobrazuje odděleně od ostrých auditů.</span></button>
-        <button type="button" class="iadb-kind${currentKind === "ostry" ? " sel" : ""}" data-kind="ostry"><strong>Ostrý audit</strong><span>Započítává se do přehledu výsledků a termínů příštích auditů.</span></button>
+        <button type="button" class="iadb-kind${currentKind === "ostry" ? " sel" : ""}" data-kind="ostry"><strong>${load ? "Ostré audity" : "Ostrý audit"}</strong><span>${load ? "Certifikační a recertifikační audity." : "Opakuje se podle platnosti (12 / 36 měsíců), započítává se do termínů příštích auditů."}</span></button>
+        <button type="button" class="iadb-kind${currentKind === "nulty" ? " sel" : ""}" data-kind="nulty"><strong>${load ? "Nulté audity" : "Nultý audit"}</strong><span>${load ? "Jednorázové vstupní audity." : "Jednorázový – nemá platnost ani termín příštího auditu, neopakuje se."}</span></button>
       </div>
       <div class="iadb-actions"><button type="button" class="iadb-btn ghost" data-cancel>Zrušit</button></div>`);
     let done = false;
@@ -129,6 +131,7 @@ async function save(stateJson, note) {
   const kind = await askKind(rec.partner);
   if (!kind) return;
   rec.audit_kind = kind;
+  if (kind === "nulty") rec.valid_months = null; // nultý audit je jednorázový, termín příštího auditu nemá
   const kraj = await krajFromIc(rec.ic); // kraj sídla podle IČ z ARES (pro filtr v přehledu)
   if (kraj) rec.kraj = kraj;
   const { data: same, error } = await supabase.from("audits").select("id,partner,ic,audit_date,updated_at,audit_kind").eq("brand", BRAND).eq("audit_kind", kind).order("updated_at", { ascending: false });
