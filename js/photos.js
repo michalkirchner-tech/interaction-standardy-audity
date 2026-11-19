@@ -1,11 +1,11 @@
 // Fotky ke kritériím auditu: zmenšení v zařízení → uložení do Supabase Storage (složka podle zákazníka)
 // Ve stavu formuláře se ukládá jen cesta k fotce a malá miniatura (pár kB), ne fotka samotná.
-import { supabase } from "./supabase.js?v=20261119g";
+import { supabase } from "./supabase.js?v=20261119h";
 
 const BUCKET = "audit-photos";
 const MAX_SIDE = 1200, QUALITY = 0.55;   // velká fotka: delší strana 1200 px, JPEG 55 % (obvykle 80–200 kB)
 const THUMB = 80, THUMB_Q = 0.5;         // miniatura 80×80 px (asi 2–3 kB)
-const BRAND = location.pathname.includes("/stellantis/") ? "stellantis" : location.pathname.includes("/mitsubishi/") ? "mitsubishi" : location.pathname.includes("/hyundai/") ? "hyundai" : "arval";
+const BRAND = location.pathname.includes("/stellantis/") ? "stellantis" : location.pathname.includes("/mitsubishi/") ? "mitsubishi" : location.pathname.includes("/hyundai/") ? "hyundai" : location.pathname.includes("/volvo/") ? "volvo" : "arval";
 const pending = new Map();               // cesta → { blob, tries } čekající na nahrání
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 let rerender = () => {};

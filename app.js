@@ -1,12 +1,12 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
-import { supabase, getProfile } from "./js/supabase.js?v=20261119g";
-import { exportPdf, exportXlsx } from "./js/export.js?v=20261119g";
-import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261119g";
-import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261119g";
-import { renderUsers } from "./js/users.js?v=20261119g";
-import { openGallery } from "./js/gallery.js?v=20261119g";
-import { renderMultibrand } from "./js/multibrand.js?v=20261119g";
-import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261119g";
+import { supabase, getProfile } from "./js/supabase.js?v=20261119h";
+import { exportPdf, exportXlsx } from "./js/export.js?v=20261119h";
+import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261119h";
+import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261119h";
+import { renderUsers } from "./js/users.js?v=20261119h";
+import { openGallery } from "./js/gallery.js?v=20261119h";
+import { renderMultibrand } from "./js/multibrand.js?v=20261119h";
+import { RESULT_BRANDS, NO_VALIDITY, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261119h";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
@@ -14,7 +14,7 @@ const BRANDS = [
   { id: "mercedes",   name: "Mercedes-Benz", logo: "assets/logos/mercedes.svg" },
   { id: "skoda",      name: "Škoda Auto",  logo: "assets/logos/skoda.svg",      wide: true },
   { id: "porsche-cr", name: "Porsche ČR",  logo: "assets/logos/porsche-cr.svg", wide: true },
-  { id: "volvo",      name: "Volvo",       logo: "assets/logos/volvo.svg" },
+  { id: "volvo",      name: "Volvo",       logo: "assets/logos/volvo.svg",      url: "volvo/" },
   { id: "mitsubishi", name: "Mitsubishi",  logo: "assets/logos/mitsubishi.svg", url: "mitsubishi/" },
   { id: "hyundai",    name: "Hyundai",     logo: "assets/logos/hyundai.svg",    wide: true, url: "hyundai/" },
   { id: "byd",        name: "BYD",         logo: "assets/logos/byd.svg",        wide: true, url: "byd/" },
@@ -189,7 +189,7 @@ async function renderResultsHome() {
       const own = rows.filter(r => r.brand === b.id);
       const mine = own.map(r => stOf(r).key);
       const ex = mine.filter(k => k === "expired").length, so = mine.filter(k => k === "soon").length;
-      const fail = b.id === "stellantis" ? own.filter(r => !/^Úspěšný/.test(r.result || "")).length : 0;
+      const fail = NO_VALIDITY.has(b.id) ? own.filter(r => !/^Úspěšný/.test(r.result || "")).length : 0;
       app.querySelector(`[data-stats="${b.id}"]`).innerHTML = !mine.length ? "zatím bez auditů"
         : `${mine.length} zákazníků${ex ? ` · <b class="c-exp">${ex} propadlé</b>` : ""}${so ? ` · <b class="c-soon">${so} blíží se</b>` : ""}${fail ? ` · <b class="c-exp">${fail} neúspěšné</b>` : ""}`;
     }
@@ -204,7 +204,7 @@ async function renderResultsBrand(b) {
       <a class="back" href="#vysledky">← Zpět na výsledky auditů</a>
       <div class="brand-head">
         <img src="${b.logo}" alt="${b.name}">
-        <div><h2>Výsledky auditů – ${b.name}</h2><p>${b.id === "stellantis" ? "Výsledek je úspěšný nebo neúspěšný; recertifikační lhůta se neuvádí." : "Nahoře jsou propadlé audity a audity, kterým se blíží termín."}</p></div>
+        <div><h2>Výsledky auditů – ${b.name}</h2><p>${NO_VALIDITY.has(b.id) ? "Výsledek je úspěšný nebo neúspěšný; recertifikační lhůta se neuvádí." : "Nahoře jsou propadlé audity a audity, kterým se blíží termín."}</p></div>
       </div>
       <div id="dash"><div class="empty">Načítám…</div></div>
     </section>`;
@@ -234,7 +234,7 @@ async function renderResultsBrand(b) {
       const r = rows.find(x => custKey(x) === (inactive ? btn.dataset.inactCust : btn.dataset.actCust));
       if (!r) return;
       const msg = inactive
-        ? `Označit zákazníka „${btn.dataset.name}“ jako neaktivního (${b.name})?\n\nAudity se nesmažou. ${b.id === "stellantis" ? "" : "Zákazník přestane hlásit termín a propadlý audit, "}V seznamu bude dole s označením „Neaktivní“ a dál se započítává do celkového počtu. Kdykoli ho můžete znovu aktivovat.`
+        ? `Označit zákazníka „${btn.dataset.name}“ jako neaktivního (${b.name})?\n\nAudity se nesmažou. ${NO_VALIDITY.has(b.id) ? "" : "Zákazník přestane hlásit termín a propadlý audit, "}V seznamu bude dole s označením „Neaktivní“ a dál se započítává do celkového počtu. Kdykoli ho můžete znovu aktivovat.`
         : `Znovu aktivovat zákazníka „${btn.dataset.name}“? Bude zase hlásit termíny příštích auditů.`;
       if (!confirm(msg)) return;
       btn.disabled = true;
@@ -264,7 +264,7 @@ async function handleImport(b, files, refresh) {
       const state = JSON.parse(await f.text());
       const brand = detectBrand(state);
       if (!brand) throw new Error("soubor nevypadá jako uložený audit z formuláře");
-      if (brand !== b.id) throw new Error(`jde o audit ${{ arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi", hyundai: "Hyundai" }[brand]}, ne ${b.name}`);
+      if (brand !== b.id) throw new Error(`jde o audit ${{ arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi", hyundai: "Hyundai", volvo: "Volvo" }[brand]}, ne ${b.name}`);
       recs.push({ f: f.name, rec: await prepareImport(state, brand) });
     } catch (e) { recs.push({ f: f.name, err: e.message }); }
   }

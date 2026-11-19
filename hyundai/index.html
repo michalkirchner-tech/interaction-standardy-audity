@@ -14,8 +14,10 @@
 <title>Audit procesů a vybavení karosárny a lakovny – Hyundai</title>
 <style>html.ia-guard body{visibility:hidden}</style>
 <script>document.documentElement.classList.add("ia-guard")</script>
-<script type="module" src="../js/guard.js?v=20261119g"></script>
-<script type="module" src="../js/db-bridge.js?v=20261119g"></script>
+<script type="module" src="../js/guard.js?v=20261119h"></script>
+<script type="module" src="../js/db-bridge.js?v=20261119h"></script>
+<script type="module" src="../js/photos.js?v=20261119h"></script>
+<script type="module" src="../js/locations.js?v=20261119h"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
@@ -155,6 +157,8 @@ body.t-cert .recert-only{display:none!important}
 .btn.sig-btn{color:var(--m-deep);border-color:var(--m-deep);background:#fff}
 .btn.sig-btn:hover{background:#e3ebf5}
 @media print{.sig-area{border:1px solid #999}.sig-area.empty{color:transparent}}
+@media(max-width:980px){.wrap{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:760px){.topbar{position:static;flex-wrap:wrap;padding:10px 12px;gap:10px}.brand{flex:1 1 100%}.brand h1{font-size:.92rem}.actions{width:100%;gap:6px}.actions .btn{padding:7px 10px;font-size:.82rem}.wrap{padding:14px 10px 40px}}
 /* --- Hyundai doplňky --- */
 .item .t b{display:block;font-size:.88rem;color:var(--m-deep);margin-bottom:2px}
 .item .t span{display:block;color:#333}

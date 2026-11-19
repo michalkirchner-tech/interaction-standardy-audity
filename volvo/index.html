@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#1e1e1e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Audity">
+<link rel="apple-touch-icon" href="../assets/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/favicon-32.png">
+<title>Procesní audit a standardy vybavení B&amp;P – Volvo</title>
+<style>html.ia-guard body{visibility:hidden}</style>
+<script>document.documentElement.classList.add("ia-guard")</script>
+<script type="module" src="../js/guard.js?v=20261119h"></script>
+<script type="module" src="../js/db-bridge.js?v=20261119h"></script>
+<script type="module" src="../js/photos.js?v=20261119h"></script>
+<script type="module" src="../js/locations.js?v=20261119h"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --m-red:#c8102e; --m-purple:#2563A8; --m-deep:#0E2A4F; --m-grad:linear-gradient(110deg,#0A1F3C 0%,#173E6E 55%,#2F67A8 100%);
+  --m-soft:#ECF2FA; --m-line:#D0DCEC; --ok:#1d7a45; --ok-bg:#e1f4e8; --bad:#b0101d; --bad-bg:#fde3e7; --warn:#8a5300; --warn-bg:#fff1d6;
+  --text:#1E1E1E; --muted:#6b6b6b;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Open Sans",system-ui,sans-serif;color:var(--text);background:#EEF2F7}
+h1,h2,h3{font-family:Poppins,system-ui,sans-serif}
+.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:14px;padding:10px 22px;background:var(--m-grad);color:#fff;box-shadow:0 4px 14px rgba(0,44,95,.3)}
+.brand{display:flex;align-items:center;gap:14px;flex:1;min-width:0}
+.brand .logo{background:#fff;border-radius:10px;padding:5px 9px;display:flex}
+.brand .logo img{height:34px;display:block}
+.brand h1{margin:0;font-size:1.05rem;font-weight:600;line-height:1.2}
+.brand small{display:block;font-family:"Open Sans",sans-serif;font-weight:400;opacity:.85;font-size:.8rem}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{border:1px solid rgba(255,255,255,.55);background:rgba(255,255,255,.12);color:#fff;border-radius:9px;padding:8px 13px;font:600 .88rem "Open Sans",sans-serif;cursor:pointer;white-space:nowrap}
+.btn:hover{background:rgba(255,255,255,.25)}
+.btn.solid{background:#fff;color:var(--m-deep);border-color:#fff}
+.btn.solid:hover{background:#e3ebf5}
+#saveNote{font-size:.85rem;min-width:0}
+.ia-home-btn{flex:0 0 auto;width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#E91929;color:#fff;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.25);transition:background .15s ease,transform .15s ease}
+.ia-home-btn:hover{background:#c8101f;transform:scale(1.08)}
+.ia-home-btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+
+.wrap{max-width:1180px;margin:0 auto;padding:22px 18px 60px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:22px;align-items:start}
+@media(max-width:980px){.wrap{grid-template-columns:1fr}}
+.card{background:#fff;border-radius:14px;box-shadow:0 6px 18px rgba(0,44,95,.08);margin-bottom:20px;overflow:hidden}
+.card>h2{margin:0;padding:13px 18px;font-size:1.02rem;color:#fff;background:var(--m-grad);display:flex;align-items:center;gap:10px}
+.card>h2 .sec-score{margin-left:auto;font:600 .8rem "Open Sans",sans-serif;background:rgba(255,255,255,.2);padding:3px 10px;border-radius:999px}
+.card .body{padding:16px 18px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 16px}
+@media(max-width:700px){.grid2,.grid3{grid-template-columns:1fr}}
+label.f{display:block;font-size:.82rem;font-weight:600;color:#444}
+label.f input,label.f textarea,label.f select{display:block;width:100%;margin-top:4px;padding:9px 10px;border:1px solid #c9d4e2;border-radius:8px;font:inherit;background:#fff}
+label.f input:focus,label.f textarea:focus{outline:2px solid var(--m-purple);border-color:transparent}
+.subject{border:1px solid var(--m-line);border-radius:12px;padding:12px 14px;margin-top:14px;background:#fff}
+.subject h3{margin:0 0 10px;font-size:.95rem;color:var(--m-deep);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.subject h3 label{font:600 .82rem "Open Sans",sans-serif;color:#555;display:flex;align-items:center;gap:6px;cursor:pointer}
+.subject.same .grid-sub{display:none}
+.subject.same .same-info{display:block}
+.same-info{display:none;color:var(--muted);font-size:.86rem}
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:.82rem;color:#555;margin:0 0 6px}
+
+.group{padding:8px 18px;background:var(--m-soft);color:var(--m-deep);font-weight:700;font-size:.85rem;border-top:1px solid var(--m-line);border-bottom:1px solid var(--m-line)}
+.item{display:grid;grid-template-columns:42px minmax(0,1fr) 98px 64px;gap:10px;align-items:center;padding:9px 18px;border-bottom:1px solid #e6ecf3;cursor:pointer}
+.item:hover{background:#f6f9fc}
+.item .n{font-weight:700;color:var(--m-purple);font-size:.88rem}
+.item .t{font-size:.92rem;line-height:1.35}
+.badge{display:inline-block;text-align:center;font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:999px;letter-spacing:.02em}
+.b-N{background:#fde3e7;color:#b0101d;border:1px solid #f6b9c4}
+.b-P{background:#e2ecf8;color:#002C5F;border:1px solid #bcd0e8}
+.b-D{background:#eee;color:#555;border:1px solid #ddd}
+.toggle{justify-self:end;width:56px;height:30px;border-radius:999px;background:#ddd;position:relative;transition:background .15s}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s}
+.item.on .toggle{background:var(--ok)}
+.item.on .toggle::after{left:29px}
+.item.off-N{background:#fff6f7}
+.sec-tools{display:flex;gap:8px;justify-content:flex-end;padding:10px 18px;background:#f4f7fb}
+.sec-tools button{border:1px solid var(--m-line);background:#fff;border-radius:8px;padding:6px 11px;font:600 .8rem "Open Sans",sans-serif;cursor:pointer;color:var(--m-deep)}
+.sec-tools button:hover{border-color:var(--m-purple)}
+
+.side{position:sticky;top:78px}
+@media(max-width:980px){.side{position:static}}
+.result{border-radius:14px;padding:16px;color:#fff;background:#777;margin-bottom:14px}
+.result.ok{background:linear-gradient(135deg,#1d7a45,#2f9a5d)}
+.result.bad{background:linear-gradient(135deg,#b0101d,#D0103A)}
+.result .big{font:700 1.25rem Poppins,sans-serif}
+.result ul{margin:8px 0 0;padding-left:18px;font-size:.86rem}
+.sumtbl{width:100%;border-collapse:collapse;font-size:.84rem;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 6px 18px rgba(0,44,95,.08)}
+.sumtbl th{background:var(--m-soft);color:var(--m-deep);font-weight:700;padding:7px 8px;text-align:center}
+.sumtbl th:first-child,.sumtbl td:first-child{text-align:left;white-space:nowrap}
+.sumtbl td{padding:7px 8px;border-top:1px solid #e6ecf3;text-align:center}
+.sumtbl td.bad{color:var(--bad);font-weight:700}
+.sumtbl tfoot td{font-weight:700;background:#f4f7fb}
+.dates{background:#fff;border-radius:12px;padding:12px 14px;margin-top:14px;font-size:.88rem;box-shadow:0 6px 18px rgba(0,44,95,.08)}
+.dates b{color:var(--m-deep)}
+.rules{font-size:.8rem;color:var(--muted);margin-top:12px;line-height:1.4}
+
+table.op{width:100%;border-collapse:collapse;font-size:.88rem}
+table.op th{background:var(--m-soft);color:var(--m-deep);text-align:left;padding:7px 8px;font-size:.78rem;text-transform:uppercase}
+table.op td{border-top:1px solid #e6ecf3;padding:5px 6px;vertical-align:top}
+table.op textarea,table.op input{width:100%;border:1px solid #d6dfea;border-radius:7px;padding:6px 7px;font:inherit;resize:vertical;min-height:34px}
+table.op .del{border:0;background:none;color:#999;font-size:1.2rem;cursor:pointer}
+table.op .del:hover{color:var(--bad)}
+.op-tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.op-tools button{border:1px solid var(--m-line);background:#fff;border-radius:8px;padding:7px 12px;font:600 .84rem "Open Sans",sans-serif;cursor:pointer;color:var(--m-deep)}
+.op-tools button:hover{border-color:var(--m-purple)}
+.printonly{display:none}
+.tri{display:inline-flex;border:1px solid var(--m-line);border-radius:9px;overflow:hidden;justify-self:end}
+.tri button{border:0;background:#fff;padding:6px 10px;font:600 .78rem "Open Sans",sans-serif;cursor:pointer;color:#666;border-left:1px solid var(--m-line)}
+.tri button:first-child{border-left:0}
+.tri button.sel-A{background:var(--ok);color:#fff}
+.tri button.sel-C{background:#e0a100;color:#fff}
+.tri button.sel-N{background:var(--bad);color:#fff}
+.ritem{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px 18px;border-bottom:1px solid #e6ecf3}
+.ritem .t{font-size:.92rem;line-height:1.35}
+.ritem.st-N{background:#fff6f7}.ritem.st-C{background:#fffaf0}
+.order-head{display:flex;align-items:center;gap:12px;padding:10px 18px;background:var(--m-soft);border-top:1px solid var(--m-line);border-bottom:1px solid var(--m-line);color:var(--m-deep);font-weight:700}
+.order-head input{flex:0 1 260px;padding:6px 9px;border:1px solid #c9d4e2;border-radius:7px;font:inherit;font-weight:400}
+body.t-recert .cert-only{display:none!important}
+body.t-cert .recert-only{display:none!important}
+@media print{.tri button{display:none}.tri button[class*="sel-"]{display:inline-block}}
+
+@media print{
+  @page{size:A4;margin:12mm}
+  body{background:#fff;font-size:10.5pt}
+  .no-print,.sec-tools,.op-tools,.ia-home-btn,table.op .del{display:none!important}
+  .topbar{position:static;box-shadow:none;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .wrap{display:flex;flex-direction:column;padding:0;max-width:none}
+  .side{position:static;order:-1;display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+  .side .rules{grid-column:1/-1}
+  .item{grid-template-columns:34px minmax(0,1fr) 90px 92px}
+  .card,.sumtbl,.dates,.result{box-shadow:none;break-inside:auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .card>h2,.group,.badge,.toggle,.result{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .item{break-inside:avoid;padding:5px 10px}
+  .item .toggle{display:none}
+  .item .mark{display:inline!important}
+  label.f input,label.f textarea{border:0;border-bottom:1px solid #ccc;border-radius:0;padding:2px 0}
+  .printonly{display:block}
+}
+.item .mark{display:none;justify-self:end;font-weight:700}
+.sigbox{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.sig-lbl{font-size:.82rem;font-weight:600;color:#555}
+.sig-area{width:100%;min-height:74px;border:1px dashed #b8c4d4;border-radius:8px;padding:12px 14px;box-sizing:border-box;background:#fff;color:#0F2C46}
+.sig-area b{display:block;font-size:.95rem;margin-bottom:4px}
+.sig-area.empty{color:#999;font-size:.85rem;display:flex;align-items:center}
+.sig-clear{background:none;border:0;color:#b0101d;font-size:.8rem;cursor:pointer;padding:0;text-decoration:underline}
+.ares{font-size:.76rem;margin-top:3px}
+.ares.ok{color:#1f7a3a}.ares.err{color:#b3261e}.ares.load{color:#666}
+.ares a{color:inherit}
+.result.todo{background:linear-gradient(135deg,#8a6d00,#b8920a)}
+.btn.sig-btn{color:var(--m-deep);border-color:var(--m-deep);background:#fff}
+.btn.sig-btn:hover{background:#e3ebf5}
+@media print{.sig-area{border:1px solid #999}.sig-area.empty{color:transparent}}
+/* --- Volvo --- */
+.sec-state{font:700 .78rem "Open Sans",sans-serif;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.92)}
+.sec-state.ok{color:var(--ok)}.sec-state.bad{color:var(--bad)}
+.part-head{margin:26px 0 10px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.part-head h2{margin:0;font-size:1.2rem;color:var(--m-deep)}
+.part-head .pct{font:700 .9rem "Open Sans",sans-serif;padding:3px 12px;border-radius:999px;background:#fff;border:1px solid var(--m-line)}
+.part-head .pct.ok{color:var(--ok);border-color:#b6dfc6}.part-head .pct.bad{color:var(--bad);border-color:#f2b8c0}
+.item{grid-template-columns:42px minmax(0,1fr) auto 36px 64px}
+.item .t b{display:block;font-size:.92rem;color:var(--m-deep)}
+.item .t .must{display:block;margin-top:3px;white-space:pre-line;color:#333;font-size:.86rem}
+.item .t .chk{display:block;margin-top:4px;white-space:pre-line;color:#6b6b6b;font-size:.8rem}
+.item .t .chk::before{content:"Kontrola: ";font-weight:700}
+.item .t .note{display:block;color:#6b6b6b;font-size:.8rem;margin-top:2px}
+.meta{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.meta-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.qty{font-size:.74rem;font-weight:700;color:var(--m-deep);background:var(--m-soft);border:1px solid var(--m-line);border-radius:6px;padding:2px 7px;white-space:nowrap}
+.b-C{background:#e2ecf8;color:#0E2A4F;border:1px solid #bcd0e8}
+.b-R{background:#eee;color:#555;border:1px solid #ddd}
+.b-X{background:#fff;color:#888;border:1px dashed #ccc}
+.imp{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#fde3e7;color:#b0101d;font-weight:800;font-size:.78rem;border:1px solid #f6b9c4}
+.spec-btn{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border:1px solid var(--m-line);border-radius:7px;background:#fff;color:var(--m-purple);font:600 .76rem "Open Sans",sans-serif;cursor:pointer;white-space:nowrap}
+.spec-btn::after{content:'\25BE';font-size:.8rem;transition:transform .12s}
+.spec-btn:hover{border-color:var(--m-purple);background:var(--m-soft)}
+.spec-btn.on{background:var(--m-purple);border-color:var(--m-purple);color:#fff}
+.spec-btn.on::after{transform:rotate(180deg)}
+.spec-panel{margin:0 18px 10px 70px;padding:12px 16px;background:var(--m-soft);border:1px solid var(--m-line);border-radius:9px;font-size:.9rem;line-height:1.45}
+.spec-panel .spec-title{font-weight:700;color:var(--m-deep);margin-bottom:4px}
+.spec-panel p{margin:0;white-space:pre-line}
+.spec-panel .links{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.84rem}
+.spec-panel .links a{color:var(--m-purple);font-weight:600}
+.spec-panel .links a::before{content:"↗ "}
+.ph{display:flex;justify-content:center}
+.abbr{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.8rem;color:#555;padding:10px 18px;background:#f7f9fc;border-bottom:1px solid var(--m-line)}
+.abbr b{color:var(--m-deep)}
+.kab{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(160px,34%);gap:10px;align-items:center;padding:8px 18px;border-bottom:1px solid #e6ecf3}
+.kab .t{font-size:.9rem}
+.kab input{width:100%;border:1px solid #d6dfea;border-radius:7px;padding:6px 8px;font:inherit}
+.kab.st-ok{background:#f3fbf6}.kab.st-bad{background:#fff6f7}
+.tri button.sel-ok{background:var(--ok);color:#fff}
+.tri button.sel-bad{background:var(--bad);color:#fff}
+@media(max-width:700px){
+  .item{grid-template-columns:30px minmax(0,1fr) 36px 56px;grid-template-areas:"n t ph tg" "n m ph tg"}
+  .item .n{grid-area:n}.item .t{grid-area:t}.item .meta{grid-area:m;align-items:flex-start}.item .meta-row{justify-content:flex-start}.item .ph{grid-area:ph}.item .toggle{grid-area:tg}
+  .spec-panel{margin-left:18px}
+  .kab{grid-template-columns:1fr auto}.kab input{grid-column:1/-1}
+}
+@media print{
+  .item{grid-template-columns:34px minmax(0,1fr) auto 92px}
+  .spec-panel,.spec-btn{display:none!important}
+  .kab{grid-template-columns:minmax(0,1fr) 90px minmax(0,35%)}
+  .kab input{border:0;border-bottom:1px solid #ccc;border-radius:0}
+  .part-head{break-after:avoid}
+}
+@media(max-width:980px){.wrap{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:760px){.topbar{position:static;flex-wrap:wrap;padding:10px 12px;gap:10px}.brand{flex:1 1 100%}.brand h1{font-size:.92rem}.actions{width:100%;gap:6px}.actions .btn{padding:7px 10px;font-size:.82rem}.wrap{padding:14px 10px 40px}}
+</style>
+</head>
+<body>
+<script id="criteria-data" type="application/json">{"version":"VCCR 2025 (v4)","min":90,"parts":[{"id":"std","title":"Procesní audit a standardy B&P","sections":[{"id":"s1","title":"1. Servisní proces příjmu oprav","items":[{"id":"std-1a","n":"1a","title":"Příjem oprav po nehodě","must":"Příjem musí být realizován výhradně v prostorách autorizovaného dealerství Volvo.","check":"Místo servisního poradce pro příjem oprav.","w":2.5},{"id":"std-1b","n":"1b","title":"Plánovací modul","must":"Používání sdíleného plánovacího modulu pro plánování kapacity karosárny, lakovny. Vedoucí dílny B&P nebo pověřená osoba s přístupem s možností koordinovat skladbu a objem zakázek.\n- bodový záznam požadavku\n- kontrola historie (KAR / LAK)\n- prověření, kontrola QB (svolávací akce)\n- požadavek na mobilitu (odvoz, náhr. vozidlo)\n- způsob řešení opravy (HAV / POV / samoplátce)\n- dohodnutí termínu pro přistavení vozu k opravě\n- odeslání SMS s připomenutím termínu vč. kontaktu na servisního poradce, dva dny před plánovaným termínem\n- vytvoření objednávky (předzakázky) do plánovače (vždy u pojízdných škod)","check":"Kontrola záznamů v plánovacím modulu.","w":2.5},{"id":"std-1c","n":"1c","title":"Včastné získání podkladů pro zahájení opravy v rámci pojistné události","must":"Zahájit potřebné kroky v rámci přípravy zakázky nebo ihned po příjmu vozidla do servisu.\n- první prohlídka\n- předběžnou kalkulaci nákladů na opravu, zasílat pojišťovně před objednáním dílů, nebo zahájením vlastní opravy\n- doklady k vyřízení pojistné události (číslo PÚ, plná moc k vyřízení krycího dopisu, devinkulace, zápis pojišťovny, doklady řidiče)","check":"Ověření úplnosti a dostupnosti dokumentů.\nDokumenty v elektronické, nebo tistěné podobě.\nKontrola vybraných zakázek.","w":2.5},{"id":"std-1d","n":"1d","title":"Příjem vozidla do servisu","must":"Řádně vyplněný zakázkový list.\n- čas, datum, aktuání stav km a paliva při převzetí vozidla do opravy\n- platnost STK\n- kontrola: e-mail, telefon, aktivní VIDA Remote Readout (vzdálená diagnostika)\n- popis rozsahu prací odsouhlasený zákazníkem\n- přepokládaný termín dokončení opravy\n- předběžná cena opravy\n- čas a datum předání vozidla po opravě ze servisu\n- příjmení (čitelně) a podpis zákazníka\n- v případě příjmu vozidla bez zákazníka, odsouhlasení rozsahu zakázky elektronicky (potvrzený e-mail, elektronický podpis)\n- v případě dohody zapůjčení náhr. vozidla\n- popis visačky klíčů pro jasnou identifikaci vozidla\n- odstavení vozu + zapsat umístění do zakázky","check":"Kontrola záznamů v zakázkovém listu, nebo v ověřené elektronické podobě.\nKontrola vybraných zakázek.","w":2.5},{"id":"std-1e","n":"1e","title":"Nesouvisející poškození","must":"Zaznamenání poškození vozidla, které nesouvisí s pojistnou událostí, v zakázkovém listu. V případě záznamu pomocí fotodokumentace tato pořízena před podpisem zakázkového listu zákazníkem. S prokazatelným časem a datem pořízení fotografie.","check":"Kontrola záznamů v zakázkovém listu, nebo v ověřené elektronické podobě.\nKontrola vybraných zakázek.","w":2.5},{"id":"std-1f","n":"1f","title":"Rozšíření zakázky","must":"V případě nutnosti rozšíření zakázky z důvodu navýšení ceny, nebo změny termínu dokončení.\n- doplnění textu dodatečných požadavků\n- kontrola dostupnosti / ceny ND\n- odsouhlasení rozšíření zakázky zákazníkem, lze i elektronicky (potvrzený e-mail, elektronický podpis).","check":"Kontrola záznamů v zakázkovém listu, nebo v ověřené elektronické podobě.\nKontrola vybraných zakázek.","w":2.5},{"id":"std-1g","n":"1g","title":"Proces kontroly kvality, po dokončení opravy","must":"Je provedena kontrola kvality po ukončení opravy, před předáním zákazníkovi. Výslednou kvalitu odvedených prací, kontrolu čistoty. Provedení dílenských svolávacích akcí QB (svolávací akce).","check":"Kontrola záznamů o provedené kontrole kvality. Kontrola vozidel připravených k předání zákazníkovi.\nKontrola vybraných zakázek.","w":0.75}]},{"id":"s2","title":"2. Servisní proces zpracování zakázky","items":[{"id":"std-2a","n":"2a","title":"Objednávání náhradních dílů","must":"ND objednávant systematicky ke každé zakázce. ND objednávat prioritně v režimu skladové objednávky OC3, minimálně 65%.\n- ověření dostupnosti\n- rezervace ND do předzakázky (v případě jezdící škody)\n- označení kompletace / neúplnosti všech ND v plánovači (v případě jezdící škody)\n- fyzická příprava ND do boxu se zakázkovým listem na daný den opravy","check":"Kontrola procesu objednání ND.","w":2.5},{"id":"std-2b","n":"2b","title":"Pruběžné zasílání podkladů k vyřízení pojistné události","must":"Dokumenty určené pro pojišťovnu zasílat průběžně během jednotlivých fází zakázky.","check":"Kontrola časové posloupnosti dle data odeslání do příslušného portálu pojišťovny.\nKontrola vybraných zakázek.","w":0.75},{"id":"std-2c","n":"2c","title":"Probíhá dostatečná výměna provozních informací mezi autorizovaným dealerem a smluvní opravnou","must":"Nutné sdílení informací potřebných ke každé opravě dle technologických postupů Volvo. Dodržování technologie oprav ze strany smluvního opravce.","check":"Kontrola principu předávání informací, fotodokumentace a podkladů s popisem technologie oprav.","w":0.75},{"id":"std-2d","n":"2d","title":"Včasné vyřízení pojistné události","must":"Je faktura s podklady pro PU odeslána s dokončenou opravou? (do dvou pracovních dnů). Je v případě nestardantního postupu tento s předstihem komunikován s pojišťovnou?","check":"Kontrola časové posloupnosti jednotlivých kroků.","w":2.5},{"id":"std-2e","n":"2e","title":"Archivace podkladů k opravě","must":"Vždy archivovat společně se zakázkovým listem:\n- fotodokumentaci nesouvisejícího poškození\n- fotodokumentace poškození nehodou\n- kalkulace výpočtu opravy\n- fotodokumentaci průběhu opravy a další poškození zjištěné při opravě\n- doklady k vyřízení pojistné události (plná moc k vyřízení krycího dopisu od zákazníka, devinkulaci, zápis pojišťovny, doklady řidiče).","check":"Ověření úplnosti a dostupnosti dokumentů.\nDokumenty v elektronické, nebo tistěné podobě.\nKontrola vybraných zakázek.","w":2.5},{"id":"std-2f","n":"2f","title":"Spokojenost zákazníka","must":"Je prováděn dotaz na spokojenost zákazníka jménem servisu. Evidence odpovědí a v případě nespojenosti, její důvod.","check":"Bez hodnocení","w":0},{"id":"std-2g","n":"2g","title":"Reklamace a opakované opravy","must":"Existuje postup / evidence stížností a reklamací?","check":"Kontrola záznamu a způsobu vyřešení reklamace.","w":2.5}]},{"id":"s3","title":"3. Zaměstnanci a jejich kompetence","items":[{"id":"std-3a","n":"3a","title":"Jsou v systému Thrive registrováni zaměstnanci karosárny a lakovny? Dosáhli registrovaní zaměstnanci v rámci své pracovní pozice akreditační úrovně?","must":"Zaměstnanci karosárny a lakovny musejí být nahlášeny HR reportem u VCCR a poté jsou zaregistrování v Thrive. Týká se i externích pracovníků.","check":"Kontrola splnění přiřazených školení v Thrive, dle informačního e-mailu ohledně povinosti plnění požadavků VCCR.","w":2.5},{"id":"std-3b","n":"3b","title":"Opravy plug-in hybridních a elektrických vozidel","must":"Splňuje pracovník podílející se na opravě PHEV a BEV vozidel legislativu? Je vozidlo v bezpečném stavu pro karosářskou a lakýrnickou opravu? Spolupráce mezi osobou EVT (electrical vehicle technician) a karosářskou / lakýrnickou dílnou, která provádí konkrétní opravu.","check":"Kontrola dodržování podmínek. Kontrola vozidel v servisu.","w":2.5}]},{"id":"s4","title":"4. Péče o životní prostředí","items":[{"id":"std-4a","n":"4a","title":"Náplň klimatizace vozidel","must":"Dodržování zákonu o látkách poškozující ozonouvou vrstvu a fluorvaných látkách č.73/2012 Sb.","check":"Kontrola certifikátů potvrzující způsobilost zaměstnanců. Možnost sdílet pracovníka s mechanickou dílnou.","w":0.75},{"id":"std-4b","n":"4b","title":"Vizuálně poškozená (havarovaná) vozidla musí být odstavena na vyhrazeném místě mimo dohled zákazníků","must":"Vyhrazený prostor, mimo dohled zákazníků dealerství, včetně záchytných nádob pro případné úniky provozních kapalin.","check":"Kontrola dodržování podmínek, ochrany majetku zákazníka a životního prostředí.","w":2.5},{"id":"std-4c","n":"4c","title":"Odpadové hospodářství, třídění odpadu","must":"Dodržování zákonu o odpadech č. 541 / 2020 Sb., v platném znění včetně příslušných vyhlášek a nařízení.","check":"Kontrola dodržování podmínek.","w":2.5}]},{"id":"s5","title":"5. Prostory dílen","items":[{"id":"std-5a","n":"5a","title":"Čistota opravovaných vozidel","must":"Jsou opravovaná vozidla čistá? Bylo provedeno mytí před opravou? (pokud mytí rozsah poškození vozidla umožní)","check":"Kontrola dodržování podmínek. Kontrola vozidel v servisu.","w":0.75},{"id":"std-5b","n":"5b","title":"Ochrana majetku zákazníka, interier vozidla","must":"Je vozidlo opatřeno interierovou ochranou? (volant, volič rychlosti, sedačka, podložka na podlaze)","check":"Kontrola dodržování podmínek. Kontrola vozidel v servisu.","w":2.5},{"id":"std-5c","n":"5c","title":"Ochrana majetku zákazníka při opravě","must":"Jsou dostatečně chráněna vozidla a jejich součásti během opravy?\n- před odletujícím brusivem, prachem (zástěny, ochranné kryty)\n- při provádění svářecích prací (ochranné nehořlavé deky)\n- zakrytí poškozených, nebo demontovaných částí vozidla\n- vozidla na lakovně chráněny před záprachem\n- demontované díly nesmí být ponechány ani ve vozidle, ani v zavazadlovém prostoru","check":"Kontrola dodržování podmínek. Kontrola vozidel v servisu.","w":2.5},{"id":"std-5d","n":"5d","title":"Demontované díly pro zpětnou montáž","must":"Bezpečné a čisté místo, oddělené od dílen, pro ukládání do regálů nebo mobilních vozíků, kde lze ukládat demontované díly, které budou po opravě zpět montovány do vozidla. Uloženy tak, aby při skladování nedošlo k jejich poškození a znečištění. Označeny registračním číslem, jménem zákazníka nebo referenčním číslem zakázkového listu.","check":"Vhodný prostor, případně dostatečný počet regálů / vozíků? Viz. Kontrola vybavení-karosárna, bod 36. Kontrola dodržování podmínek. Kontrola vozidel.","w":2.5},{"id":"std-5e","n":"5e","title":"Čistota a pořádek na karosárně a lakovně","must":"Prostor, stěny a podlaha dílny by měly být stále udržovány v čistém stavu.","check":"Kontrola čistoty na pracovišti.","w":0.75}]},{"id":"s6","title":"6. Postup při opravě","items":[{"id":"std-6a","n":"6a","title":"Dodržování technologického postupu oprav dle požadavků Volvo","must":"Použivání informačního systému VIDA v průběhu opravy vozidla. Vždy používat aktuální technologický postup.","check":"Kontrola využívání a orientace v systému VIDA produktivním personálem. Lze ověřit požadavkem na vyhledání konkrétního pracovního postupu.","w":2.5},{"id":"std-6b","n":"6b","title":"Ochrana proti korozi","must":"Ochrana proti korozi na karosářské dílně a lakovně schválenými 2K materiály.","check":"Kontrola opravovaných vozidel, zda je ochrana proti korozi provedena.","w":2.5},{"id":"std-6c","n":"6c","title":"Vyjádření k opravě","must":"Je v zakázkovém listu karosářem/lakýrníkem zaznamenám rozsah provedených prací? Heslovitě včetně podpisu.","check":"Kontrola záznamů vyjádření k opravě. Kontrola vybraných zakázek.","w":0.75},{"id":"std-6d","n":"6d","title":"Proces kontroly kvality, v průběhu opravy","must":"Je prováděna kontrola kvality vprůběhu opravy. Je stanoven konkrétní pracovník, který ručí za výslednou kvalitu odvedených prací a dodržování technologických postupů opravy. Kontrolu neprovádí zaměstnanec, který provedl opravu.","check":"Kontrola záznamů o provedené kontrole kvality. Kontrola vybraných zakázek.","w":0.75}]}]},{"id":"kar","title":"Vybavení karosárny","sections":[{"id":"kars1","title":"Vybavení pro dokončovací práce","items":[{"id":"kar-1","n":"1","title":"Excentrická bruska s odsáváním","qty":"1 WS","cr":"C","note":"","w":5.45,"spec":{"title":"Excentrická bruska s odsáváním","t":"Elektrická, AKU, nebo vzduchová excentrická bruska pro hrubé broušení 5 - 8mm. Ruční nářadí musí být v souladu se směrnicí 2002/44/EG o vibracích EU 2002/44/EG.","links":[]}},{"id":"kar-2","n":"2","title":"Vysavač na odsávání brusného prachu","qty":"1 WS","cr":"C","note":"","w":5.45,"spec":{"title":"Vysavač na odsávání brusného prachu","t":"Vysavač prachových částic vzniklých broušením, mobilní nebo stacionární. Podtlak na pracovišti (myšleno pro každou brusku) 130 mbar. Objem proudění vzduchu do odsávacího zařízení pro jedno pracoviště (např. vysavač) 20 l/s . Filtry odsávacího zařízení pro prachy kategorie L s hodnotami pro prach MAK > 1 mg/m³.","links":[]}},{"id":"kar-3","n":"3","title":"ALU - vzduchová excentrická bruska s odsáváním","qty":"1 WS","cr":"C","note":"","w":5.45,"spec":{"title":"ALU - vzduchová excentrická bruska s odsáváním","t":"Vzduchová excentrická bruska pro jemné broušení dílů ze slitin hliníku - zdvih 2,5 - 3 mm, může být sdíleno s lakovnounou, pokud je pracoviště klempírny a lakovny v rámci stejné budovy. Ruční nářadí musí být v souladu se směrnicí 2002/44/EG o vibracích EU 2002/44/EG.","links":[]}},{"id":"kar-4","n":"4","title":"ALU - vysavač pro odsávání brusného prachu","qty":"1 WS","cr":"C","note":"","w":5.45,"spec":{"title":"ALU - vysavač pro odsávání brusného prachu","t":"S možností společného odsávání ocel/hliník ATEX 94/9/ES pro zonu 22.\nVvysavač prachových částic vzniklých broušením, mobilní nebo stacionární, pro broušení prachů tříd výbušnosti St1, St2 a St3 (např. Aluminium), dle směrnice ATEX 94/9/ES pro zónu 22. Podtlak na pracovišti (myšleno pro každou brusku) 130 mbar. Objem proudění vzduchu do odsávacího zařízení pro jedno pracoviště (např. vysavač) 20 l/s . Filtry odsávacího zařízení pro prachy kategorie L s hodnotami pro prach MAK > 1 mg/m³ Může být sdíleno s karosárnou, pokud je pracoviště klempírny a lakovny v rámci stejné budovy.","links":[]}},{"id":"kar-5","n":"5","title":"Brusivo hrubost P80 - P180","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"kar-6","n":"6","title":"Maskovací papír, pásky","qty":"1 WS","cr":"C","note":"","w":1.5},{"id":"kar-7","n":"7","title":"Obnova tvaru karoserie","qty":"1 WS","cr":"C","note":"","w":5.45,"spec":{"title":"Obnova tvaru karoserie","t":"Preferovaná metoda, studené cínování dvousložkovou epoxidovou pryskyřicí, CBR 2109, Teroson EP 5010, Teroson EP 5020. Lze nahradit klasickou metodou za použití pájky Sn70Zn30, nutné dodržovat higienické limity při práci s nebezbpečným materiálem (ES) č. 1272/2008.","links":[]}},{"id":"kar-8","n":"8","title":"Antikorozní ochrana","qty":"1 WS","cr":"C","note":"","w":5.45,"spec":{"title":"Antikorozní ochrana","t":"Pro povrchovou ochranu opravavovaných oblastí 2K epoxidový základový plnič. Mezi spojované části karoroserie pouze provařitelný antikorozní nátěr VOLVO WELDING PROMER 31385366.","links":[]}},{"id":"kar-9","n":"9","title":"Rozstřiková lahev na odmašťovací prostředky a odmašťovač","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"kar-10","n":"10","title":"Infrazářič IRT, nebo FlexiTherm – sušící deky","qty":"1 WS","cr":"C","note":"integrovaný/externí měřič teploty","w":1.5},{"id":"kar-11","n":"11","title":"Karosářský hoblík stavitelný","qty":"1 WS","cr":"C","note":"","w":1.5}]},{"id":"kars2","title":"Obecné nářadí a vybavení","items":[{"id":"kar-12","n":"12","title":"Vozík s náradím pro karosářské, demontážní a montážní práce","qty":"1 PT","cr":"C","note":"","w":5.45},{"id":"kar-13","n":"13","title":"Akumulátorová vrtačka pro uchycení průměru 1-13 mm","qty":"1 PT","cr":"C","note":"","w":5.45},{"id":"kar-14","n":"14","title":"Pneumatická pilka přímočará","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"kar-15","n":"15","title":"Pistole pro konzervaci dutin (sada včetně hloubkové sondy)","qty":"1 WS","cr":"C","note":"","w":1.5},{"id":"kar-16","n":"16","title":"Horkovzdušná pistole","qty":"1 WS","cr":"C","note":"udržitelná teplota min 600°C","w":1.5},{"id":"kar-17","n":"17","title":"Vyřezávací sada na výměnu skel","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"kar-18","n":"18","title":"Pistole pro aplikaci originálního lepidla VOLVO pro čelní skla","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"kar-19","n":"19","title":"Stojan na čelní sklo","qty":"2 WS","cr":"C","note":"","w":5.45},{"id":"kar-20","n":"20","title":"Úchytka na skla pro manipulaci","qty":"2 WS","cr":"C","note":"","w":5.45},{"id":"kar-22","n":"22","title":"Samosvěrné kleště (různé typy)","qty":"5 PB","cr":"C","note":"","w":1.5},{"id":"kar-23","n":"23","title":"Úhlová bruska","qty":"1 PB","cr":"C","note":"","w":5.45},{"id":"kar-24","n":"24","title":"Mini bruska","qty":"1 PB","cr":"C","note":"pneumatická / AKU, systém Roloc","w":5.45},{"id":"kar-25","n":"25","title":"Odvrtávačka bodových svárů s opěrou","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"kar-26","n":"26","title":"Ruční pásová bruska","qty":"1 WS","cr":"C","note":"pneumatická / AKU","w":5.45},{"id":"kar-27","n":"27","title":"Ruční pistole pro 2K lepidlo","qty":"1 WS","cr":"C","note":"50 ml","w":1.5},{"id":"kar-28","n":"28","title":"Nabíječka akumulátoru","qty":"1 WS","cr":"R","note":"min. 50A","w":5.45}]},{"id":"kars3","title":"Vybavení karosářské dílny","items":[{"id":"kar-29","n":"29","title":"Prostor pracoviště s osvětlením minimálně 750 LUX","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"kar-30","n":"30","title":"Ochranné zástěny","qty":"1 PB","cr":"C","note":"","w":5.45},{"id":"kar-31","n":"31","title":"Odsávání splodin vznikajících při svařování, pevné nebo mobilní","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"kar-32","n":"32","title":"Dvousloupové zvedáky (zvedací nosnost, min. 3t)","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"kar-33","n":"33","title":"Svařovací zařízení na metodu MIG/MAG, min. 150A, směsný plyn CO2+Argon","qty":"1/2 PB","cr":"C","note":"min 1x, pro 4 karosáře min 2ks, pro každě další 2 karosáře +1","w":5.45},{"id":"kar-35","n":"35","title":"Trolley jack (zvedák), přibližně na 1500kg zvedací kapacity","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"kar-36","n":"36","title":"Skladový regál / vozík na demontované komponenty","qty":"3 PT","cr":"C","note":"","w":5.45},{"id":"kar-37","n":"37","title":"Náhrada kola pro manipulaci s vozidlem s poškozeným zavěšením","qty":"2 WS","cr":"C","note":"","w":5.45},{"id":"kar-38","n":"38","title":"Invertor pro bodové sváření","qty":"1 WS","cr":"C","note":"12.000 A, přítlak 550dNa","w":5.45},{"id":"kar-39","n":"39","title":"Ochrana majetku zákazníka pro interier vozidla","qty":"1 WS","cr":"C","note":"sedadlo, volant, volič rychlosti, podlaha","w":5.45},{"id":"kar-40","n":"40","title":"Ochranné plachty pro poškozená zaparkovaná vozidla","qty":"3 WS","cr":"C","note":"","w":5.45},{"id":"kar-41","n":"41","title":"Ochranné prvky, nehořlavé krycí tkaniny","qty":"2 PB","cr":"C","note":"Teplotní odolnost 1000 °C. Gramáž 1035 g/m2. Třída reakce na oheň A1.","w":5.45,"spec":{"title":"Nehořlavé krycí tkaniny","t":"Ochrana okolí proti jiskrám, plamenu při svařování, nebo broušení.Teplotní odolnost 1000 °C. Gramáž 1035 g/m2. Třída reakce na oheň A1.","links":[]}},{"id":"kar-42","n":"42","title":"Teleskopická měřicí tyč","qty":"1 WS","cr":"C","note":"","w":5.45,"spec":{"title":"Teleskopická měřicí tyč","t":"Analogové měřidlo se stupnicí v milimetrech, s propojením na kolmé měření bodu pomocí kuželových nástavců, kalibrace 1x ročně.","links":[{"label":"Teleskopická měřící tyč","url":"https://www.wielanderschill.com/en/Telescopic-measuring-rod-920-2610-mm/871001"}]}},{"id":"kar-43","n":"43","title":"Spotovací zařízení pro ocel","qty":"1 WS","cr":"C","note":"","w":5.45,"spec":{"title":"Spotovací zařízení pro ocel","t":"Mikroprocesorem řízený přístroj s integrovaným nastavením pro vyrovnávání ocelových karosérií. Různé typy vytahovacích elektrod, hrazdy pro rovnání.","links":[]}},{"id":"kar-44","n":"44","title":"Spotovací zařízení pro hliník","qty":"1 WS","cr":"R","note":"","w":0,"spec":{"title":"Spotovací zařízení pro hliník","t":"Mikroprocesorem řízený přístroj s integrovaným nastavením pro vyrovnávání hliníkových karosérií. Přivaření probíhá v ochranné atmosféře. Různé typy vytahovacích elektrod, hrazdy pro rovnání.","links":[]}},{"id":"kar-45","n":"45","title":"Rozpínaci sada, min. 4tuny","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"kar-46","n":"46","title":"Rozpínače aretační","qty":"1 WS","cr":"C","note":"karosářská rozpěrka","w":1.5},{"id":"kar-47","n":"47","title":"Malá rovnací stolice","qty":"1 WS","cr":"C","note":"","w":1.5,"spec":{"title":"Malá rovnací stolice","t":"Karosářský zvedák s možností upnutí vozidla pro potřeby tahu dozerem, min. tah dozeru 5t. Primárně určeno pro malé a střední deformace vnějších panelů, nenahrazuje \"Velkou rovnací stolici\", neze používat k výměnám, nebo opravám konstrukčních částí karoserie.","links":[{"label":"Malá rovnací stolice","url":"https://car-o-liner.com/product/speed-speed-plus/"}]}},{"id":"kar-48","n":"48","title":"Velká rovnací stolice","qty":"1 WS","cr":"C","note":"","w":5.45,"spec":{"title":"Velká rovnací stolice","t":"Rovnací stolice pro opravy a výměny strukturálních částí karoserie s možností tahu dozerem, min. 10t. Stavitelné věže pro fixaci při výměně strukturálních dílů.","links":[{"label":"Velká rovnací stolice","url":"https://car-o-liner.com/product/quick42/"}]}},{"id":"kar-49","n":"49","title":"Elektronický měřící systém","qty":"1 WS","cr":"C","note":"","w":5.45,"spec":{"title":"Elektronický měřící systém","t":"Systém pro diagnostiku a opravy karoserie s online přístupem do databáze vozidel Volvo. Platná licence pro aktualizaci dat. Jedna z doporučených varian, v případě technologie pro měření od jiného výrobce, je potřeba splňovat minimálně možnosti měření, uvedených systémů v odkazech.","links":[{"label":"Elektronický měřící systém - 1. varianta","url":"https://car-o-liner.com/product/pointx-ii/"},{"label":"Elektronický měřící systém - 2. varianta","url":"https://car-o-liner.com/product/car-o-tronic/"}]}}]},{"id":"kars4","title":"Stlačený vzduch","items":[{"id":"kar-50","n":"50","title":"Kompresor","qty":"1 WS","cr":"C","note":"","w":5.45,"spec":{"title":"Kompresor","t":"Umístěn v samostatné odvětrávané místnosti, optimální teplota 20/25°C.","links":[]}},{"id":"kar-51","n":"51","title":"Provozní deník","qty":"1 WS","cr":"C","note":"může být veden v elektronické podobě","w":5.45},{"id":"kar-52","n":"52","title":"Automatické odlučování kondenzátu ze vzdušníku","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"kar-53","n":"53","title":"Filtrace před výstupem do rozvodů, min 0,1µm","qty":"1 WS","cr":"C","note":"","w":5.45}]},{"id":"kars5","title":"Osobní ochranné pracovní prostředky karosárna, požární ochrana","items":[{"id":"kar-54","n":"54","title":"Ochrana dýchacích cest","qty":"1 PT","cr":"C","note":"","w":5.45,"spec":{"title":"Ochrana dýchacích cest","t":"Třída 3 (FFP3) slouží k ochraně před pevnými či kapalnými aerosoly vysoké toxicity (např. chrom), viry, radioaktivními látkami a karcinogenními látkami","links":[{"label":"Ochrana dýchacích cest","url":"https://www.3m.cz/3M/cs_CZ/p/dc/v000265948/"}]}},{"id":"kar-55","n":"55","title":"Ochrana sluchu","qty":"1 PT","cr":"C","note":"","w":5.45},{"id":"kar-56","n":"56","title":"Pracovní obuv","qty":"1 PT","cr":"C","note":"obuv s výztuží ve špičce","w":5.45},{"id":"kar-57","n":"57","title":"Ochranné rukavice","qty":"1 PT","cr":"C","note":"pro sváření, pro práci s nebezpečnými látkami","w":5.45},{"id":"kar-58","n":"58","title":"Ochrana zraku","qty":"1 PT","cr":"C","note":"brýle, nebo štít","w":5.45},{"id":"kar-59","n":"59","title":"Svářečská kukla","qty":"1 WS","cr":"C","note":"1x na svařovací zařízení","w":5.45},{"id":"kar-60","n":"60","title":"Ochranný pracovní oděv","qty":"3 PT","cr":"C","note":"Přizpůsobený zaměstnancům a jejich pracovní pozici.","w":5.45},{"id":"kar-61","n":"61","title":"Lékárnička první pomoci","qty":"1 PT","cr":"C","note":"","w":5.45},{"id":"kar-62","n":"62","title":"Set na pohotovostní výplach očí","qty":"1 PT","cr":"C","note":"","w":5.45},{"id":"kar-63","n":"63","title":"Hasicí přístroj a hasicí roušky","qty":"WS","cr":"C","note":"počet a druh dle legislativy","w":1.5}]}]},{"id":"lak","title":"Vybavení lakovny","sections":[{"id":"laks1","title":"Lakovna, přípravné pracoviště","items":[{"id":"lak-1","n":"1","title":"Přípravné pracoviště odsávané","qty":"1 WS","cr":"C","note":"","w":1.5,"spec":{"title":"Přípravné pracoviště odsávané","t":"Minimální výměna vzduchu 17 000 m3/h (podle rozměru pracoviště). Filtry podlahové výstupní G2, vstupní stropní M5. Doporučuje se oddělení roletou/závěsem od prostor lakovny.","links":[]}},{"id":"lak-2","n":"2","title":"Prostor pracoviště s osvětlením minimálně 750 LUX","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"lak-3","n":"3","title":"Krátkovlnný infrazářič","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"lak-4","n":"4","title":"Dvoustupňová filtrace stlačeného vzduchu","qty":"1 PB","cr":"C","note":"","w":5.45,"spec":{"title":"Dvoustupňová filtrace stlačeného vzduchu","t":"Filtrační systém s regulací stlačeného vzduchu a automatickým odvodem kondenzátu. Stupně filtrace: bronzový filtr: 5 µm; jemný filtr: 0,1 µm. Průtok vzduchu 800 l/min při vstupním tlaku 6 barů.","links":[]}},{"id":"lak-5","n":"5","title":"Antistatická hadice pro stlačený vzduch 9 nebo 10 mm","qty":"1 PB","cr":"C","note":"ČSN EN ISO 2398 v pozdějším znění","w":5.45},{"id":"lak-6","n":"6","title":"Zvedák s nízkým zdvihem","qty":"1 WS","cr":"C","note":"","w":5.45,"spec":{"title":"Zvedák s nízkým zdvihem","t":"Mobilní, nebo stacionární s minimální výškou zdvihu 600mm.","links":[]}},{"id":"lak-7","n":"7","title":"Sříkací pistole na stříkací tmel s odpovídající tryskovou sadou","qty":"1 PB","cr":"C","note":"dle technického listu používaného materiálu","w":5.45},{"id":"lak-8","n":"8","title":"Sříkací pistole na základy a plniče s odpovídající tryskovou sadou","qty":"1 PB","cr":"C","note":"dle technického listu používaného materiálu","w":5.45},{"id":"lak-9","n":"9","title":"Externí ukazatel tlaku pro pistole bez digitálního měření","qty":"1 PB","cr":"C","note":"lze použít pro více stříkacích pistolí","w":5.45},{"id":"lak-10","n":"10","title":"Rozstřiková lahev na odmašťovací prostředky a odmašťovač","qty":"1 PT","cr":"C","note":"","w":5.45},{"id":"lak-11","n":"11","title":"Lakovací stojany otočné univerzální","qty":"4 PT","cr":"C","note":"","w":5.45},{"id":"lak-12","n":"12","title":"Lakovací stojany na nárazníky a drobné díly","qty":"2 WS","cr":"C","note":"","w":5.45},{"id":"lak-13","n":"13","title":"Odvíjecí stojan na maskovací papír - pevný/mobilní","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"lak-14","n":"14","title":"Odvíjecí stojan na maskovací fólii - pevný/mobilní","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"lak-15","n":"15","title":"Excentrická bruska s odsáváním","qty":"1 PT","cr":"C","note":"","w":5.45,"spec":{"title":"Excentrická bruska s odsáváním","t":"Elektrická, nebo vzduchová excentrická bruska pro broušení 2,5-5mm. Ruční nářadí musí být v souladu se směrnicí 2002/44/EG o vibracích EU 2002/44/EG.","links":[]}},{"id":"lak-16","n":"16","title":"Vysavač na odsávání brusného prachu","qty":"1x na 2 PT","cr":"C","note":"","w":5.45,"spec":{"title":"Vysavač na odsávání brusného prachu","t":"Vysavač prachových částic vzniklých broušením, mobilní nebo stacionární. Podtlak na pracovišti (myšleno pro každou brusku) 130 mbar. Objem proudění vzduchu do odsávacího zařízení pro jedno pracoviště (např. vysavač) 20 l/s . Filtry odsávacího zařízení pro prachy kategorie L s hodnotami pro prach MAK > 1 mg/m³.","links":[]}},{"id":"lak-17","n":"17","title":"ALU - vysavač pro odsávání brusného prachu","qty":"1 WS","cr":"C","note":"","w":5.45,"spec":{"title":"ALU - vysavač pro odsávání brusného prachu","t":"S možností společného odsávání ocel/hliník ATEX 94/9/ES pro zonu 22.\nVvysavač prachových částic vzniklých broušením, mobilní nebo stacionární, pro broušení prachů tříd výbušnosti St1, St2 a St3 (např. Aluminium), dle směrnice ATEX 94/9/ES pro zónu 22. Podtlak na pracovišti (myšleno pro každou brusku) 130 mbar. Objem proudění vzduchu do odsávacího zařízení pro jedno pracoviště (např. vysavač) 20 l/s . Filtry odsávacího zařízení pro prachy kategorie L s hodnotami pro prach MAK > 1 mg/m³ Může být sdíleno s karosárnou, pokud je pracoviště klempírny a lakovny v rámci stejné budovy.","links":[]}},{"id":"lak-18","n":"18","title":"ALU - vzduchová excentrická bruska s odsáváním","qty":"1 WS","cr":"C","note":"","w":5.45,"spec":{"title":"ALU - vzduchová excentrická bruska s odsáváním","t":"Vzduchová excentrická bruska pro jemné broušení dílů ze slitin hliníku - zdvih 2,5 - 3 mm, může být sdíleno s klempírnou, pokud je pracoviště klempírny a lakovny v rámci stejné budovy. Ruční nářadí musí být v souladu se směrnicí 2002/44/EG o vibracích EU 2002/44/EG.","links":[]}},{"id":"lak-19","n":"19","title":"Bruska pro maloplošné broušení","qty":"1 WS","cr":"C","note":"rozměr 80mm","w":5.45}]},{"id":"laks2","title":"Příprava laků, míchárna","items":[{"id":"lak-23","n":"23","title":"Odvětrávaná a temperovaná místnost s míchací stolicí","qty":"1 WS","cr":"C","note":"teplota min. 20°C, osvětlení min. 750 LUX","w":5.45},{"id":"lak-24","n":"24","title":"Stav skladových zásob","qty":"1 WS","cr":"C","note":"skladování a expirace materálů","w":1.5},{"id":"lak-25","n":"25","title":"PC s přístupem do koloristického programu, kalibrovaná váha","qty":"1 WS","cr":"C","note":"váha umístěna na stole seřizovatelném do vodorovné polohy","w":5.45},{"id":"lak-26","n":"26","title":"Technické a bezpečnostní listy","qty":"1 WS","cr":"C","note":"elektronický přístup k aktuálním TI, SD","w":5.45},{"id":"lak-27","n":"27","title":"Pracovní stůl pro přípravu lakovacích materiálů, s možností zachycení tekutých látek","qty":"1 WS","cr":"C","note":"s vlastním odsáváním, pokud je mimo míchací místnost","w":5.45},{"id":"lak-28","n":"28","title":"Sříkací pistole na podkladovou barvu s odpovídající tryskovou sadou","qty":"1 PB","cr":"C","note":"dle technického listu používaného materiálu","w":5.45},{"id":"lak-29","n":"29","title":"Sříkací pistole na vrchní lak s odpovídající tryskovou sadou","qty":"1 PB","cr":"C","note":"dle technického listu používaného materiálu","w":5.45},{"id":"lak-30","n":"30","title":"Stříkací pistole na drobné opravy","qty":"1 WS","cr":"R","note":"","w":0},{"id":"lak-31","n":"31","title":"SATA Cert","qty":"1 WS","cr":"C","note":"","w":5.45,"spec":{"title":"SATA Cert","t":"Slouží k pravidelné kontrole kvality stříkacího obrazu lakovací pistole.","links":[{"label":"SATA cert","url":"https://www.sata.com/en-int/products/spray-guns/gravity-flow-cup-guns/satajet-20-b/accessories"}]}},{"id":"lak-32","n":"32","title":"Myčka stříkacích pistolí s odsáváním","qty":"1 WS","cr":"C","note":"","w":5.45,"spec":{"title":"Myčka stříkacích pistolí s odsáváním","t":"Pro automatické mytí stříkacích pistolí zvnějšku i uvnitř. Pro čištění vodou ředitelných materiálů, používat čistící prostředky na vodní/biologické bázi. V případě rozpouštědlových materiálů, používat čisticí prostředky se sníženým obsahem VOC (VOC pod 15 %).","links":[]}},{"id":"lak-33","n":"33","title":"Držáky na sříkací pistole","qty":"2 PB","cr":"C","note":"","w":5.45},{"id":"lak-34","n":"34","title":"Lampa denního světla","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"lak-35","n":"35","title":"Tiskárna štítků pro testkarty","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"lak-36","n":"36","title":"Fotospektrometr","qty":"1 WS","cr":"C","note":"digitální nástroj, pro měření a vyhledávání odstímů","w":5.45},{"id":"lak-37","n":"37","title":"Automat na promíchání lakovacího materiálu před použitím","qty":"1","cr":"R","note":"","w":0,"spec":{"title":"Automat na promíchání lakovacího materiálu před použitím","t":"Zařízení, které bylo speciálně vyvinuté pro míchání barev, plničů a čirých laků v autolakovnách. Promíchá všechny komponenty naprosto důkladně za mnohem kratší dobu, eliminuje se tak i riziko chyby lidského faktoru, kdy ručním mícháním může dojít k odstínovým nedokonalostem.\nNapř. ROTOGEN 1000.","links":[]}},{"id":"lak-38","n":"38","title":"Odpadní nádoby na zbytkový materiál - uzavíratelné","qty":"2 WS","cr":"C","note":"","w":5.45}]},{"id":"laks3","title":"Lakovací kabina","items":[{"id":"lak-39","n":"39","title":"Lakovací kabina","qty":"1 WS","cr":"C","note":"","w":5.45,"kabina":true},{"id":"lak-40","n":"40","title":"Antistatická ofukovací pistole","qty":"1 WS","cr":"C","note":"","w":5.45,"spec":{"title":"Antistatická ofukovací pistole","t":"Pro neutralizování statického náboje před lakováním. Zabraňuje ulpívání prachu a jiných nečistot na povrchu vozidla.","links":[]}},{"id":"lak-41","n":"41","title":"Minimální nutné osvětlení v lakovací kabině 1000 LUX","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"lak-42","n":"42","title":"Provozní deník","qty":"1 WS","cr":"C","note":"může být veden v elektronické podobě","w":1.5},{"id":"lak-43","n":"43","title":"Třístupňová filtrace stlačeného vzduchu","qty":"1 PB","cr":"C","note":"","w":5.45,"spec":{"title":"Třístupňová filtrace stlačeného vzduchu","t":"Filtrační systém s regulací stlačeného vzduchu a automatickým odvodem kondenzátu. Stupně filtrace: bronzový filtr: 5 µm, jemný filtr: 0,01 µm; filtr s aktivním uhlím. Průtok vzduchu 3600 l/min při vstupním tlaku 6 barů.\nVhodný pro použití s barvami na vodní bázi a systémy ochrany dýchacích cest nezávislými na okolním vzduchu.","links":[]}},{"id":"lak-44","n":"44","title":"Antistatická hadice pro stlačený vzduch 9 nebo 10mm","qty":"1 PB","cr":"C","note":"ČSN EN ISO 2398 v pozdějším znění","w":5.45},{"id":"lak-45","n":"45","title":"Držáky na sříkací pistole a odkládací polička","qty":"2 PB","cr":"C","note":"","w":1.5},{"id":"lak-46","n":"46","title":"Antistatické utěrky","qty":"1 PB","cr":"C","note":"","w":5.45}]},{"id":"laks4","title":"Dokončovací práce a kontrolní prostor","items":[{"id":"lak-47","n":"47","title":"Prostor pracoviště s osvětlením 1000 LUX","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"lak-48","n":"48","title":"Leštící přístroj","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"lak-49","n":"49","title":"Leštící pasty","qty":"1WS","cr":"C","note":"","w":5.45},{"id":"lak-50","n":"50","title":"Přípravky na leštění - beránek, molitanový kotouček, utěrky","qty":"1 WS","cr":"C","note":"stav a čistota","w":5.45},{"id":"lak-51","n":"51","title":"Uzavřená odkládací plocha pro přípravky na leštění","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"lak-52","n":"52","title":"Mini pneumatická/elektrická úhlová bruska","qty":"1 WS","cr":"C","note":"pro odstranění nečistot v laku","w":5.45},{"id":"lak-53","n":"53","title":"Sada pro maloplošné leštění","qty":"1 WS","cr":"C","note":"","w":5.45}]},{"id":"laks5","title":"Stlačený vzduch","items":[{"id":"lak-54","n":"54","title":"Kompresor","qty":"1 WS","cr":"C","note":"","w":5.45,"spec":{"title":"Kompresor","t":"Umístěn v samostatné odvětrávané místnosti, optimální teplota 20/25°C.","links":[]}},{"id":"lak-55","n":"55","title":"Provozní deník","qty":"1 WS","cr":"C","note":"může být veden v elektronické podobě","w":5.45},{"id":"lak-56","n":"56","title":"Automatické odlučování kondenzátu ze vzdušníku","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"lak-57","n":"57","title":"Kondenzační sušička","qty":"1 WS","cr":"C","note":"","w":5.45},{"id":"lak-58","n":"58","title":"Filtrace před výstupem do rozvodů, min 0,1µm","qty":"1 WS","cr":"C","note":"","w":5.45}]},{"id":"laks6","title":"Osobní ochranné pracovní prostředky, požární ochrana","items":[{"id":"lak-59","n":"59","title":"Ochranné brýle","qty":"1 PT","cr":"C","note":"","w":5.45},{"id":"lak-60","n":"60","title":"Prachové respirátory","qty":"1 PT","cr":"C","note":"","w":5.45},{"id":"lak-61","n":"61","title":"Polomaska, maska do kabiny - určeno pro stříkání (A2P3)","qty":"1 PT","cr":"C","note":"","w":5.45},{"id":"lak-62","n":"62","title":"Celoobličejová ochranná maska","qty":"1 PT","cr":"C","note":"","w":5.45,"spec":{"title":"Celoobličejová ochranná maska","t":"Ochranná maska s přívodem vzduchu je nejvyšším stupněm ochrany dýchacích cest, zajišťuje uživateli i ochranu zraku.","links":[{"label":"Celoobličejová ochranná maska","url":"https://www.sata.com/en-int/products/breathing-protection/full-hoods-respiratory-protection/sata-air-vision-5000"},{"label":"Celoobličejová ochranná maska","url":"https://www.3m.cz/3M/cs_CZ/p/c/osobni-ochranne-prostredky/ochrana-dychacich-organu/jednotky-s-pohonem-a-privodem-vzduchu/filtracni-jednotky-s-pohonem-vzduchu/"}]}},{"id":"lak-63","n":"63","title":"Ochranné rukavice","qty":"1 PT","cr":"C","note":"","w":5.45},{"id":"lak-64","n":"64","title":"Bezpečnostní obuv (vyztužená špička, antistatická)","qty":"1 PT","cr":"C","note":"","w":5.45},{"id":"lak-65","n":"65","title":"Ochranná kombinéza","qty":"1 PT","cr":"C","note":"","w":5.45},{"id":"lak-66","n":"66","title":"Lékárnička první pomoci","qty":"1 PT","cr":"C","note":"","w":5.45},{"id":"lak-67","n":"67","title":"Set na pohotovostní výplach očí","qty":"1 PT","cr":"C","note":"","w":5.45},{"id":"lak-68","n":"68","title":"Hasicí přístroj a hasicí roušky","qty":"WS","cr":"C","note":"počet a druh dle legislativy","w":1.5}]}]}],"kabina":[{"id":"kab-1","text":"Stropní filtry","hint":""},{"id":"kab-2","text":"Filtry ve strojovně","hint":""},{"id":"kab-3","text":"Podlahové filtry","hint":""},{"id":"kab-4","text":"Proudění vzduchu mezi 0,25-0,3 m/s","hint":""},{"id":"kab-5","text":"Všechny trubice svítí","hint":""},{"id":"kab-6","text":"Hodnota osvětlení v LUX, min.1000","hint":"zapsat průměr ze tří měření"},{"id":"kab-7","text":"Kontrola těsnění dveří","hint":""},{"id":"kab-8","text":"Kontrola hořáku","hint":""},{"id":"kab-9","text":"CO čidlo - stav, platná kalibrace","hint":""},{"id":"kab-10","text":"Vizuální kontrola poškození panelů","hint":""},{"id":"kab-11","text":"Vizuální kontrola poškození dveří","hint":""},{"id":"kab-12","text":"Čistota výstupního ventilátoru","hint":""},{"id":"kab-13","text":"Čistota vstupního ventilátoru","hint":""},{"id":"kab-14","text":"Čistota strojovny","hint":""},{"id":"kab-15","text":"Čistota výstupní klapky","hint":""},{"id":"kab-16","text":"Rozměry kabiny v milimetrech","hint":""},{"id":"kab-17","text":"Zvedací hever","hint":""}],"abbr":[["PT","na každého technika"],["WS","na dílnu"],["PB","na stanoviště"],["C","hlavní / povinné"],["R","doporučené – není nutné k auditu"]]}</script>
+
+<div class="topbar">
+  <div class="brand">
+    <a href="../" class="ia-home-btn no-print" title="Zpět na úvodní stránku" aria-label="Zpět na úvodní stránku"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5M5.5 9.5V20h5v-6h3v6h5V9.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    <span class="logo"><img src="../assets/logos/volvo.svg" alt="Volvo"></span>
+    <h1>Procesní audit a standardy vybavení B&amp;P<small>Volvo Car Czech Republic · INTERACTION · VCCR 2025</small></h1>
+  </div>
+  <div class="actions no-print">
+    <span id="saveNote"></span>
+    <button class="btn" type="button" id="btnNew">Nový audit</button>
+    <button class="btn" type="button" id="btnLoad">Načíst existující</button>
+    <button class="btn solid" type="button" id="btnSave">Uložit koncept</button>
+    <div class="dropdown-wrap" id="missWrap">
+      <button class="btn" type="button" id="btnMissing" aria-haspopup="true" aria-expanded="false">Nesplněná kritéria ▾</button>
+      <div class="dropdown-menu" id="missMenu" hidden>
+        <button type="button" class="dropdown-item" id="btnMissingPdf">Export do PDF</button>
+        <button type="button" class="dropdown-item" id="btnMissingCsv">Export do Excelu (CSV)</button>
+      </div>
+    </div>
+    <button class="btn" type="button" id="btnPrint">Tisk / PDF</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <main>
+    <section class="card">
+      <h2>Základní informace</h2>
+      <div class="body">
+        <div class="grid3">
+          <label class="f">Datum auditu<input type="date" data-m="datumAuditu"></label>
+          <label class="f">Auditor<input data-m="auditor" list="auditors"></label>
+        </div>
+        <datalist id="auditors"><option value="Karel Trachta"><option value="Michal Kirchner"><option value="Radek Richter"></datalist>
+
+        <div class="subject" data-subject="prijem">
+          <h3>Autorizovaný dealer (sídlo)</h3>
+          <div class="grid2 grid-sub">
+            <label class="f">Název autorizovaného dealera<input data-s="nazev"></label>
+            <div class="grid2" style="gap:12px"><label class="f">IČ<input data-s="ic" inputmode="numeric"></label><label class="f">Číslo dealera<input data-s="cisloDealera"></label></div>
+            <label class="f">Ulice<input data-s="ulice"></label>
+            <div class="grid2" style="gap:12px"><label class="f">PSČ<input data-s="psc"></label><label class="f">Město<input data-s="mesto"></label></div>
+            <label class="f">Kontaktní osoba (jméno a příjmení)<input data-s="kontakt"></label>
+            <label class="f">Telefon, e-mail<input data-s="kontaktTel"></label>
+          </div>
+        </div>
+        <div class="ialoc-slot" data-card="subject"></div>
+        <div class="subject" data-subject="opravna">
+          <h3>Opravna karoserií / lakovna <label class="no-print"><input type="checkbox" data-ext="opravna"> smluvní (externí) opravna</label></h3>
+          <div class="same-info">Vlastní opravna autorizovaného dealera.</div>
+          <div class="grid2 grid-sub">
+            <label class="f">Název<input data-s="nazev"></label>
+            <label class="f">IČ<input data-s="ic" inputmode="numeric"></label>
+            <label class="f">Ulice (provozovna)<input data-s="ulice"></label>
+            <div class="grid2" style="gap:12px"><label class="f">PSČ<input data-s="psc"></label><label class="f">Město<input data-s="mesto"></label></div>
+            <label class="f">Kontaktní osoba (jméno a příjmení)<input data-s="kontakt"></label>
+            <label class="f">Telefon, e-mail<input data-s="kontaktTel"></label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div id="parts"></div>
+
+    <section class="card" id="kabCard">
+      <h2>Specifikace lakovací kabiny <span class="sec-score">k bodu 39 vybavení lakovny</span></h2>
+      <div id="kabBody"></div>
+    </section>
+
+    <section class="card">
+      <h2>Akční plán</h2>
+      <div class="body">
+        <table class="op">
+          <thead><tr><th style="width:15%">Část</th><th style="width:28%">Nevyhovující</th><th style="width:28%">Domluvená náprava</th><th style="width:14%">Vykonavatel</th><th style="width:13%">Termín nápravy</th><th class="no-print"></th></tr></thead>
+          <tbody id="opBody"></tbody>
+        </table>
+        <div class="op-tools">
+          <button type="button" id="opAdd">+ Přidat řádek</button>
+          <button type="button" id="opFill">Doplnit nesplněné hodnocené body</button>
+        </div>
+        <label class="f" style="margin-top:16px">Poznámky<textarea data-root="poznamky" rows="3"></textarea></label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Podpis</h2>
+      <div class="body">
+        <p style="margin:0 0 12px;font-size:.88rem;color:#444">Zástupce autorizovaného dealera byl seznámen s výsledkem auditu.</p>
+        <div class="grid2">
+          <label class="f">Auditor<input data-m="auditor" list="auditors"></label>
+          <label class="f">Zástupce autorizovaného dealera (jméno a příjmení)<input data-p="zastupce"></label>
+        </div>
+        <div class="grid2" style="margin-top:14px">
+          <div class="sigbox"><div class="sig-lbl">Podpis auditora</div>
+            <button type="button" class="btn sig-btn no-print" data-sign="auditor">Digitálně podepsat</button>
+            <div class="sig-area" id="sig-auditor"></div>
+            <button type="button" class="sig-clear no-print" data-unsign="auditor">Vymazat podpis</button></div>
+          <div class="sigbox"><div class="sig-lbl">Podpis zástupce autorizovaného dealera</div>
+            <button type="button" class="btn sig-btn no-print" data-sign="zastupce">Digitálně podepsat</button>
+            <div class="sig-area" id="sig-zastupce"></div>
+            <button type="button" class="sig-clear no-print" data-unsign="zastupce">Vymazat podpis</button></div>
+        </div>
+        <div class="grid2" style="margin-top:14px">
+          <label class="f">Místo<input data-p="misto"></label>
+          <label class="f">Datum<input type="date" data-p="datum"></label>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <aside class="side">
+    <div class="result" id="result"></div>
+    <table class="sumtbl">
+      <thead><tr><th>Část</th><th>Splněno</th><th>Výsledek</th><th></th></tr></thead>
+      <tbody id="sumBody"></tbody>
+    </table>
+    <div class="dates" id="dates"></div>
+    <p class="rules">Každá ze tří částí (procesní standardy, vybavení karosárny, vybavení lakovny) musí dosáhnout alespoň 90 %. Splněný bod = +1, nesplněný bod se odečítá podle své důležitosti (standardy −2,5 / −0,75; vybavení −5,45 / −1,5). Doporučené vybavení (R) a body bez hodnocení se do výsledku nepočítají.</p>
+  </aside>
+</div>
+
+<div id="missing-report"></div>
+
+<script>
+(function(){
+var DATA = JSON.parse(document.getElementById('criteria-data').textContent);
+var PARTS = DATA.parts, MIN = DATA.min;
+var LS_KEY = 'ia-volvo-draft';
+var saveNoteEl = document.getElementById('saveNote');
+var openSpec = {};
+var ALL = [];
+PARTS.forEach(function(p){ p.sections.forEach(function(s){ s.items.forEach(function(it){ it.part = p; it.sec = s; ALL.push(it); }); }); });
+
+function todayIso(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function emptySubject(){ return {nazev:'',ic:'',cisloDealera:'',ulice:'',psc:'',mesto:'',kontakt:'',kontaktTel:''}; }
+function emptyState(){
+  return { form:'volvo',
+    meta:{ partner:'', ic:'', datumAuditu:todayIso(), auditor:'', mistoPrijmu:null, mistoDilny:null,
+      prijem:emptySubject(), opravnaSmluvni:false, opravna:emptySubject() },
+    checks:{}, kabina:{}, photos:{}, radky:[], poznamky:'', podpis:{zastupce:'',misto:'',datum:''}, sig:{auditor:null, zastupce:null} };
+}
+var state = emptyState();
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function czDate(d){ return d.getDate()+'. '+(d.getMonth()+1)+'. '+d.getFullYear(); }
+function czIso(iso){ return iso ? czDate(new Date(iso+'T00:00:00')) : '—'; }
+function fmtPct(x){ return (Math.round(x*10)/10).toFixed(1).replace('.',',')+' %'; }
+function fmtW(w){ return String(w).replace('.',','); }
+
+// ---------- kritéria ----------
+function itemHtml(it){
+  var std = it.part.id === 'std';
+  var t = '<b>'+esc(it.title)+'</b>' + (std ? '<span class="must">'+esc(it.must)+'</span><span class="chk">'+esc(it.check)+'</span>' : (it.note ? '<span class="note">'+esc(it.note)+'</span>' : ''));
+  var badges = '';
+  if (!std) badges += '<span class="qty" title="Minimální počet">'+esc(it.qty)+'</span><span class="badge b-'+(it.cr==='R'?'R':'C')+'">'+(it.cr==='R'?'Doporučené':'Povinné')+'</span>';
+  if (!it.w) badges += '<span class="badge b-X">Bez hodnocení</span>';
+  else if (it.w >= 2.5) badges += '<span class="imp" title="Vysoká důležitost – nesplnění −'+fmtW(it.w)+' b.">!</span>';
+  var spec = it.spec ? '<button type="button" class="spec-btn no-print'+(openSpec[it.id]?' on':'')+'" data-spec="'+it.id+'" aria-expanded="'+(openSpec[it.id]?'true':'false')+'">Specifikace</button>' : '';
+  return '<div class="item" data-id="'+it.id+'" role="switch" tabindex="0" title="'+(it.w?'Nesplnění: −'+fmtW(it.w)+' b.':'Bez hodnocení')+'">'
+    + '<span class="n">'+esc(it.n)+'</span><span class="t">'+t+'</span>'
+    + '<span class="meta"><span class="meta-row">'+badges+'</span>'+(spec?'<span class="meta-row">'+spec+'</span>':'')+'</span>'
+    + '<span class="ph no-print" data-ph="'+it.id+'"></span><span class="toggle" aria-hidden="true"></span><span class="mark"></span></div>'
+    + (it.spec && openSpec[it.id] ? specHtml(it) : '');
+}
+function specHtml(it){
+  var s = it.spec;
+  return '<div class="spec-panel no-print" id="spec-'+it.id+'"><div class="spec-title">Specifikace '+esc(it.n)+' – '+esc(s.title)+'</div>'
+    + (s.t ? '<p>'+esc(s.t)+'</p>' : '')
+    + (s.links && s.links.length ? '<div class="links">'+s.links.map(function(l){ return '<a href="'+esc(l.url)+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>'; }).join('')+'</div>' : '')
+    + '</div>';
+}
+function buildParts(){
+  var html = '';
+  PARTS.forEach(function(p){
+    html += '<div class="part-head"><h2>'+esc(p.title)+'</h2><span class="pct" data-pct="'+p.id+'"></span></div>';
+    if (p.id !== 'std') html += '';
+    p.sections.forEach(function(sec, si){
+      html += '<section class="card" data-sec="'+sec.id+'"><h2>'+esc(sec.title)+'<span class="sec-score" data-score="'+sec.id+'"></span></h2>';
+      if (p.id !== 'std' && si === 0) html += '<div class="abbr">'+DATA.abbr.map(function(a){ return '<span><b>'+esc(a[0])+'</b> = '+esc(a[1])+'</span>'; }).join('')+'<span><span class="imp">!</span> = vysoká důležitost</span></div>';
+      html += '<div data-items="'+sec.id+'">'+sec.items.map(itemHtml).join('')+'</div>';
+      html += '<div class="sec-tools no-print"><button type="button" data-all="'+sec.id+'">Vše splněno</button><button type="button" data-none="'+sec.id+'">Zrušit vše</button></div></section>';
+    });
+  });
+  document.getElementById('parts').innerHTML = html;
+  bindItems(document.getElementById('parts'));
+  document.querySelectorAll('[data-all]').forEach(function(b){ b.onclick = function(){ secItems(b.dataset.all).forEach(function(it){ state.checks[it.id]=true; }); changed(); }; });
+  document.querySelectorAll('[data-none]').forEach(function(b){ b.onclick = function(){ secItems(b.dataset.none).forEach(function(it){ delete state.checks[it.id]; }); changed(); }; });
+  buildKabina();
+}
+function secItems(id){ return ALL.filter(function(it){ return it.sec.id===id; }); }
+function bindItems(root){
+  root.querySelectorAll('.item').forEach(function(el){
+    var tog = function(){ var id = el.dataset.id; if (state.checks[id]) delete state.checks[id]; else state.checks[id] = true; changed(); };
+    el.addEventListener('click', tog);
+    el.addEventListener('keydown', function(e){ if (e.target===el && (e.key===' '||e.key==='Enter')){ e.preventDefault(); tog(); } });
+  });
+  root.querySelectorAll('[data-spec]').forEach(function(b){
+    b.addEventListener('click', function(e){ e.stopPropagation(); toggleSpec(b.dataset.spec); });
+    b.addEventListener('keydown', function(e){ e.stopPropagation(); });
+  });
+}
+function toggleSpec(id){
+  openSpec[id] = !openSpec[id];
+  var it = ALL.filter(function(x){ return x.id===id; })[0];
+  var row = document.querySelector('.item[data-id="'+id+'"]'), btn = row.querySelector('[data-spec]');
+  btn.classList.toggle('on', !!openSpec[id]); btn.setAttribute('aria-expanded', openSpec[id]?'true':'false');
+  var old = document.getElementById('spec-'+id); if (old) old.remove();
+  if (openSpec[id]) row.insertAdjacentHTML('afterend', specHtml(it));
+}
+
+// ---------- specifikace lakovací kabiny ----------
+function buildKabina(){
+  document.getElementById('kabBody').innerHTML = DATA.kabina.map(function(k){
+    return '<div class="kab" data-kab="'+k.id+'"><span class="t">'+esc(k.text)+'</span>'
+      + '<span class="tri"><button type="button" data-v="ok">Vyhovuje</button><button type="button" data-v="bad">Nevyhovuje</button></span>'
+      + '<input data-kc="'+k.id+'" placeholder="'+esc(k.hint || 'Komentář')+'"></div>';
+  }).join('');
+  document.querySelectorAll('[data-kab]').forEach(function(row){
+    var id = row.dataset.kab;
+    row.querySelectorAll('[data-v]').forEach(function(b){ b.onclick = function(){ var o = state.kabina[id] = state.kabina[id] || {v:'',c:''}; o.v = o.v===b.dataset.v ? '' : b.dataset.v; renderKabina(); changed(true); }; });
+    row.querySelector('[data-kc]').addEventListener('input', function(e){ var o = state.kabina[id] = state.kabina[id] || {v:'',c:''}; o.c = e.target.value; changed(true); });
+  });
+}
+function renderKabina(){
+  document.querySelectorAll('[data-kab]').forEach(function(row){
+    var o = state.kabina[row.dataset.kab] || {v:'',c:''};
+    row.className = 'kab' + (o.v ? ' st-'+o.v : '');
+    row.querySelectorAll('[data-v]').forEach(function(b){ b.className = o.v===b.dataset.v ? 'sel-'+o.v : ''; });
+    var inp = row.querySelector('[data-kc]'); if (inp.value !== (o.c||'')) inp.value = o.c || '';
+  });
+}
+
+// ---------- vyhodnocení ----------
+function evaluate(){
+  var per = {}, ok = true;
+  PARTS.forEach(function(p){
+    var s = {pts:0, cnt:0, met:0, total:0, fail:[], secs:{}};
+    p.sections.forEach(function(sec){
+      var ss = {met:0, total:0};
+      sec.items.forEach(function(it){
+        var on = !!state.checks[it.id];
+        if (it.w) { s.cnt++; s.pts += on ? 1 : -it.w; s.total++; ss.total++; if (on) { s.met++; ss.met++; } else s.fail.push(it); }
+      });
+      s.secs[sec.id] = ss;
+    });
+    s.pct = s.cnt ? s.pts / s.cnt * 100 : 0;
+    s.ok = s.pct >= MIN;
+    if (!s.ok) ok = false;
+    per[p.id] = s;
+  });
+  return {ok:ok, per:per};
+}
+function renderResult(){
+  var r = evaluate();
+  document.querySelectorAll('.item').forEach(function(el){
+    var on = !!state.checks[el.dataset.id];
+    el.classList.toggle('on', on); el.setAttribute('aria-checked', on);
+    el.querySelector('.mark').textContent = on ? '✔ ANO' : '✘ NE';
+  });
+  PARTS.forEach(function(p){
+    var s = r.per[p.id];
+    var pc = document.querySelector('[data-pct="'+p.id+'"]');
+    pc.className = 'pct '+(s.ok?'ok':'bad'); pc.textContent = fmtPct(s.pct)+' (min. '+MIN+' %)';
+    p.sections.forEach(function(sec){ var ss = s.secs[sec.id];
+      document.querySelector('[data-score="'+sec.id+'"]').textContent = ss.met+' / '+ss.total+' splněno'; });
+  });
+  var res = document.getElementById('result');
+  res.className = 'result ' + (r.ok ? 'ok' : 'bad');
+  var reasons = PARTS.filter(function(p){ return !r.per[p.id].ok; }).map(function(p){ return p.title+': '+fmtPct(r.per[p.id].pct); });
+  res.innerHTML = '<div class="big">'+(r.ok?'Úspěšný audit':'Neúspěšný audit')+'</div>'
+    + '<ul>'+(reasons.length ? reasons.map(function(x){ return '<li>'+esc(x)+' (min. '+MIN+' %)</li>'; }).join('') : '<li>Všechny části splněny (min. '+MIN+' %)</li>')+'</ul>';
+  document.getElementById('sumBody').innerHTML = PARTS.map(function(p){ var s = r.per[p.id];
+    return '<tr><td>'+esc(p.title.replace('Procesní audit a standardy B&P','Procesní standardy'))+'</td><td>'+s.met+'/'+s.total+'</td><td'+(s.ok?'':' class="bad"')+'>'+fmtPct(s.pct)+'</td>'
+      +'<td class="'+(s.ok?'st-ok':'st-bad')+'">'+(s.ok?'✔':'✘')+'</td></tr>'; }).join('');
+  document.getElementById('dates').innerHTML = 'Datum auditu: <b>'+czIso(state.meta.datumAuditu)+'</b>';
+}
+
+// ---------- pole formuláře ----------
+function bindFields(){
+  document.querySelectorAll('[data-m]').forEach(function(inp){
+    inp.addEventListener('input', function(){ state.meta[inp.dataset.m] = inp.value;
+      document.querySelectorAll('[data-m="'+inp.dataset.m+'"]').forEach(function(o){ if (o!==inp) o.value = inp.value; });
+      if (inp.dataset.m==='datumAuditu') fillPodpis(); changed(); }); });
+  document.querySelectorAll('.subject[data-subject]').forEach(function(box){
+    var key = box.dataset.subject;
+    box.querySelectorAll('[data-s]').forEach(function(inp){ inp.addEventListener('input', function(){ state.meta[key][inp.dataset.s] = inp.value;
+      if (key==='prijem' && (inp.dataset.s==='kontakt' || inp.dataset.s==='mesto')) fillPodpis(); changed(true); }); });
+  });
+  document.querySelectorAll('[data-ext]').forEach(function(cb){ cb.addEventListener('change', function(){ state.meta[cb.dataset.ext+'Smluvni'] = cb.checked; renderExt(); changed(true); }); });
+  document.querySelectorAll('[data-p]').forEach(function(inp){ inp.addEventListener('input', function(){ state.podpis[inp.dataset.p] = inp.value; changed(true); }); });
+  document.querySelector('[data-root="poznamky"]').addEventListener('input', function(e){ state.poznamky = e.target.value; changed(true); });
+  document.querySelectorAll('[data-sign]').forEach(function(b){ b.onclick = function(){ sign(b.dataset.sign); }; });
+  document.querySelectorAll('[data-unsign]').forEach(function(b){ b.onclick = function(){ state.sig[b.dataset.unsign] = null; renderSigs(); changed(true); }; });
+  document.querySelectorAll('.subject [data-s="ic"]').forEach(function(inp){
+    var st = document.createElement('div'); st.className = 'ares'; inp.parentNode.appendChild(st);
+    var key = inp.closest('.subject').dataset.subject;
+    var go = function(){ var ic = inp.value.replace(/\s+/g,''); if (/^\d{8}$/.test(ic) && ic !== inp.dataset.looked) lookupAres(key, ic, inp, st); };
+    inp.addEventListener('input', go); inp.addEventListener('blur', go);
+  });
+}
+function fillFields(){
+  document.querySelectorAll('[data-m]').forEach(function(inp){ inp.value = state.meta[inp.dataset.m] || ''; });
+  document.querySelectorAll('.subject[data-subject]').forEach(function(box){
+    var key = box.dataset.subject;
+    box.querySelectorAll('[data-s]').forEach(function(inp){ inp.value = (state.meta[key]||{})[inp.dataset.s] || ''; });
+  });
+  document.querySelectorAll('[data-ext]').forEach(function(cb){ cb.checked = !!state.meta[cb.dataset.ext+'Smluvni']; });
+  document.querySelector('[data-root="poznamky"]').value = state.poznamky || '';
+  document.querySelectorAll('.ares').forEach(function(st){ st.className='ares'; st.textContent=''; });
+  document.querySelectorAll('.subject [data-s="ic"]').forEach(function(inp){ inp.dataset.looked = inp.value.replace(/\s+/g,''); });
+  renderExt(); fillPodpis(); renderSigs(); renderOps(); renderKabina();
+}
+function renderExt(){ document.querySelector('[data-subject="opravna"]').classList.toggle('same', !state.meta.opravnaSmluvni); }
+
+// ---------- ARES ----------
+function aresUlice(s){ if (!s) return ''; var c = s.cisloDomovni ? String(s.cisloDomovni) : ''; if (s.cisloOrientacni) c += '/' + s.cisloOrientacni + (s.cisloOrientacniPismeno||'');
+  var u = s.nazevUlice || s.nazevCastiObce || s.nazevObce || ''; return (u + ' ' + c).trim(); }
+function aresPsc(p){ p = String(p||'').replace(/\D+/g,''); return p.length===5 ? p.slice(0,3)+' '+p.slice(3) : p; }
+function lookupAres(key, ic, inp, st){
+  inp.dataset.looked = ic;
+  st.className = 'ares load'; st.textContent = 'Načítám údaje z ARES…';
+  fetch('https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/' + ic, {headers:{'Accept':'application/json'}})
+    .then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(d){
+      if (!d || (!d.obchodniJmeno && !d.sidlo)) throw new Error('nenalezeno');
+      var o = state.meta[key], s = d.sidlo || {};
+      if (d.obchodniJmeno) o.nazev = d.obchodniJmeno;
+      var u = aresUlice(s); if (u) o.ulice = u;
+      if (s.psc) o.psc = aresPsc(s.psc);
+      if (s.nazevObce) o.mesto = (s.nazevObce==='Praha' && s.nazevMestskehoObvodu) ? s.nazevMestskehoObvodu : s.nazevObce;
+      inp.closest('.subject').querySelectorAll('[data-s]').forEach(function(x){ x.value = o[x.dataset.s] || ''; });
+      if (key==='prijem') fillPodpis();
+      st.className = 'ares ok'; st.textContent = '✓ Doplněno z ARES';
+      changed(true);
+    })
+    .catch(function(){ st.className = 'ares err';
+      st.innerHTML = 'Nepodařilo se dohledat – vyplňte ručně, nebo zkontrolujte na <a href="https://or.justice.cz/ias/ui/rejstrik-$firma?ico='+ic+'" target="_blank" rel="noopener">justice.cz</a>'; });
+}
+
+// ---------- podpis ----------
+function podpisValue(k){ return state.podpis[k] || (k==='datum' ? state.meta.datumAuditu : k==='misto' ? state.meta.prijem.mesto : k==='zastupce' ? state.meta.prijem.kontakt : '') || ''; }
+function fillPodpis(){ document.querySelectorAll('[data-p]').forEach(function(inp){ inp.value = podpisValue(inp.dataset.p); }); }
+function sign(who){
+  var jmeno = who==='auditor' ? (state.meta.auditor||'').trim() : podpisValue('zastupce').trim();
+  if (!jmeno) { alert(who==='auditor' ? 'Nejprve vyplňte jméno auditora.' : 'Nejprve vyplňte jméno a příjmení zástupce autorizovaného dealera.'); return; }
+  state.sig[who] = {jmeno:jmeno, datum: state.meta.datumAuditu || todayIso()};
+  renderSigs(); changed(true);
+}
+function renderSigs(){
+  ['auditor','zastupce'].forEach(function(who){
+    var box = document.getElementById('sig-'+who), s = state.sig[who];
+    if (s && s.jmeno) { box.className = 'sig-area'; box.innerHTML = '<b>Digitálně podepsáno dne '+esc(czIso(s.datum))+'</b>'+esc(s.jmeno); }
+    else { box.className = 'sig-area empty'; box.textContent = 'Nepodepsáno'; }
+  });
+}
+
+// ---------- akční plán ----------
+var CASTI = PARTS.map(function(p){ return p.title; }).concat(['Specifikace lakovací kabiny','Jiné']);
+function renderOps(){
+  var body = document.getElementById('opBody');
+  var opts = function(v){ return '<option value=""></option>'+CASTI.map(function(s){ return '<option'+(s===v?' selected':'')+'>'+esc(s)+'</option>'; }).join(''); };
+  body.innerHTML = state.radky.map(function(r, i){
+    return '<tr><td><select data-op="'+i+'" data-k="cast">'+opts(r.cast)+'</select></td>'
+      + '<td><textarea data-op="'+i+'" data-k="nedostatek" rows="2">'+esc(r.nedostatek)+'</textarea></td>'
+      + '<td><textarea data-op="'+i+'" data-k="naprava" rows="2">'+esc(r.naprava)+'</textarea></td>'
+      + '<td><input data-op="'+i+'" data-k="osoba" value="'+esc(r.osoba)+'"></td>'
+      + '<td><input data-op="'+i+'" data-k="termin" type="date" value="'+esc(r.termin)+'"></td>'
+      + '<td class="no-print"><button class="del" type="button" data-del="'+i+'" title="Odebrat řádek">×</button></td></tr>';
+  }).join('');
+  body.querySelectorAll('[data-op]').forEach(function(el){ el.addEventListener(el.tagName==='SELECT'?'change':'input', function(){ state.radky[+el.dataset.op][el.dataset.k] = el.value; changed(true); }); });
+  body.querySelectorAll('[data-del]').forEach(function(b){ b.onclick = function(){ state.radky.splice(+b.dataset.del,1); renderOps(); changed(true); }; });
+}
+function newRow(o){ return Object.assign({cast:'',nedostatek:'',naprava:'',osoba:'',termin:''}, o||{}); }
+document.getElementById('opAdd').onclick = function(){ state.radky.push(newRow()); renderOps(); changed(true); };
+document.getElementById('opFill').onclick = function(){
+  var have = {}; state.radky.forEach(function(x){ have[x.cast+'|'+x.nedostatek] = 1; });
+  var add = 0;
+  ALL.forEach(function(it){
+    if (state.checks[it.id] || !it.w) return;
+    var t = it.n+' – '+it.title;
+    if (!have[it.part.title+'|'+t]) { state.radky.push(newRow({cast:it.part.title, nedostatek:t})); add++; }
+  });
+  DATA.kabina.forEach(function(k){ var o = state.kabina[k.id]; if (o && o.v==='bad') { var t = k.text + (o.c ? ' ('+o.c+')' : '');
+    if (!have['Specifikace lakovací kabiny|'+t]) { state.radky.push(newRow({cast:'Specifikace lakovací kabiny', nedostatek:t})); add++; } } });
+  renderOps(); changed(true);
+  if (!add) note('Žádné nové nesplněné body', 3000);
+};
+
+// ---------- nesplněná kritéria (PDF / CSV) ----------
+function missingParts(){
+  return PARTS.map(function(p){ return {title:p.title, secs:p.sections.map(function(sec){ return {title:sec.title, items:sec.items.filter(function(it){ return !state.checks[it.id]; })}; })}; });
+}
+function partner(){ return state.meta.prijem.nazev || ''; }
+function missingTitle(){ return 'Nesplněná kritéria – Volvo B&P audit' + (partner() ? ' – ' + partner() : ''); }
+function plural(n){ return n===1 ? 'položka' : (n>=2 && n<=4) ? 'položky' : 'položek'; }
+function buildMissing(){
+  var root = document.getElementById('missing-report'), r = evaluate();
+  var h = '<div class="mr-title">'+esc(missingTitle())+'</div><div class="mr-sub">Datum auditu: '+esc(czIso(state.meta.datumAuditu))
+    + ' · výsledek: <b>'+(r.ok?'úspěšný':'neúspěšný')+'</b> · '+PARTS.map(function(p){ return esc(p.title)+' '+fmtPct(r.per[p.id].pct); }).join(' · ')+' · vygenerováno '+czDate(new Date())+'</div>';
+  var any = false;
+  missingParts().forEach(function(p){
+    var n = p.secs.reduce(function(a,s){ return a+s.items.length; }, 0); if (!n) return; any = true;
+    h += '<div class="mr-sec"><h3>'+esc(p.title)+' – chybí '+n+' '+plural(n)+'</h3>';
+    p.secs.forEach(function(s){ if (!s.items.length) return; h += '<div class="mr-grp">'+esc(s.title)+'</div>';
+      s.items.forEach(function(it){ h += '<div class="mr-row"><span>'+esc(it.n)+'</span><span>'+esc(it.title)+(it.qty?' <span style="color:#888">('+esc(it.qty)+')</span>':'')+'</span><span><span class="badge '+(it.w?'b-C':'b-X')+'">'+(it.w?(it.cr==='R'?'Doporučené':'Hodnocené'):'Bez hodnocení')+'</span></span></div>'; }); });
+    h += '</div>';
+  });
+  if (!any) h += '<div class="mr-sec">Všechny body jsou splněné.</div>';
+  root.innerHTML = h;
+}
+function exportMissingPdf(){
+  buildMissing();
+  document.body.classList.add('exporting-missing');
+  var prev = document.title; document.title = missingTitle() + (state.meta.datumAuditu ? ' ' + state.meta.datumAuditu : '');
+  var done = false;
+  function cleanup(){ if (done) return; done = true; document.body.classList.remove('exporting-missing'); document.title = prev; window.removeEventListener('afterprint', cleanup); }
+  window.addEventListener('afterprint', cleanup);
+  setTimeout(function(){ window.print(); }, 50);
+  setTimeout(cleanup, 15000);
+}
+function csvEsc(v){ v = String(v==null?'':v); return /[;"\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
+function slug(s){ return String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').toLowerCase(); }
+function exportMissingCsv(){
+  var rows = [[missingTitle()], ['Část','Oblast','Č.','Položka','Minimální počet','Hodnocení']];
+  missingParts().forEach(function(p){ p.secs.forEach(function(s){ s.items.forEach(function(it){ rows.push([p.title, s.title, it.n, it.title, it.qty||'', it.w ? (it.cr==='R'?'Doporučené':'Hodnocené') : 'Bez hodnocení']); }); }); });
+  if (rows.length === 2) rows.push(['Všechny body splněny','','','','','']);
+  var csv = rows.map(function(r){ return r.map(csvEsc).join(';'); }).join('\r\n');
+  var blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'}), url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = 'nesplnena_kriteria_volvo' + (partner() ? '_' + slug(partner()) : '') + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+}
+var missBtn = document.getElementById('btnMissing'), missMenu = document.getElementById('missMenu'), missWrap = document.getElementById('missWrap');
+function closeMiss(){ missMenu.setAttribute('hidden',''); missBtn.setAttribute('aria-expanded','false'); }
+missBtn.onclick = function(e){ e.stopPropagation(); if (missMenu.hasAttribute('hidden')) { missMenu.removeAttribute('hidden'); missBtn.setAttribute('aria-expanded','true'); } else closeMiss(); };
+document.addEventListener('click', function(e){ if (!missWrap.contains(e.target)) closeMiss(); });
+document.getElementById('btnMissingPdf').onclick = function(){ closeMiss(); exportMissingPdf(); };
+document.getElementById('btnMissingCsv').onclick = function(){ closeMiss(); exportMissingCsv(); };
+
+// ---------- fotky (js/photos.js) ----------
+function renderPhotos(){
+  if (!window.IA_PHOTOS) return;
+  document.querySelectorAll('[data-ph]').forEach(function(slot){
+    slot.innerHTML = '';
+    slot.appendChild(window.IA_PHOTOS.button(slot.dataset.ph, function(){ return state; }, {
+      partner: function(){ return state.meta.prijem.nazev; }, ic: function(){ return state.meta.prijem.ic; }, changed: function(){ saveLocal(); } }));
+  });
+}
+document.addEventListener('ia-photos-ready', function(){ window.IA_PHOTOS.onRerender(renderPhotos); renderPhotos(); });
+
+// ---------- uložení ----------
+function syncPartner(){
+  var p = state.meta.prijem;
+  state.meta.partner = (p.nazev||'').trim(); state.meta.ic = (p.ic||'').replace(/\s/g,'');
+  ['datum','misto','zastupce'].forEach(function(k){ if (!state.podpis[k]) state.podpis[k] = podpisValue(k); });
+}
+function serializeState(){ syncPartner(); return JSON.stringify(state); }
+function saveLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){} }
+function note(t, ms){ saveNoteEl.textContent = t; if (ms) setTimeout(function(){ if (saveNoteEl.textContent===t) saveNoteEl.textContent=''; }, ms); }
+function changed(noRender){ if (!noRender) renderResult(); saveLocal(); }
+window.IA_FORM = { state: function(){ return state; }, changed: function(){ saveLocal(); } };
+
+function applyLoaded(obj){
+  var base = emptyState(); state = base;
+  if (!obj || typeof obj!=='object') return;
+  var m = obj.meta || {};
+  ['partner','ic','datumAuditu','auditor','opravnaSmluvni','mistoPrijmu','mistoDilny'].forEach(function(k){ if (m[k]!==undefined) state.meta[k] = m[k]; });
+  state.meta.prijem = Object.assign(emptySubject(), m.prijem||{});
+  state.meta.opravna = Object.assign(emptySubject(), m.opravna||{});
+  state.checks = Object.assign({}, obj.checks||{});
+  state.kabina = Object.assign({}, obj.kabina||{});
+  state.photos = Object.assign({}, obj.photos||{});
+  state.radky = Array.isArray(obj.radky) ? obj.radky.map(function(r){ return newRow(r); }) : [];
+  state.poznamky = obj.poznamky || '';
+  state.podpis = Object.assign({zastupce:'',misto:'',datum:''}, obj.podpis||{});
+  state.sig = {auditor:(obj.sig||{}).auditor||null, zastupce:(obj.sig||{}).zastupce||null};
+}
+function renderAll(){ fillFields(); renderResult(); renderPhotos(); if (window.IA_LOC) window.IA_LOC.refresh(); }
+
+document.getElementById('btnNew').onclick = function(){
+  if (!confirm('Začít nový prázdný audit? Neuložené změny v aktuálním formuláři se ztratí.')) return;
+  state = emptyState(); renderAll(); saveLocal(); note('Nový audit', 2500);
+};
+document.getElementById('btnPrint').onclick = function(){ window.print(); };
+document.getElementById('btnSave').addEventListener('click', function(){ if (!window.IA_DB) return alert('Připojení k databázi se ještě načítá, zkuste to za okamžik.'); window.IA_DB.save(serializeState(), function(t){ note(t, 3000); }); });
+document.getElementById('btnLoad').addEventListener('click', function(){ if (!window.IA_DB) return alert('Připojení k databázi se ještě načítá, zkuste to za okamžik.'); window.IA_DB.open(function(l){ applyLoaded(l); renderAll(); saveLocal(); note('Načteno z databáze ✓', 3000); }); });
+
+// ---------- start ----------
+buildParts();
+bindFields();
+try { var saved = localStorage.getItem(LS_KEY); if (saved) applyLoaded(JSON.parse(saved)); } catch(e){}
+if (!state.meta.datumAuditu && !state.meta.prijem.nazev && !Object.keys(state.checks).length) state.meta.datumAuditu = todayIso();
+renderAll();
+})();
+</script>
+</body>
+</html>
