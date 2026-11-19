@@ -1,9 +1,9 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
-import { supabase, getProfile } from "./js/supabase.js?v=20261118d";
-import { exportPdf, exportXlsx } from "./js/export.js?v=20261118d";
-import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261118d";
-import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261118d";
-import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, esc as escR } from "./js/results.js?v=20261118d";
+import { supabase, getProfile } from "./js/supabase.js?v=20261119a";
+import { exportPdf, exportXlsx } from "./js/export.js?v=20261119a";
+import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261119a";
+import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261119a";
+import { RESULT_BRANDS, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, esc as escR } from "./js/results.js?v=20261119a";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
@@ -176,7 +176,7 @@ async function renderResultsHome() {
     </section>`;
   app.querySelectorAll(".tile").forEach(attachTilt);
   try {
-    const rows = latestPerCustomer(await loadAudits());
+    const rows = latestPerCustomer((await loadAudits()).filter(r => (r.audit_kind || "ostry") === "ostry"));
     for (const b of RESULT_BRANDS) {
       const own = rows.filter(r => r.brand === b.id);
       const mine = own.map(r => statusOf(r.next_audit_date).key);
@@ -188,6 +188,7 @@ async function renderResultsHome() {
   } catch (e) { app.querySelectorAll("[data-stats]").forEach(x => x.textContent = "chyba načtení"); }
 }
 
+const filters = {};
 async function renderResultsBrand(b) {
   document.title = `Výsledky ${b.name} | INTERACTION`;
   app.innerHTML = `
@@ -201,23 +202,37 @@ async function renderResultsBrand(b) {
     </section>`;
   const dash = document.getElementById("dash");
   const isAdmin = profile.role === "admin";
-  const refresh = async () => {
-    let defs = null, rows = [];
-    try { defs = b.id === "arval" ? await arvalDefs() : null; rows = await loadAudits(b.id); dash.innerHTML = dashboardHtml(b.id, rows, isAdmin, defs); }
-    catch (e) { dash.innerHTML = `<div class="empty">Data se nepodařilo načíst: ${escR(e.message)}</div>`; return; }
+  const filt = filters[b.id] || (filters[b.id] = defaultFilter()); // filtry zůstanou nastavené během práce v aplikaci
+  let defs = null, rows = [];
+  const draw = () => {
+    const kOpen = document.getElementById("fKraj")?.open;
+    dash.innerHTML = dashboardHtml(b.id, rows, isAdmin, defs, filt);
+    if (kOpen) document.getElementById("fKraj").open = true;
     dash.querySelectorAll("[data-export]").forEach(btn => btn.onclick = () => {
-      const t = exportTable(b.id, rows, defs, document.getElementById("resSearch")?.value);
-      if (!t.rows.length) return alert("Žádní zákazníci k exportu (zkontrolujte vyhledávání).");
+      const t = exportTable(b.id, rows, defs, filt);
+      if (!t.rows.length) return alert("Žádní zákazníci k exportu (zkontrolujte filtry a vyhledávání).");
       if (btn.dataset.export === "pdf") exportPdf(t); else exportXlsx(t, t.file + ".xlsx");
     });
     const search = document.getElementById("resSearch");
-    if (search) search.oninput = () => { const q = search.value.toLowerCase().trim(); dash.querySelectorAll("tbody tr").forEach(tr => tr.hidden = q && !tr.dataset.q.includes(q)); };
+    const applySearch = () => { const q = filt.q.toLowerCase().trim(); dash.querySelectorAll("tbody tr").forEach(tr => tr.hidden = q && !tr.dataset.q.includes(q)); };
+    if (search) { search.oninput = () => { filt.q = search.value; applySearch(); }; applySearch(); }
+    const kind = document.getElementById("fKind"); if (kind) kind.onchange = () => { filt.kind = kind.value; draw(); };
+    const per = document.getElementById("fPeriod"); if (per) per.onchange = () => { filt.period = per.value; draw(); };
+    dash.querySelectorAll("#fKraj input[type=checkbox]").forEach(cb => cb.onchange = () => {
+      filt.kraje = [...dash.querySelectorAll("#fKraj input:checked")].map(x => x.value); draw();
+    });
+    const clr = dash.querySelector("[data-kraj-clear]"); if (clr) clr.onclick = () => { filt.kraje = []; draw(); };
     dash.querySelectorAll("[data-del]").forEach(btn => btn.onclick = async () => {
       if (!confirm(`Opravdu smazat audit zákazníka „${btn.dataset.name}“? Tuto akci nelze vrátit.`)) return;
       try { await deleteAudit(btn.dataset.del); refresh(); } catch (e) { alert("Smazání se nepodařilo: " + e.message); }
     });
     const file = document.getElementById("importFile");
     if (file) file.onchange = () => handleImport(b, [...file.files], refresh);
+  };
+  const refresh = async () => {
+    try { defs = b.id === "arval" ? await arvalDefs() : null; rows = await loadAudits(b.id); }
+    catch (e) { dash.innerHTML = `<div class="empty">Data se nepodařilo načíst: ${escR(e.message)}</div>`; return; }
+    draw();
   };
   refresh();
 }

@@ -373,3 +373,24 @@ tr.st-soon td:first-child { box-shadow: inset 4px 0 0 #f0a000; }
 .pwa-actions { display: flex; flex-direction: column; gap: 8px; }
 .pwa-later { border: 0; background: none; color: #666; font: 600 .92rem "Open Sans", sans-serif; cursor: pointer; padding: 8px; }
 .pwa-offer .pwa-note { font-size: .78rem; color: #888; margin: 12px 0 0; }
+
+/* Filtry přehledu výsledků */
+.res-filters { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; margin-bottom: 12px; }
+.f-field { display: flex; flex-direction: column; gap: 4px; font-size: .78rem; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: .02em; }
+.f-field select, .f-kraj summary { font: 400 .92rem "Open Sans", system-ui, sans-serif; text-transform: none; letter-spacing: 0; color: #1e1e1e; padding: 8px 12px; border: 1px solid #ccc; border-radius: 9px; background: #fff; min-width: 210px; cursor: pointer; }
+.f-kraj { position: relative; }
+.f-kraj summary { list-style: none; position: relative; padding-right: 30px; }
+.f-kraj summary::-webkit-details-marker { display: none; }
+.f-kraj summary::after { content: "▾"; position: absolute; right: 11px; top: 50%; transform: translateY(-50%); color: #777; }
+.f-kraj[open] summary { border-color: #1e1e1e; }
+.f-kraj-list { position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; background: #fff; border: 1px solid #ddd; border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,.18); padding: 8px; width: 290px; max-height: 60vh; overflow: auto; text-transform: none; letter-spacing: 0; }
+.f-kraj-list label { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; font: 400 .9rem "Open Sans", system-ui, sans-serif; color: #1e1e1e; cursor: pointer; }
+.f-kraj-list label:hover { background: #f4f4f4; }
+.f-kraj-list label span { flex: 1; }
+.f-kraj-list label em { font-style: normal; color: #888; font-size: .8rem; }
+.f-kraj-list label.f-empty { color: #aaa; }
+.f-kraj-list input { width: 17px; height: 17px; accent-color: #E21F25; }
+.f-kraj-act { border-top: 1px solid #eee; margin-top: 6px; padding-top: 8px; }
+.f-note { margin: -4px 0 12px; font-size: .85rem; color: #555; }
+.kind-badge { display: inline-block; margin-top: 3px; background: #FFF1D6; color: #8a5a00; border-radius: 6px; padding: 1px 7px; font-size: .74rem; font-weight: 600; }
+@media (max-width: 600px) { .f-field, .f-field select, .f-kraj summary { width: 100%; min-width: 0; } .res-filters { flex-direction: column; align-items: stretch; } .f-kraj-list { width: 100%; } }
