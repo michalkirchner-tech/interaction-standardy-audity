@@ -1,7 +1,7 @@
 // Service worker aplikace Standardy a audity.
 // Strategie „nejdřív síť“: vždy se načte nejnovější verze, uložená kopie slouží jen při výpadku připojení.
 // Požadavky na databázi (Supabase), ARES a jiné weby se neukládají.
-const CACHE = "ia-audity-v35";
+const CACHE = "ia-audity-v36";
 const CORE = ["./", "./index.html", "./styles.css", "./manifest.webmanifest", "./assets/interaction-logo.png", "./assets/icons/icon-192.png", "./assets/icons/icon-512.png"];
 
 self.addEventListener("install", e => {

@@ -1,6 +1,6 @@
 // Náhled kompletní výsledkové listiny auditu (jen ke čtení) + export do PDF (tisk prohlížeče)
-import { supabase } from "./supabase.js?v=20261120w";
-import { formDefs, arvalBreakdown, mitsubishiEval, mitsubishiRecertEval, stOf, czDate, esc } from "./results.js?v=20261120w";
+import { supabase } from "./supabase.js?v=20261120x";
+import { formDefs, arvalBreakdown, mitsubishiEval, mitsubishiRecertEval, stOf, czDate, esc } from "./results.js?v=20261120x";
 
 const BRAND_NAME = { arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi" };
 const OK = '<span class="pv-ok" title="Splněno">✓</span>', NOK = '<span class="pv-nok" title="Nesplněno">✗</span>';
@@ -16,7 +16,7 @@ export async function openPreview(brand, id) {
   box.innerHTML = `<div class="pv-box" role="dialog" aria-modal="true"><div class="pv-bar no-print-pv">
       <strong>Výsledková listina – ${esc(BRAND_NAME[brand] || brand)}</strong>
       <label class="pv-only"><input type="checkbox" data-only> Jen nesplněná kritéria</label>
-      <span class="pv-btns"><button type="button" data-pdf class="pv-pdf">Export do PDF</button><button type="button" data-x class="pv-close">Zavřít</button></span></div>
+      <span class="pv-btns"><button type="button" data-share class="pv-share">Sdílet PDF</button><button type="button" data-pdf class="pv-pdf">Export do PDF</button><button type="button" data-x class="pv-close">Zavřít</button></span></div>
     <div class="pv-doc"><p class="pv-msg">Načítám audit…</p></div></div>`;
   document.body.appendChild(box);
   document.body.classList.add("pv-open");
@@ -61,6 +61,65 @@ export async function openPreview(brand, id) {
     window.addEventListener("afterprint", done);
     setTimeout(() => window.print(), 50);
     setTimeout(done, 20000);
+  };
+  const fname = `Vysledkova_listina_${BRAND_NAME[brand] || brand}_${rec.partner}_${rec.audit_date || ""}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9_.-]+/g, "_").replace(/_+/g, "_") + ".pdf";
+  const subject = `Výsledková listina auditu ${BRAND_NAME[brand] || brand} – ${rec.partner} (${czDate(rec.audit_date)})`;
+  setupShare(box, doc, fname, subject);
+}
+
+// ---------- Sdílet PDF (e-mail, Outlook, WhatsApp… podle nabídky Sdílet v systému) ----------
+let h2pLoading = null;
+function loadHtml2pdf() {
+  if (window.html2pdf) return Promise.resolve(window.html2pdf);
+  return h2pLoading ||= new Promise((ok, fail) => {
+    const sc = document.createElement("script");
+    sc.src = "assets/vendor/html2pdf.bundle.min.js?v=20261120x";
+    sc.onload = () => ok(window.html2pdf); sc.onerror = () => { h2pLoading = null; fail(new Error("Nepodařilo se načíst nástroj pro PDF (jste online?).")); };
+    document.head.appendChild(sc);
+  });
+}
+async function makePdf(doc) {
+  const h2p = await loadHtml2pdf();
+  const el = document.createElement("div");
+  el.className = "pv-doc pv-pdf-doc" + (doc.classList.contains("pv-only-bad") ? " pv-only-bad" : "");
+  el.innerHTML = doc.innerHTML;
+  return h2p().set({
+    margin: [10, 10, 12, 10],
+    image: { type: "jpeg", quality: 0.85 },
+    html2canvas: { scale: 1.6, useCORS: true, backgroundColor: "#ffffff" },
+    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+    pagebreak: { mode: ["css", "legacy"], avoid: ["tr", ".pv-kv", ".pv-head", "h2", "h3"] },
+  }).from(el).outputPdf("blob");
+}
+function download(file) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = file.name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+}
+function setupShare(box, doc, fname, subject) {
+  const btn = box.querySelector("[data-share]");
+  let ready = null; // hotové PDF – druhé klepnutí ho rovnou sdílí
+  const share = async file => {
+    try { await navigator.share({ files: [file], title: subject, text: subject }); return "ok"; }
+    catch (e) { return e.name === "AbortError" ? "ok" : e.name === "NotAllowedError" ? "again" : "fail"; }
+  };
+  btn.onclick = async () => {
+    if (btn.disabled) return;
+    let file = ready;
+    if (!file) {
+      btn.disabled = true; btn.textContent = "Připravuji PDF…";
+      try { file = new File([await makePdf(doc)], fname, { type: "application/pdf" }); }
+      catch (e) { alert("PDF se nepodařilo vytvořit: " + e.message); btn.disabled = false; btn.textContent = "Sdílet PDF"; return; }
+      btn.disabled = false; btn.textContent = "Sdílet PDF";
+    }
+    if (!(navigator.canShare && navigator.canShare({ files: [file] }))) {
+      download(file);
+      alert("Tento prohlížeč neumí soubor sdílet přímo do aplikace. PDF se stáhlo do počítače – přiložte ho do e-mailu ručně.\n\nTip: ve Windows použijte Microsoft Edge nebo Google Chrome.");
+      return;
+    }
+    const r = await share(file);
+    if (r === "again") { ready = file; btn.textContent = "PDF je připravené – klepněte znovu"; btn.classList.add("pv-ready"); return; }
+    if (r === "fail") { download(file); alert("Sdílení se nepodařilo, PDF se stáhlo – přiložte ho ručně."); }
+    ready = null; btn.textContent = "Sdílet PDF"; btn.classList.remove("pv-ready");
   };
 }
 
@@ -155,8 +214,9 @@ const css = `
 .pv-box{background:#fff;border-radius:14px;width:min(1000px,100%);display:flex;flex-direction:column;max-height:calc(100vh - 28px);overflow:hidden;color:#1e1e1e}
 .pv-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:12px 16px;border-bottom:3px solid #E21F25}
 .pv-bar strong{flex:1 1 auto}.pv-only{font-size:.88rem;display:flex;gap:6px;align-items:center;cursor:pointer}
-.pv-btns{display:flex;gap:8px}.pv-btns button{border:0;border-radius:9px;padding:8px 14px;font:600 .9rem inherit;cursor:pointer}
-.pv-pdf{background:#1e1e1e;color:#fff}.pv-close{background:#fff;border:1px solid #ccc!important}
+.pv-btns{display:flex;flex-wrap:wrap;gap:8px}.pv-btns button{border:0;border-radius:9px;padding:8px 14px;font:600 .9rem inherit;cursor:pointer}
+.pv-pdf{background:#1e1e1e;color:#fff}.pv-share{background:#e30613;color:#fff}.pv-share.pv-ready{background:#1d7a3a}.pv-share:disabled{opacity:.7;cursor:wait}
+.pv-pdf-doc{overflow:visible!important;max-height:none!important;padding:0!important;background:#fff;font-size:9.5pt}.pv-pdf-doc tr.pv-bad,.pv-pdf-doc .pv-lvl{-webkit-print-color-adjust:exact}.pv-close{background:#fff;border:1px solid #ccc!important}
 .pv-doc{overflow:auto;padding:18px 22px 26px;font-size:.88rem;line-height:1.4}
 .pv-head{display:flex;gap:14px;align-items:center;margin-bottom:12px}.pv-head img{height:34px}.pv-head h1{font-size:1.15rem;margin:0}.pv-head p{margin:2px 0 0;font-weight:600}
 .pv-doc h2{font-size:1rem;margin:20px 0 6px;padding-bottom:4px;border-bottom:1px solid #ddd;display:flex;align-items:center;gap:10px;flex-wrap:wrap;break-after:avoid}
