@@ -1,6 +1,6 @@
 // Náhled kompletní výsledkové listiny auditu (jen ke čtení) + export do PDF (tisk prohlížeče)
-import { supabase } from "./supabase.js?v=20261120y";
-import { formDefs, prepareImport, arvalBreakdown, mitsubishiEval, mitsubishiRecertEval, stOf, czDate, esc } from "./results.js?v=20261120y";
+import { supabase } from "./supabase.js?v=20261120z";
+import { formDefs, prepareImport, arvalBreakdown, mitsubishiEval, mitsubishiRecertEval, stOf, czDate, esc } from "./results.js?v=20261120z";
 
 const BRAND_NAME = { arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi" };
 const OK = '<span class="pv-ok" title="Splněno">✓</span>', NOK = '<span class="pv-nok" title="Nesplněno">✗</span>';
@@ -55,7 +55,9 @@ function sigBlock(s) {
   if (!keys.length) return "";
   return `<h2>Podpisy</h2><div class="pv-sigs">${keys.map(k => {
     const v = sg[k];
-    const inner = typeof v === "string" && v.startsWith("data:image") ? `<img src="${v}" alt="">`
+    const k2 = s.kontakty || {}, jm = k === "auditor" ? k2.auditorJmeno : k === "odpovedna" ? k2.odpovednaJmeno : "";
+    const dt = k2.datumPodpisu || s.meta?.datumAuditu;
+    const inner = typeof v === "string" && v.startsWith("data:image") ? `<img src="${v}" alt="">${jm ? `<b>${esc(jm)}</b>` : ""}<span>Digitálně podepsáno${dt ? ` ${czDate(dt)}` : ""}</span>`
       : typeof v === "object" ? `<b>${esc(v.jmeno || "")}</b><span>Digitálně podepsáno${v.datum ? ` ${czDate(v.datum)}` : ""}</span>` : "";
     return inner ? `<div class="pv-sig"><span class="pv-sigl">${esc(SIG_LBL[k] || k)}</span>${inner}</div>` : "";
   }).join("")}</div>`;
@@ -111,7 +113,7 @@ function loadHtml2pdf() {
   if (window.html2pdf) return Promise.resolve(window.html2pdf);
   return h2pLoading ||= new Promise((ok, fail) => {
     const sc = document.createElement("script");
-    sc.src = new URL("../assets/vendor/html2pdf.bundle.min.js?v=20261120y", import.meta.url).href;
+    sc.src = new URL("../assets/vendor/html2pdf.bundle.min.js?v=20261120z", import.meta.url).href;
     sc.onload = () => ok(window.html2pdf); sc.onerror = () => { h2pLoading = null; fail(new Error("Nepodařilo se načíst nástroj pro PDF (jste online?).")); };
     document.head.appendChild(sc);
   });

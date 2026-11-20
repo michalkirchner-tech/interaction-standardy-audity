@@ -1,6 +1,6 @@
 // KPI – porovnání partnerů (nebo jejich poboček) mezi sebou
-import { KPIS, KPI_BY_KEY, periodData, sumBranches, kpiValues, benchmark, targetFor, fmtKpi, periodName, monthCount } from "./kpi-calc.js?v=20261120y";
-import { barChart } from "./kpi-out.js?v=20261120y";
+import { KPIS, KPI_BY_KEY, periodData, sumBranches, kpiValues, benchmark, targetFor, fmtKpi, periodName, monthCount } from "./kpi-calc.js?v=20261120z";
+import { barChart } from "./kpi-out.js?v=20261120z";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const TYPES = { M: "měsíc", Q: "kvartál", H: "pololetí", Y: "rok" };
