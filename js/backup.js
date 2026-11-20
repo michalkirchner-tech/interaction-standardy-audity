@@ -1,5 +1,5 @@
 // Zálohy dat – jen pro administrátora
-import { supabase } from "./supabase.js?v=20261120s";
+import { supabase } from "./supabase.js?v=20261120t";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const BRAND = { arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi", hyundai: "Hyundai" };

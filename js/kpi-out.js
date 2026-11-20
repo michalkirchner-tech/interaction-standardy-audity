@@ -1,6 +1,6 @@
 // KPI – výstupy: dashboard, tabulka po pobočkách, grafy, vlastní cílové benchmarky
-import { supabase } from "./supabase.js?v=20261120s";
-import { KPIS, PAINT_KPIS, KPI_BY_KEY, periodData, sumBranches, kpiValues, benchmark, targetFor, rate, fmtKpi, periodName, monthCount } from "./kpi-calc.js?v=20261120s";
+import { supabase } from "./supabase.js?v=20261120t";
+import { KPIS, PAINT_KPIS, KPI_BY_KEY, periodData, sumBranches, kpiValues, benchmark, targetFor, rate, fmtKpi, periodName, monthCount } from "./kpi-calc.js?v=20261120t";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const CARDS = ["marze", "zisk", "hodnota_mj", "produktivita", "obrat_hod", "spotreba_hod", "obrat_lak", "produktivita_kar"];
@@ -36,6 +36,7 @@ export async function loadAllEntries() {
 export function barChart(title, items, fmt, bench, target) {
   const vals = items.map(i => i.v).filter(v => v != null);
   if (!vals.length) return "";
+  if (items.length > 6) return hBarChart(title, items, fmt, bench, target);
   const refs = [bench, target].filter(v => v != null);
   const max = Math.max(...vals, ...refs, 0) * 1.12 || 1;
   const min = Math.min(0, ...vals);
@@ -57,6 +58,30 @@ export function barChart(title, items, fmt, bench, target) {
           <text x="${x + bw / 2}" y="${H - B + 16}" text-anchor="middle" class="lab">${esc(it.label)}</text>`;
       }).join("")}
       ${line(bench, "bm")}${line(target, "tg")}
+    </svg></figure>`;
+}
+
+// Vodorovný graf pro mnoho položek (dlouhé názvy vlevo)
+function hBarChart(title, items, fmt, bench, target) {
+  const vals = items.map(i => i.v).filter(v => v != null);
+  const max = Math.max(...vals, bench ?? 0, target ?? 0, 0) * 1.15 || 1, min = Math.min(0, ...vals);
+  const W = 560, L = 190, R = 14, rowH = 22, T = 6, H = T + items.length * rowH + 10;
+  const x = v => L + (v - min) / (max - min) * (W - L - R);
+  const short = s => s.length > 30 ? s.slice(0, 29) + "…" : s;
+  const vline = (v, cls) => v == null ? "" : `<line x1="${x(v)}" x2="${x(v)}" y1="${T - 2}" y2="${H - 6}" class="${cls}"/>`;
+  const leg = [bench != null ? `<span class="lg-bm-t">┆ benchmark ${esc(fmtKpi(bench, fmt))}</span>` : "", target != null ? `<span class="lg-tg-t">┆ vlastní cíl ${esc(fmtKpi(target, fmt))}</span>` : ""].filter(Boolean).join(" · ");
+  return `<figure class="kpi-chart kpi-chart-h"><figcaption>${esc(title)}${leg ? `<small>${leg}</small>` : ""}</figcaption>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)}">
+      ${items.map((it, i) => {
+        const y = T + i * rowH;
+        const lab = `<text x="${L - 6}" y="${y + rowH / 2 + 4}" text-anchor="end" class="lab"><title>${esc(it.label)}</title>${esc(short(it.label))}</text>`;
+        if (it.v == null) return lab + `<text x="${L + 4}" y="${y + rowH / 2 + 4}" class="na">—</text>`;
+        const x0 = x(Math.min(0, it.v)), w = Math.max(1, Math.abs(x(it.v) - x(0)));
+        return lab + `<rect x="${x0}" y="${y + 3}" width="${w}" height="${rowH - 7}" rx="3" class="${it.total ? "bar-t" : "bar"}"/>
+          <text x="${x0 + w + 4}" y="${y + rowH / 2 + 4}" class="val">${esc(fmtKpi(it.v, fmt))}</text>`;
+      }).join("")}
+      <line x1="${x(0)}" x2="${x(0)}" y1="${T - 2}" y2="${H - 6}" class="ax"/>
+      ${vline(bench, "bm")}${vline(target, "tg")}
     </svg></figure>`;
 }
 

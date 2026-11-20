@@ -1,6 +1,6 @@
 // KPI – odchozené a prodané hodiny: za celé středisko, nebo jmenovitě (řádky se jmény, součet se dopočítá)
 // Zobrazení: jedna tabulka na oddělení – řádek = pobočka, při volbě „jmenovitě“ se pod ní rozbalí řádky se jmény.
-import { DEPTS } from "./kpi-defs.js?v=20261120s";
+import { DEPTS } from "./kpi-defs.js?v=20261120t";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmtNum = v => v == null || v === "" || isNaN(v) ? "" : Number(v).toLocaleString("cs-CZ", { maximumFractionDigits: 4 });

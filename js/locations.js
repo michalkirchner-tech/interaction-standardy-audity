@@ -1,7 +1,7 @@
 // Základní údaje auditu: „Příjem do servisu“ a „Mechanická dílna“ – v místě sídla, nebo na jiné adrese.
 // Formulář dá k dispozici window.IA_FORM = { state(), changed() } a do stránky vloží prázdné <div class="ialoc-slot">.
 // Tento modul do nich bloky vykreslí (i po každém překreslení formuláře).
-import { krajFromAddress } from "./results.js?v=20261120s";
+import { krajFromAddress } from "./results.js?v=20261120t";
 
 const BLOCKS = [
   { key: "mistoPrijmu", title: "Příjem do servisu", kraj: true },

@@ -659,3 +659,4 @@ body.gal-open { overflow: hidden; }
 .fill-period em { font-style: normal; background: rgba(255,255,255,.18); border-radius: 999px; padding: 2px 12px; font-weight: 600; }
 .kpi-ok-inline { color: #1b6b35; }
 .kpi-req-list td .muted { display: block; color: #777; font-size: .78rem; }
+.kpi-charts:has(.kpi-chart-h) { grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); }
