@@ -1,20 +1,20 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
-import { supabase, getProfile } from "./js/supabase.js?v=20261120d";
-import { exportPdf, exportXlsx } from "./js/export.js?v=20261120d";
-import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261120d";
-import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261120d";
-import { renderUsers } from "./js/users.js?v=20261120d";
-import { openGallery } from "./js/gallery.js?v=20261120d";
-import { openPreview } from "./js/preview.js?v=20261120d";
-import { renderMultibrand } from "./js/multibrand.js?v=20261120d";
-import { RESULT_BRANDS, NO_VALIDITY, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261120d";
+import { supabase, getProfile } from "./js/supabase.js?v=20261120e";
+import { exportPdf, exportXlsx } from "./js/export.js?v=20261120e";
+import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261120e";
+import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261120e";
+import { renderUsers } from "./js/users.js?v=20261120e";
+import { openGallery } from "./js/gallery.js?v=20261120e";
+import { openPreview } from "./js/preview.js?v=20261120e";
+import { renderMultibrand } from "./js/multibrand.js?v=20261120e";
+import { RESULT_BRANDS, NO_VALIDITY, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261120e";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
   { id: "stellantis", name: "Stellantis",  logo: "assets/logos/stellantis.svg", wide: true, url: "stellantis/" },
   { id: "mercedes",   name: "Mercedes-Benz", logo: "assets/logos/mercedes.svg" },
-  { id: "skoda",      name: "Škoda Auto",  logo: "assets/logos/skoda.svg",      wide: true },
-  { id: "porsche-cr", name: "Porsche ČR",  logo: "assets/logos/porsche-cr.svg", wide: true },
+  { id: "skoda",      name: "Škoda Auto",  logo: "assets/logos/skoda.svg",      wide: true, url: "skoda/" },
+  { id: "porsche-cr", name: "Porsche ČR",  logo: "assets/logos/porsche-cr.svg", wide: true, url: "porsche-cr/" },
   { id: "volvo",      name: "Volvo",       logo: "assets/logos/volvo.svg",      url: "volvo/" },
   { id: "mitsubishi", name: "Mitsubishi",  logo: "assets/logos/mitsubishi.svg", url: "mitsubishi/" },
   { id: "hyundai",    name: "Hyundai",     logo: "assets/logos/hyundai.svg",    wide: true, url: "hyundai/" },
