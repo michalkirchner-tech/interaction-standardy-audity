@@ -1,7 +1,7 @@
 // KPI servisních partnerů (lakovna, karosárna) – jen pro administrátora
 // Krok 1: partneři a pobočky · Krok 2: zadávání vstupů za období · Krok 3: výstupy
-import { supabase } from "./supabase.js?v=20261120i";
-import { outputsHtml, loadAllEntries, loadTargets, targetsFormHtml, saveTargets } from "./kpi-out.js?v=20261120i";
+import { supabase } from "./supabase.js?v=20261120j";
+import { outputsHtml, loadAllEntries, loadTargets, targetsFormHtml, saveTargets } from "./kpi-out.js?v=20261120j";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const czErr = e => /kpi_partners_name_uq/.test(e?.message || "") ? "Partner s tímto názvem už existuje."
@@ -73,7 +73,7 @@ export async function renderKpi(app) {
   dirty = false;
   app.innerHTML = `
     <section class="brand-page wide-page kpi-page">
-      <a class="back" href="#">← Zpět na úvod</a>
+      <a class="back" href="#" id="kpiTopBack">← Zpět na úvod</a>
       <div class="brand-head brand-head-plain"><div><h2>KPI servisních partnerů</h2>
         <p>Sledování ukazatelů lakovny a karosárny. Vidí jen administrátor.</p></div></div>
       <div id="kpiBox"><div class="empty">Načítám…</div></div>
@@ -83,6 +83,13 @@ export async function renderKpi(app) {
 }
 
 function box() { return document.getElementById("kpiBox"); }
+
+// Horní odkaz zpět: v seznamu partnerů vede na úvod, jinde zpět na přehled KPI
+function setBack(toList) {
+  const a = document.getElementById("kpiTopBack"); if (!a) return;
+  a.textContent = toList ? "← Zpět na přehled KPI" : "← Zpět na úvod";
+  a.onclick = toList ? e => { e.preventDefault(); if (leaveOk()) { showList(); window.scrollTo(0, 0); } } : null;
+}
 const leaveOk = () => !dirty || confirm("Máte neuložené změny ve vstupech. Opravdu odejít bez uložení?");
 window.addEventListener("beforeunload", e => { if (dirty && document.getElementById("kpiInputs")) { e.preventDefault(); e.returnValue = ""; } });
 
@@ -90,6 +97,7 @@ window.addEventListener("beforeunload", e => { if (dirty && document.getElementB
 async function showList(msg = "") {
   const b = box(); if (!b) return;
   dirty = false; current = null;
+  setBack(false);
   try { partners = await loadPartners(); }
   catch (e) { b.innerHTML = `<div class="empty">Data se nepodařilo načíst: ${esc(e.message)}</div>`; return; }
   let counts = {};
@@ -145,6 +153,7 @@ function branchRow(br = {}) {
 
 function showForm(p) {
   const b = box();
+  setBack(true);
   const edit = !!p;
   b.innerHTML = `
     <div class="res-card kpi-form-card">
@@ -253,6 +262,7 @@ let allEntries = [], targets = {};
 
 async function showPartner(pid, msg = "") {
   const b = box();
+  setBack(true);
   current = partners.find(p => p.id === pid);
   if (!current) return showList();
   b.innerHTML = `<div class="empty">Načítám…</div>`;
@@ -265,8 +275,7 @@ async function showPartner(pid, msg = "") {
   b.innerHTML = `
     <div class="res-card">
       <div class="kpi-bar">
-        <div><button type="button" class="kpi-link" id="kpiBack">← Všichni partneři</button>
-          <h3 class="kpi-title">${esc(current.name)}</h3>
+        <div><h3 class="kpi-title">${esc(current.name)}</h3>
           <span class="muted-cell">Pobočky: ${current.kpi_branches.map(x => esc(x.name)).join(", ")}</span></div>
         <div class="kpi-tabs"><button type="button" data-mode="in" class="${mode === "in" ? "active" : ""}">Vstupy</button><button type="button" data-mode="out" class="${mode === "out" ? "active" : ""}">Výstupy</button></div>
       </div>
@@ -285,7 +294,6 @@ async function showPartner(pid, msg = "") {
     b.querySelectorAll("[data-mode]").forEach(x => x.classList.toggle("active", x === t));
     draw();
   });
-  document.getElementById("kpiBack").onclick = () => { if (leaveOk()) showList(); };
   const pYear = document.getElementById("pYear"), pType = document.getElementById("pType"), pNo = document.getElementById("pNo");
   const fillNo = () => {
     const n = periodNos(sel.type);

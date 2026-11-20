@@ -523,7 +523,7 @@ body.gal-open { overflow: hidden; }
 .no-painters .kpi-painters { display: none; }
 .kpi-link { border: 0; background: none; color: var(--ia-blue); font: 600 .88rem "Open Sans", sans-serif; cursor: pointer; padding: 0; }
 .kpi-link:hover { color: var(--ia-red); }
-.kpi-title { margin: 4px 0 2px; font-size: 1.35rem; }
+.kpi-title { margin: 0 0 2px; font-size: 1.35rem; }
 .kpi-tabs { display: flex; gap: 4px; background: var(--ia-bg); border-radius: 10px; padding: 4px; }
 .kpi-tabs button { border: 0; background: none; padding: 8px 18px; border-radius: 8px; font: 600 .92rem "Poppins", sans-serif; cursor: pointer; color: #555; }
 .kpi-tabs button.active { background: var(--ia-dark); color: #fff; }
