@@ -1,6 +1,6 @@
 // KPI – excelová šablona pro partnera (vytvoření .xlsx) a načtení vyplněné tabulky zpět
-import { zip } from "./export.js?v=20261120m";
-import { LAK, KAR, PAINT } from "./kpi-defs.js?v=20261120m";
+import { zip } from "./export.js?v=20261120n";
+import { LAK, KAR, PAINT, DEPTS, periodRange } from "./kpi-defs.js?v=20261120n";
 
 const MAGIC = "interaction-kpi-sablona-v1";
 const MONTHS = ["leden", "únor", "březen", "duben", "květen", "červen", "červenec", "srpen", "září", "říjen", "listopad", "prosinec"];
@@ -13,11 +13,11 @@ const enc = s => new TextEncoder().encode(s);
 const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
 <numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.####"/></numFmts>
-<fonts count="5"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="15"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><i/><sz val="10"/><color rgb="FF555555"/><name val="Calibri"/></font><font><sz val="9"/><color rgb="FF777777"/><name val="Calibri"/></font></fonts>
-<fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1E1E1E"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE2E2E2"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFF6CC"/><bgColor indexed="64"/></patternFill></fill></fills>
+<fonts count="7"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="15"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><i/><sz val="10"/><color rgb="FF555555"/><name val="Calibri"/></font><font><sz val="9"/><color rgb="FF777777"/><name val="Calibri"/></font><font><b/><sz val="14"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><i/><sz val="9"/><color rgb="FF0D4798"/><name val="Calibri"/></font></fonts>
+<fills count="6"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1E1E1E"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE2E2E2"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFF6CC"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE91929"/><bgColor indexed="64"/></patternFill></fill></fills>
 <borders count="2"><border/><border><left style="thin"><color rgb="FFB0B0B0"/></left><right style="thin"><color rgb="FFB0B0B0"/></right><top style="thin"><color rgb="FFB0B0B0"/></top><bottom style="thin"><color rgb="FFB0B0B0"/></bottom></border></borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="8">
+<cellXfs count="11">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
 <xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>
 <xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment wrapText="1" vertical="center"/></xf>
@@ -26,6 +26,9 @@ const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <xf numFmtId="164" fontId="0" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1" applyProtection="1"><protection locked="0"/></xf>
 <xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf>
 <xf numFmtId="0" fontId="4" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf>
+<xf numFmtId="0" fontId="5" fillId="5" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="center"/></xf>
+<xf numFmtId="0" fontId="6" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment wrapText="1" vertical="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyProtection="1"><protection locked="0"/></xf>
 </cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
 
 // req = { partner:{id,name,has_kar,has_painters,kpi_branches[{id,name,kpi_painters}]}, year, type, no, branchIds:[] }
@@ -37,23 +40,42 @@ export function buildTemplate(req) {
   const map = [];        // [ref, "b|p", id, key, label]
   let r = 0;
   const add = (cells, ht) => { r++; rows.push({ r, cells, ht }); return r; };
-  const ncol = Math.max(2 + brs.length, 1 + PAINT.length + 1);
+  const ncol = Math.max(2 + brs.length, 1 + PAINT.length + 1, 4);
   add([{ c: 0, v: `Podklady pro KPI – ${p.name}`, s: 1 }], 22);
-  add([{ c: 0, v: `Sledované období: ${per}`, s: 0 }]);
+  const banner = add([{ c: 0, v: `VYPLŇUJETE ÚDAJE ZA OBDOBÍ:  ${per.toUpperCase()}   (${periodRange(req.year, req.type, req.no)})`, s: 8 }, ...Array.from({ length: ncol - 1 }, (_, i) => ({ c: i + 1, v: "", s: 8 }))], 28);
   add([{ c: 0, v: "Vyplňte prosím jen žlutá pole. Čísla pište bez měny (Kč) – desetinná místa s čárkou. Pokud údaj nesledujete, pole nechte prázdné. Řádky ani sloupce prosím nepřidávejte a list nepřejmenovávejte – tabulka se pak automaticky načte zpět.", s: 6 }], 46);
-  const merges = [`A3:${col(ncol - 1)}3`];
+  const merges = [`A2:${col(ncol - 1)}2`, `A3:${col(ncol - 1)}3`];
   add([]);
   add([{ c: 0, v: "Ukazatel", s: 2 }, { c: 1, v: "Jednotka", s: 2 }, ...brs.map((b, i) => ({ c: 2 + i, v: b.name, s: 2 }))], 20);
   const section = (title, defs) => {
     add([{ c: 0, v: title, s: 3 }, { c: 1, v: "", s: 3 }, ...brs.map((_, i) => ({ c: 2 + i, v: "", s: 3 }))]);
-    for (const m of defs) {
+    for (const m of defs.filter(m => !m.adminOnly)) {
       const rr = r + 1;
-      add([{ c: 0, v: m.l + (m.avg ? " (průměrný stav za období)" : ""), s: 4 }, { c: 1, v: m.u, s: 7 },
-        ...brs.map((b, i) => { map.push([`${col(2 + i)}${rr}`, "b", b.id, m.k, m.l]); return { c: 2 + i, v: null, s: 5 }; })], m.avg ? 32 : 18);
+      add([{ c: 0, v: m.l + (m.avg ? " (průměrný stav za období)" : "") + (m.hours ? " – souhrnně za celé středisko" : ""), s: 4 }, { c: 1, v: m.u, s: 7 },
+        ...brs.map((b, i) => { map.push([`${col(2 + i)}${rr}`, "b", b.id, m.k, m.l]); return { c: 2 + i, v: null, s: 5 }; })], m.avg || m.hours ? 32 : 18);
+      if (m.hint) { add([{ c: 0, v: "↑ " + m.hint, s: 9 }], 16); merges.push(`A${r}:${col(ncol - 1)}${r}`); }
     }
   };
   section("Lakovna", LAK);
   if (p.has_kar) section("Karosárna", KAR);
+  // hodiny jmenovitě – místo souhrnu za středisko
+  for (const dk of p.has_kar ? ["lak", "kar"] : ["lak"]) {
+    const d = DEPTS[dk];
+    add([]);
+    add([{ c: 0, v: `Odchozené a prodané hodiny jmenovitě – ${d.label}`, s: 1 }], 20);
+    add([{ c: 0, v: `Nepovinné. Pokud hodiny zadáte jmenovitě, nechte řádky „souhrnně za celé středisko“ výše prázdné – součet se spočítá automaticky. Jména lze přepsat i doplnit.`, s: 6 }], 30);
+    merges.push(`A${r}:${col(ncol - 1)}${r}`);
+    for (const b of brs) {
+      add([{ c: 0, v: `${b.name} – ${d.who}`, s: 2 }, { c: 1, v: "", s: 2 }, { c: 2, v: "Odchozené hod.", s: 2 }, { c: 3, v: "Prodané hod.", s: 2 }], 18);
+      const sugg = dk === "lak" ? (b.kpi_painters || []).map(x => x.name) : [];
+      const n = Math.max(8, sugg.length + 3);
+      for (let i = 0; i < n; i++) {
+        const rr = r + 1;
+        map.push([`A${rr}`, "hrow", b.id, dk, `C${rr}|D${rr}`]);
+        add([{ c: 0, v: sugg[i] || null, s: 10 }, { c: 1, v: "", s: 4 }, { c: 2, v: null, s: 5 }, { c: 3, v: null, s: 5 }], 18);
+      }
+    }
+  }
   const painters = p.has_painters ? brs.filter(b => b.kpi_painters?.length) : [];
   if (painters.length) {
     add([]);
@@ -183,15 +205,38 @@ export async function readTemplate(file) {
   if (meta.A1 !== MAGIC) throw new Error("tabulka nebyla vytvořena touto aplikací");
   const res = { partnerId: String(meta.A2), year: Number(meta.A3), type: String(meta.A4), no: Number(meta.A5), branchIds: String(meta.A6 || "").split(",").filter(Boolean),
     partnerName: meta.A7, period: meta.A8, who: "", data: { b: {}, p: {} }, problems: [], count: 0 };
+  const named = {}; // id -> dept -> rows
   for (let r = 10; meta["A" + r] != null; r++) {
     const [ref, kind, id, key, label] = ["A", "B", "C", "D", "E"].map(c => meta[c + r]);
     const raw = main[ref];
+    if (kind === "hrow") {
+      const [oRef, pRef] = String(label).split("|");
+      const n = raw == null ? "" : String(raw).trim(), o = parseNum(main[oRef]), pv = parseNum(main[pRef]);
+      if (o == null && pv == null) continue;             // jen jméno bez hodin se ignoruje
+      if (isNaN(o) || isNaN(pv) || o < 0 || pv < 0) { res.problems.push(`řádek ${ref.slice(1)} (hodiny jmenovitě${n ? ", " + n : ""}): neplatné číslo`); continue; }
+      if (!n) { res.problems.push(`řádek ${ref.slice(1)} (hodiny jmenovitě): u hodin chybí jméno`); continue; }
+      ((named[id] ||= {})[key] ||= []).push({ n: n.slice(0, 80), o, p: pv });
+      continue;
+    }
     if (kind === "who") { res.who = raw == null ? "" : String(raw).trim(); continue; }
     const v = parseNum(raw);
     if (v == null) continue;
     if (isNaN(v) || v < 0) { res.problems.push(`${ref} (${label}): „${raw}“ není platné kladné číslo`); continue; }
     (res.data[kind][id] ||= {})[key] = v;
     res.count++;
+  }
+  // součty jmenovitých hodin nahradí souhrn za středisko
+  res.data.h = named;
+  for (const [id, deps] of Object.entries(named)) for (const [dk, rows] of Object.entries(deps)) {
+    const d = DEPTS[dk];
+    for (const [k, f] of [[d.o, "o"], [d.p, "p"]]) {
+      const xs = rows.map(x => x[f]).filter(v => v != null);
+      if (!xs.length) continue;
+      const sum = xs.reduce((a, b) => a + b, 0), prev = res.data.b[id]?.[k];
+      if (prev != null && prev !== sum) res.problems.push(`${d.label}: vyplněn souhrn za středisko (${prev}) i jmenovité hodiny – použije se součet jmenovitých (${sum})`);
+      if (prev == null) res.count++;
+      (res.data.b[id] ||= {})[k] = sum;
+    }
   }
   return res;
 }

@@ -25,6 +25,18 @@ function combine(parts) {
       out[sec][id] = o;
     }
   }
+  // jmenovité hodiny: sečíst podle jména (jen když jsou jmenovitě ve všech částech)
+  const ids = new Set(parts.flatMap(d => Object.keys(d.h || {})));
+  for (const id of ids) for (const dk of ["lak", "kar"]) {
+    if (!parts.every(d => d.h?.[id]?.[dk]?.length)) continue;
+    const m = new Map();
+    for (const d of parts) for (const r of d.h[id][dk]) {
+      const k = r.n.trim().toLowerCase(), x = m.get(k) || { n: r.n.trim(), o: null, p: null };
+      if (r.o != null) x.o = (x.o || 0) + r.o; if (r.p != null) x.p = (x.p || 0) + r.p;
+      m.set(k, x);
+    }
+    ((out.h ||= {})[id] ||= {})[dk] = [...m.values()];
+  }
   return out;
 }
 
@@ -67,7 +79,7 @@ export const KPIS = [
   { g: "Na jednoho lakýrníka", k: "nakup_lak", l: "Nákup na lakýrníka", fmt: "kc", dir: 0, per: true, f: v => div(v.nakup, v.lak_zam) },
   { g: "Na jednoho lakýrníka", k: "spotreba_lak", l: "Spotřeba na lakýrníka", fmt: "kc", dir: 0, per: true, f: v => div(v.spotreba, v.lak_zam) },
   { g: "Na jednoho lakýrníka", k: "obrat_lak", l: "Obrat na lakýrníka", fmt: "kc", dir: 1, per: true, f: v => div(v.obrat, v.lak_zam) },
-  { g: "Na jednoho lakýrníka", k: "zak_lak", l: "Zakázky LAK na lakýrníka", fmt: "num", dir: 1, per: true, f: v => div(v.lak_zak, v.lak_zam) },
+  { g: "Na jednoho lakýrníka", k: "zak_lak", l: "Zakázky lakovny na lakýrníka", fmt: "num", dir: 1, per: true, f: v => div(v.lak_zak, v.lak_zam) },
   { g: "Na prodanou (fakturovanou) hodinu", k: "nakup_hod", l: "Nákup na prodanou hodinu", fmt: "kc", dir: 0, f: v => div(v.nakup, v.lak_prod) },
   { g: "Na prodanou (fakturovanou) hodinu", k: "spotreba_hod", l: "Spotřeba na prodanou hodinu", fmt: "kc", dir: -1, f: v => div(v.spotreba, v.lak_prod) },
   { g: "Na prodanou (fakturovanou) hodinu", k: "obrat_hod", l: "Obrat na prodanou hodinu", fmt: "kc", dir: 1, f: v => div(v.obrat, v.lak_prod) },
@@ -75,10 +87,10 @@ export const KPIS = [
   { g: "Na jednu zakázku", k: "spotreba_zak", l: "Spotřeba na zakázku", fmt: "kc", dir: -1, f: v => div(v.spotreba, v.lak_zak) },
   { g: "Na jednu zakázku", k: "obrat_zak", l: "Obrat na zakázku", fmt: "kc", dir: 1, f: v => div(v.obrat, v.lak_zak) },
   { g: "Výkon lakovny", k: "produktivita", l: "Produktivita lakovny (prodané / odchozené hod.)", fmt: "pct", dir: 1, f: v => div(v.lak_prod, v.lak_odch) },
-  { g: "Výkon lakovny", k: "zak_lak_celkem", l: "Počet zakázek LAK", fmt: "num", dir: 1, abs: true, f: v => v.lak_zak },
+  { g: "Výkon lakovny", k: "zak_lak_celkem", l: "Počet zakázek lakovna", fmt: "num", dir: 1, abs: true, f: v => v.lak_zak },
   { g: "Karosárna", k: "produktivita_kar", l: "Produktivita karosárny (prodané / odchozené hod.)", fmt: "pct", dir: 1, kar: true, f: v => div(v.kar_prod, v.kar_odch) },
-  { g: "Karosárna", k: "zak_kar_celkem", l: "Počet zakázek KAR", fmt: "num", dir: 1, kar: true, abs: true, f: v => v.kar_zak },
-  { g: "Karosárna", k: "zak_kar", l: "Zakázky KAR na karosáře", fmt: "num", dir: 1, kar: true, per: true, f: v => div(v.kar_zak, v.kar_zam) },
+  { g: "Karosárna", k: "zak_kar_celkem", l: "Počet zakázek karosárna", fmt: "num", dir: 1, kar: true, abs: true, f: v => v.kar_zak },
+  { g: "Karosárna", k: "zak_kar", l: "Zakázky karosárny na karosáře", fmt: "num", dir: 1, kar: true, per: true, f: v => div(v.kar_zak, v.kar_zam) },
 ];
 export const PAINT_KPIS = [
   { k: "plnic_mj", l: "Plnič na 1 MJ", fmt: "l", dir: -1, f: v => div(v.plnic, v.mj) },

@@ -1,16 +1,17 @@
 // KPI servisních partnerů (lakovna, karosárna) – jen pro administrátora
 // Krok 1: partneři a pobočky · Krok 2: zadávání vstupů za období · Krok 3: výstupy
-import { supabase } from "./supabase.js?v=20261120m";
-import { renderRequests } from "./kpi-requests.js?v=20261120m";
-import { renderCompare } from "./kpi-compare.js?v=20261120m";
-import { outputsHtml, loadAllEntries, loadTargets, targetsFormHtml, saveTargets } from "./kpi-out.js?v=20261120m";
+import { supabase } from "./supabase.js?v=20261120n";
+import { renderRequests } from "./kpi-requests.js?v=20261120n";
+import { renderCompare } from "./kpi-compare.js?v=20261120n";
+import { outputsHtml, loadAllEntries, loadTargets, targetsFormHtml, saveTargets } from "./kpi-out.js?v=20261120n";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const czErr = e => /kpi_partners_name_uq/.test(e?.message || "") ? "Partner s tímto názvem už existuje."
   : /kpi_branches_name_uq/.test(e?.message || "") ? "Dvě pobočky nesmí mít stejný název."
   : (e?.message || String(e));
 
-import { LAK, KAR, PAINT } from "./kpi-defs.js?v=20261120m";
+import { LAK, KAR, PAINT } from "./kpi-defs.js?v=20261120n";
+import { hoursHtml, bindHours, collectHours } from "./kpi-hours.js?v=20261120n";
 export { LAK, KAR, PAINT };
 export const PTYPES = { M: "Měsíc", Q: "Kvartál", H: "Pololetí", Y: "Rok" };
 const MONTHS = ["leden", "únor", "březen", "duben", "květen", "červen", "červenec", "srpen", "září", "říjen", "listopad", "prosinec"];
@@ -360,8 +361,8 @@ function drawInputs() {
   const host = document.getElementById("kpiInputs");
   const p = current, e = findEntry(), d = e?.data || {};
   const br = p.kpi_branches;
-  const sectionRows = (defs) => defs.map(m => `
-    <tr><th scope="row">${esc(m.l)}<span class="muted">${m.u}${m.avg ? " · průměrný stav za období" : ""}</span></th>
+  const sectionRows = (defs) => defs.filter(m => !m.hours).map(m => `
+    <tr><th scope="row">${esc(m.l)}<span class="muted">${m.u}${m.avg ? " · průměrný stav za období" : ""}${m.hint ? " · " + esc(m.hint) : ""}</span></th>
       ${br.map(x => inputCell(d.b?.[x.id]?.[m.k], `data-b="${x.id}" data-k="${m.k}"`)).join("")}
       ${br.length > 1 ? `<td class="kpi-sum" data-sum="${m.k}"></td>` : ""}</tr>`).join("");
   const head = `<thead><tr><th>Ukazatel</th>${br.map(x => `<th>${esc(x.name)}</th>`).join("")}${br.length > 1 ? "<th>Celkem</th>" : ""}</tr></thead>`;
@@ -383,6 +384,7 @@ function drawInputs() {
       <tbody>${painters.map(x => `<tr class="kpi-sec"><td colspan="${PAINT.length + 1}">${esc(x.name)}</td></tr>` + x.kpi_painters.map(pt => `
         <tr><th scope="row">${esc(pt.name)}</th>${PAINT.map(m => inputCell(d.p?.[pt.id]?.[m.k], `data-p="${pt.id}" data-k="${m.k}"`)).join("")}</tr>`).join("")).join("")}</tbody>
     </table></div>` : p.has_painters ? `<p class="f-note">Sledování lakýrníků je zapnuté, ale u poboček nejsou zadaní žádní lakýrníci – doplňte je přes „Upravit“ u partnera.</p>` : ""}
+    ${hoursHtml(br.map(x => ({ id: x.id, name: x.name, painters: x.kpi_painters })), p.has_kar ? ["lak", "kar"] : ["lak"], d)}
     <div class="auth-msg" id="kpiInMsg"></div>
     <button type="button" class="btn-save kpi-btn" id="kpiSave">Uložit vstupy</button>
     ${e ? `<button type="button" class="btn-del kpi-del-period" id="kpiDelPeriod">Smazat toto období</button>` : ""}`;
@@ -393,7 +395,8 @@ function drawInputs() {
       td.textContent = vals.length ? fmtNum(vals.reduce((a, b) => a + b, 0)) : "";
     });
   };
-  host.querySelectorAll(".kpi-num").forEach(i => {
+  bindHours(host, () => dirty = true);
+  host.querySelectorAll("input[data-b], input[data-p]").forEach(i => {
     i.oninput = () => { dirty = true; i.classList.toggle("kpi-bad", isNaN(parseNum(i.value))); recalc(); };
     i.onblur = () => { const v = parseNum(i.value); if (v != null && !isNaN(v)) i.value = fmtNum(v, 4); };
   });
@@ -413,8 +416,11 @@ async function saveInputs() {
   const host = document.getElementById("kpiInputs"), out = document.getElementById("kpiInMsg");
   const bad = host.querySelectorAll(".kpi-num.kpi-bad");
   if (bad.length) { out.textContent = "Některá pole neobsahují platné číslo (jsou označená červeně)."; bad[0].focus(); return; }
-  const data = { b: {}, p: {} };
+  const hrs = collectHours(host);
+  if (hrs.errors.length) { out.innerHTML = hrs.errors.map(esc).join("<br>"); return; }
+  const data = { b: {}, p: {}, h: hrs.h };
   let filled = 0;
+  for (const [id, o] of Object.entries(hrs.b)) for (const [k, v] of Object.entries(o)) { (data.b[id] ||= {})[k] = v; filled++; }
   host.querySelectorAll("input[data-b]").forEach(i => { const v = parseNum(i.value); if (v != null) { (data.b[i.dataset.b] ||= {})[i.dataset.k] = v; filled++; } });
   host.querySelectorAll("input[data-p]").forEach(i => { const v = parseNum(i.value); if (v != null) { (data.p[i.dataset.p] ||= {})[i.dataset.k] = v; filled++; } });
   if (!filled) { out.textContent = "Nevyplnili jste žádný údaj."; return; }
@@ -422,6 +428,7 @@ async function saveInputs() {
   const old = findEntry()?.data || {};
   for (const [k, v] of Object.entries(old.b || {})) if (!current.kpi_branches.some(x => x.id === k)) data.b[k] = v;
   for (const [k, v] of Object.entries(old.p || {})) if (!host.querySelector(`input[data-p="${k}"]`)) data.p[k] = v;
+  for (const [k, v] of Object.entries(old.h || {})) if (!current.kpi_branches.some(x => x.id === k)) data.h[k] = v;
   const btn = document.getElementById("kpiSave"); btn.disabled = true;
   const { error } = await supabase.from("kpi_entries").upsert(
     { partner_id: current.id, year: sel.year, period_type: sel.type, period_no: sel.no, data },

@@ -1,12 +1,11 @@
 // Veřejná stránka pro partnera: vyplnění vstupů KPI přes jedinečný odkaz (bez přihlášení)
-import { supabase } from "./supabase.js?v=20261120m";
-import { LAK, KAR, PAINT } from "./kpi-defs.js?v=20261120m";
+import { supabase } from "./supabase.js?v=20261120n";
+import { LAK, KAR, PAINT, periodName, periodRange } from "./kpi-defs.js?v=20261120n";
+import { hoursHtml, bindHours, collectHours } from "./kpi-hours.js?v=20261120n";
 
 const app = document.getElementById("app");
 document.getElementById("year").textContent = new Date().getFullYear();
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const MONTHS = ["leden", "únor", "březen", "duben", "květen", "červen", "červenec", "srpen", "září", "říjen", "listopad", "prosinec"];
-const periodName = (t, n) => t === "M" ? MONTHS[n - 1] : t === "Q" ? `${n}. kvartál` : t === "H" ? `${n}. pololetí` : "celý rok";
 const fmtNum = v => v == null || v === "" || isNaN(v) ? "" : Number(v).toLocaleString("cs-CZ", { maximumFractionDigits: 4 });
 const parseNum = s => { const t = String(s ?? "").replace(/\s| /g, "").replace(",", "."); if (t === "") return null; const n = Number(t); return isNaN(n) || n < 0 ? NaN : n; };
 const fmtDT = iso => { const d = new Date(iso); return d.toLocaleDateString("cs-CZ") + " " + d.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" }); };
@@ -39,13 +38,15 @@ function draw(msg = "") {
   const f = form, br = f.branches, s = f.submitted || {};
   const per = `${periodName(f.period_type, f.period_no)} ${f.year}`;
   document.title = `Podklady pro KPI – ${f.partner} – ${per}`;
-  const defs = [["Lakovna", LAK], ...(f.has_kar ? [["Karosárna", KAR]] : [])];
+  const visible = list => list.filter(m => !m.adminOnly && !m.hours);
+  const defs = [["Lakovna", visible(LAK)], ...(f.has_kar ? [["Karosárna", visible(KAR)]] : [])];
   const painters = br.filter(b => b.painters?.length);
   page(`
     <div class="brand-head brand-head-plain"><div>
       <h2>Podklady pro KPI – ${esc(f.partner)}</h2>
-      <p>Sledované období: <strong>${esc(per)}</strong> · odkaz platí do ${new Date(f.expires_at).toLocaleDateString("cs-CZ")}</p>
+      <p>Odkaz platí do ${new Date(f.expires_at).toLocaleDateString("cs-CZ")}</p>
     </div></div>
+    <div class="fill-period">Vyplňujete údaje za období<strong>${esc(per)}</strong><span>${periodRange(f.year, f.period_type, f.period_no)}</span></div>
     <div class="res-card">
       ${msg}
       ${f.status === "filled" && !msg ? `<p class="kpi-ok">Údaje jste už odeslali ${fmtDT(f.filled_at)} (${esc(f.filled_by)}). Níže je můžete upravit a odeslat znovu.</p>` : ""}
@@ -54,9 +55,10 @@ function draw(msg = "") {
       <div class="table-wrap kpi-table-wrap"><table class="res-table kpi-in">
         <thead><tr><th>Ukazatel</th>${br.map(b => `<th>${esc(b.name)}</th>`).join("")}</tr></thead>
         <tbody>${defs.map(([g, list]) => `<tr class="kpi-sec"><td colspan="${br.length + 1}">${g}</td></tr>` + list.map(m => `
-          <tr><th scope="row">${esc(m.l)}<span class="muted">${m.u}${m.avg ? " · průměrný stav za období" : ""}</span></th>
+          <tr><th scope="row">${esc(m.l)}<span class="muted">${m.u}${m.avg ? " · průměrný stav za období" : ""}</span>${m.hint ? `<span class="fill-hint">ℹ️ ${esc(m.hint)}</span>` : ""}</th>
           ${br.map(b => cell(s.b?.[b.id]?.[m.k], `data-b="${b.id}" data-k="${m.k}"`)).join("")}</tr>`).join("")).join("")}</tbody>
       </table></div>
+      ${hoursHtml(br, f.has_kar ? ["lak", "kar"] : ["lak"], { b: s.b, h: s.h })}
       ${painters.length ? `
       <h4 class="kpi-h">Spotřeba materiálu podle lakýrníků</h4>
       <div class="table-wrap kpi-table-wrap"><table class="res-table kpi-in">
@@ -68,7 +70,8 @@ function draw(msg = "") {
       <div class="auth-msg" id="fillMsg"></div>
       <button type="button" class="btn-save kpi-btn" id="fillSend">Odeslat údaje</button>
     </div>`);
-  app.querySelectorAll(".kpi-num").forEach(i => {
+  bindHours(app);
+  app.querySelectorAll("input[data-b], input[data-p]").forEach(i => {
     i.oninput = () => i.classList.toggle("kpi-bad", isNaN(parseNum(i.value)));
     i.onblur = () => { const v = parseNum(i.value); if (v != null && !isNaN(v)) i.value = fmtNum(v); };
   });
@@ -81,8 +84,11 @@ async function send() {
   if (bad.length) { out.textContent = "Některá pole neobsahují platné kladné číslo (jsou označená červeně)."; bad[0].focus(); return; }
   const who = document.getElementById("fillBy").value.trim();
   if (!who) { out.textContent = ERR.CHYBI_JMENO; document.getElementById("fillBy").focus(); return; }
-  const data = { b: {}, p: {} };
+  const hrs = collectHours(app);
+  if (hrs.errors.length) { out.innerHTML = hrs.errors.map(esc).join("<br>"); return; }
+  const data = { b: {}, p: {}, h: hrs.h };
   let n = 0;
+  for (const [id, o] of Object.entries(hrs.b)) for (const [k, v] of Object.entries(o)) { (data.b[id] ||= {})[k] = v; n++; }
   app.querySelectorAll("input[data-b]").forEach(i => { const v = parseNum(i.value); if (v != null) { (data.b[i.dataset.b] ||= {})[i.dataset.k] = v; n++; } });
   app.querySelectorAll("input[data-p]").forEach(i => { const v = parseNum(i.value); if (v != null) { (data.p[i.dataset.p] ||= {})[i.dataset.k] = v; n++; } });
   if (!n) { out.textContent = ERR.NIC_NEVYPLNENO; return; }

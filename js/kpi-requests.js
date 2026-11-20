@@ -1,7 +1,8 @@
 // KPI – sběr dat od partnera: jedinečné odkazy k online vyplnění
-import { supabase } from "./supabase.js?v=20261120m";
-import { PTYPES, periodNos, periodName, LAK, KAR, PAINT, fmtNum } from "./kpi.js?v=20261120m";
-import { buildTemplate, readTemplate } from "./kpi-xlsx.js?v=20261120m";
+import { supabase } from "./supabase.js?v=20261120n";
+import { PTYPES, periodNos, periodName, LAK, KAR, PAINT, fmtNum } from "./kpi.js?v=20261120n";
+import { DEPTS } from "./kpi-defs.js?v=20261120n";
+import { buildTemplate, readTemplate } from "./kpi-xlsx.js?v=20261120n";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmtD = iso => new Date(iso).toLocaleDateString("cs-CZ");
@@ -161,11 +162,12 @@ async function importFile(host, p, file, onChange) {
   const pts = brs.flatMap(b => (b.kpi_painters || []).map(x => ({ ...x, b: b.name }))).filter(x => t.data.p[x.id]);
   box.innerHTML = `
     <p class="kpi-ok">Tabulka: <b>${esc(p.name)}</b> · <b>${esc(t.period)}</b> · vyplnil(a): <b>${esc(t.who || "neuvedeno")}</b> · vyplněných polí: <b>${t.count}</b></p>
-    ${t.problems.length ? `<p class="auth-msg">Tato pole nejdou načíst a budou vynechána:<br>${t.problems.map(esc).join("<br>")}</p>` : ""}
+    ${t.problems.length ? `<p class="auth-msg">Upozornění k tabulce:<br>${t.problems.map(esc).join("<br>")}</p>` : ""}
     ${!t.count ? `<p class="auth-msg">V tabulce nejsou vyplněné žádné údaje.</p>` : `
     <div class="table-wrap kpi-table-wrap"><table class="res-table kpi-out">
       <thead><tr><th>Ukazatel</th>${brs.map(b => `<th>${esc(b.name)}</th>`).join("")}</tr></thead>
       <tbody>${defs.map(m => `<tr><th scope="row">${esc(m.l)}<span class="muted">${m.u}</span></th>${brs.map(b => cellH(t.data.b[b.id]?.[m.k], cur.b?.[b.id]?.[m.k])).join("")}</tr>`).join("")}</tbody></table></div>
+    ${Object.keys(t.data.h || {}).length ? `<p class="f-note">Hodiny zadané jmenovitě: ${brs.filter(b => t.data.h[b.id]).map(b => `${esc(b.name)} – ${Object.entries(t.data.h[b.id]).map(([dk, rows]) => `${DEPTS[dk].label.toLowerCase()} ${rows.length} os.`).join(", ")}`).join("; ")} (v tabulce výše jsou jejich součty).</p>` : ""}
     ${pts.length ? `<div class="table-wrap kpi-table-wrap"><table class="res-table kpi-out">
       <thead><tr><th>Lakýrník</th>${PAINT.map(m => `<th>${m.l}</th>`).join("")}</tr></thead>
       <tbody>${pts.map(x => `<tr><th scope="row">${esc(x.name)}<span class="muted">${esc(x.b)}</span></th>${PAINT.map(m => cellH(t.data.p[x.id]?.[m.k], cur.p?.[x.id]?.[m.k])).join("")}</tr>`).join("")}</tbody></table></div>` : ""}
@@ -179,6 +181,12 @@ async function importFile(host, p, file, onChange) {
     save.disabled = true;
     const data = { b: { ...(cur.b || {}) }, p: { ...(cur.p || {}) } };
     for (const sec of ["b", "p"]) for (const [id, o] of Object.entries(t.data[sec])) data[sec][id] = { ...(data[sec][id] || {}), ...o };
+    // jmenovité hodiny: nové nahradí dosavadní; souhrn za středisko z tabulky jmenovité zruší
+    data.h = JSON.parse(JSON.stringify(cur.h || {}));
+    for (const b of brs) for (const [dk, d] of Object.entries(DEPTS)) {
+      if (t.data.h?.[b.id]?.[dk]) (data.h[b.id] ||= {})[dk] = t.data.h[b.id][dk];
+      else if (t.data.b[b.id] && (d.o in t.data.b[b.id] || d.p in t.data.b[b.id]) && data.h[b.id]) { delete data.h[b.id][dk]; if (!Object.keys(data.h[b.id]).length) delete data.h[b.id]; }
+    }
     const { error: e2 } = await supabase.from("kpi_entries").upsert({ partner_id: p.id, year: t.year, period_type: t.type, period_no: t.no, data }, { onConflict: "partner_id,year,period_type,period_no" });
     if (e2) { alert("Uložení se nepodařilo: " + e2.message); save.disabled = false; return; }
     box.innerHTML = `<p class="kpi-ok">✅ Údaje z tabulky jsou uložené do vstupů za ${periodName(t.type, t.no)} ${t.year}. Najdete je na záložkách Vstupy a Výstupy.</p>`;
