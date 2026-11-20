@@ -1,7 +1,7 @@
 // Veřejná stránka pro partnera: vyplnění vstupů KPI přes jedinečný odkaz (bez přihlášení)
-import { supabase } from "./supabase.js?v=20261120n";
-import { LAK, KAR, PAINT, periodName, periodRange } from "./kpi-defs.js?v=20261120n";
-import { hoursHtml, bindHours, collectHours } from "./kpi-hours.js?v=20261120n";
+import { supabase } from "./supabase.js?v=20261120o";
+import { LAK, KAR, PAINT, periodName, periodRange } from "./kpi-defs.js?v=20261120o";
+import { hoursHtml, bindHours, collectHours } from "./kpi-hours.js?v=20261120o";
 
 const app = document.getElementById("app");
 document.getElementById("year").textContent = new Date().getFullYear();

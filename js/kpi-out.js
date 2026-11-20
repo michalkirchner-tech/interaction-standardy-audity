@@ -1,6 +1,6 @@
 // KPI – výstupy: dashboard, tabulka po pobočkách, grafy, vlastní cílové benchmarky
-import { supabase } from "./supabase.js?v=20261120n";
-import { KPIS, PAINT_KPIS, KPI_BY_KEY, periodData, sumBranches, kpiValues, benchmark, targetFor, rate, fmtKpi, periodName, monthCount } from "./kpi-calc.js?v=20261120n";
+import { supabase } from "./supabase.js?v=20261120o";
+import { KPIS, PAINT_KPIS, KPI_BY_KEY, periodData, sumBranches, kpiValues, benchmark, targetFor, rate, fmtKpi, periodName, monthCount } from "./kpi-calc.js?v=20261120o";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const CARDS = ["marze", "zisk", "hodnota_mj", "produktivita", "obrat_hod", "spotreba_hod", "obrat_lak", "produktivita_kar"];
@@ -126,20 +126,34 @@ export function outputsHtml(ctx) {
     ${paintersHtml(p, pd.data)}`;
 }
 
-// Produktivita podle jmenovitě zadaných hodin
+// Produktivita podle jmenovitě zadaných hodin – jednotlivci i středisko jako celek
 function peopleHtml(p, data, ctx, bm, sel) {
   if (!data.h) return "";
-  const rows = [];
-  for (const b of p.kpi_branches) for (const [dk, lab, kk] of [["lak", "Lakovna", "produktivita"], ["kar", "Karosárna", "produktivita_kar"]])
-    for (const r of data.h[b.id]?.[dk] || []) rows.push({ b: b.name, lab, kk, ...r, v: r.o ? (r.p ?? null) / r.o : null });
-  if (!rows.length) return "";
-  return `<h4 class="kpi-h">Produktivita podle zaměstnanců</h4>
-    <div class="table-wrap kpi-table-wrap"><table class="res-table kpi-out">
-      <thead><tr><th>Jméno</th><th>Pobočka</th><th>Oddělení</th><th>Odchozené hod.</th><th>Prodané hod.</th><th>Produktivita</th></tr></thead>
-      <tbody>${rows.map(r => { const d = KPI_BY_KEY[r.kk], ref = targetFor(d, ctx.targets, sel.type) ?? bm[d.k]?.v; return `<tr><th scope="row">${esc(r.n)}</th><td>${esc(r.b)}</td><td>${r.lab}</td>
-        <td class="kpi-v">${fmtKpi(r.o, "num")}</td><td class="kpi-v">${fmtKpi(r.p, "num")}</td>
-        <td class="kpi-v ${rate(d, r.v, ref) > 0 ? "good" : rate(d, r.v, ref) < 0 ? "bad" : ""}">${fmtKpi(r.v, "pct")}</td></tr>`; }).join("")}</tbody>
-    </table></div>`;
+  const groups = [];
+  for (const b of p.kpi_branches) for (const [dk, lab, kk] of [["lak", "Lakovna", "produktivita"], ["kar", "Karosárna", "produktivita_kar"]]) {
+    const rows = (data.h[b.id]?.[dk] || []).map(r => ({ ...r, v: r.o ? (r.p ?? null) / r.o : null }));
+    if (!rows.length) continue;
+    const sum = k => { const xs = rows.map(r => r[k]).filter(v => v != null); return xs.length ? xs.reduce((x, y) => x + y, 0) : null; };
+    const o = sum("o"), pp = sum("p");
+    groups.push({ b: b.name, lab, d: KPI_BY_KEY[kk], rows, tot: { o, p: pp, v: o ? (pp ?? null) / o : null } });
+  }
+  if (!groups.length) return "";
+  const cls = (d, v, ref) => rate(d, v, ref) > 0 ? "good" : rate(d, v, ref) < 0 ? "bad" : "";
+  const body = groups.map(g => {
+    const ref = targetFor(g.d, ctx.targets, sel.type) ?? bm[g.d.k]?.v;
+    return `<tr class="kpi-sec"><td colspan="4">${esc(g.b)} – ${g.lab}</td></tr>
+      ${g.rows.map(r => `<tr><th scope="row">${esc(r.n)}</th><td class="kpi-v">${fmtKpi(r.o, "num")}</td><td class="kpi-v">${fmtKpi(r.p, "num")}</td><td class="kpi-v ${cls(g.d, r.v, ref)}">${fmtKpi(r.v, "pct")}</td></tr>`).join("")}
+      <tr class="kpi-total"><th scope="row">Středisko celkem</th><td class="kpi-v">${fmtKpi(g.tot.o, "num")}</td><td class="kpi-v">${fmtKpi(g.tot.p, "num")}</td><td class="kpi-v ${cls(g.d, g.tot.v, ref)}">${fmtKpi(g.tot.v, "pct")}</td></tr>`;
+  }).join("");
+  const charts = groups.map(g => barChart(`Produktivita – ${g.b} – ${g.lab.toLowerCase()}`,
+    [...g.rows.map(r => ({ label: r.n.split(" ").slice(-1)[0], v: r.v })), { label: "Středisko", v: g.tot.v, total: true }],
+    "pct", bm[g.d.k]?.v, targetFor(g.d, ctx.targets, sel.type))).join("");
+  return `<h4 class="kpi-h">Produktivita podle zaměstnanců a středisek</h4>
+    <p class="f-note">Produktivita = prodané (fakturované) hodiny / odchozené hodiny. Barva porovnává s vlastním cílem, jinak s benchmarkem.</p>
+    <div class="table-wrap kpi-table-wrap"><table class="res-table kpi-out kpi-people">
+      <thead><tr><th>Jméno</th><th>Odchozené hod.</th><th>Prodané hod.</th><th>Produktivita</th></tr></thead>
+      <tbody>${body}</tbody></table></div>
+    <div class="kpi-charts">${charts}</div>`;
 }
 
 function paintersHtml(p, data) {

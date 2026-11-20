@@ -646,3 +646,6 @@ body.gal-open { overflow: hidden; }
 .fill-period span { opacity: .9; }
 .fill-hint { display: block; font-weight: 400; color: var(--ia-blue); font-size: .78rem; margin-top: 2px; }
 @media (max-width: 640px) { .hr-grid { grid-template-columns: 1fr; } }
+.kpi-people { max-width: 760px; }
+.kpi-out tr.kpi-total th, .kpi-out tr.kpi-total td { background: #f3f3f3; font-weight: 700; border-top: 2px solid var(--ia-light); }
+.kpi-people + .kpi-charts, .kpi-table-wrap + .kpi-charts { margin-top: 14px; }
