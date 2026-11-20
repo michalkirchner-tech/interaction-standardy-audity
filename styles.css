@@ -493,3 +493,21 @@ body.gal-open { overflow: hidden; }
 .pv-name:hover { text-decoration-color: #E21F25; color: #E21F25; }
 .btn-pv { border: 1px solid #1e1e1e; background: #fff; color: #1e1e1e; border-radius: 7px; padding: 3px 9px; cursor: pointer; font: 600 .76rem "Open Sans", system-ui, sans-serif; white-space: nowrap; }
 .btn-pv:hover { background: #1e1e1e; color: #fff; }
+
+/* ---------- KPI servisních partnerů ---------- */
+.btn-kpi { border-color: var(--ia-blue); color: var(--ia-blue); }
+.kpi-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.kpi-bar h3 { margin: 0; }
+.kpi-btn { margin: 0; border: 0; border-radius: 9px; padding: 9px 16px; color: #fff; font: 600 .92rem "Poppins", sans-serif; cursor: pointer; }
+.kpi-ok { background: #e8f5ec; color: #1b6b35; border-radius: 8px; padding: 8px 12px; font-size: .9rem; }
+.kpi-actions { white-space: nowrap; text-align: right; }
+.kpi-actions .btn-logout { padding: 4px 10px; font-size: .82rem; }
+.kpi-form-card h3 { margin-top: 0; }
+.kpi-form { display: grid; grid-template-columns: 2fr 1fr; gap: 14px 18px; }
+.kpi-form label, .kpi-lbl { display: flex; flex-direction: column; gap: 5px; font-weight: 600; font-size: .9rem; }
+.kpi-form input { font: inherit; font-weight: 400; padding: 9px 11px; border: 1px solid #ccc; border-radius: 8px; }
+.kpi-form input:focus { outline: 2px solid var(--ia-blue); border-color: transparent; }
+.kpi-wide { grid-column: 1 / -1; }
+.kpi-branch { display: flex; gap: 8px; margin-bottom: 8px; max-width: 460px; }
+.kpi-branch input { flex: 1; }
+@media (max-width: 640px) { .kpi-form { grid-template-columns: 1fr; } }

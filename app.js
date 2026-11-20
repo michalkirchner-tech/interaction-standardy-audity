@@ -1,13 +1,14 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
-import { supabase, getProfile } from "./js/supabase.js?v=20261120f";
-import { exportPdf, exportXlsx } from "./js/export.js?v=20261120f";
-import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261120f";
-import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261120f";
-import { renderUsers } from "./js/users.js?v=20261120f";
-import { openGallery } from "./js/gallery.js?v=20261120f";
-import { openPreview } from "./js/preview.js?v=20261120f";
-import { renderMultibrand } from "./js/multibrand.js?v=20261120f";
-import { RESULT_BRANDS, NO_VALIDITY, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261120f";
+import { supabase, getProfile } from "./js/supabase.js?v=20261120g";
+import { exportPdf, exportXlsx } from "./js/export.js?v=20261120g";
+import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261120g";
+import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261120g";
+import { renderUsers } from "./js/users.js?v=20261120g";
+import { openGallery } from "./js/gallery.js?v=20261120g";
+import { openPreview } from "./js/preview.js?v=20261120g";
+import { renderMultibrand } from "./js/multibrand.js?v=20261120g";
+import { renderKpi } from "./js/kpi.js?v=20261120g";
+import { RESULT_BRANDS, NO_VALIDITY, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261120g";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
@@ -94,7 +95,7 @@ function renderUserBox() {
   const name = profile.full_name || profile.email;
   userBox.innerHTML = `
     <span class="user-name" title="${esc(profile.email)}">${esc(name)}</span>
-    ${profile.role === "admin" ? `<a class="btn-backup" href="#uzivatele" title="Registrovaní uživatelé">👥<span class="bk-txt"> Uživatelé</span></a><a class="btn-backup" href="#zalohy" title="Zálohy dat">💾<span class="bk-txt"> Zálohy</span></a><span class="badge-admin">Admin</span>` : ""}
+    ${profile.role === "admin" ? `<a class="btn-backup btn-kpi" href="#kpi" title="KPI servisních partnerů">📊<span class="bk-txt"> KPI</span></a><a class="btn-backup" href="#uzivatele" title="Registrovaní uživatelé">👥<span class="bk-txt"> Uživatelé</span></a><a class="btn-backup" href="#zalohy" title="Zálohy dat">💾<span class="bk-txt"> Zálohy</span></a><span class="badge-admin">Admin</span>` : ""}
     <button type="button" class="btn-logout" id="btnLogout">Odhlásit</button>`;
   document.getElementById("btnLogout").onclick = async () => { await supabase.auth.signOut(); profile = null; location.hash = ""; renderAuth(); };
 }
@@ -304,6 +305,7 @@ function route() {
   const rb = RESULT_BRANDS.find(b => "vysledky-" + b.id === id);
   if (id === "zalohy" && profile.role === "admin") renderBackups(app);
   else if (id === "uzivatele" && profile.role === "admin") renderUsers(app, profile);
+  else if (id === "kpi" && profile.role === "admin") renderKpi(app);
   else if (id === "vysledky") renderResultsHome();
   else if (id === "multibrand") renderMultibrand(app);
   else if (rb) renderResultsBrand(rb);
