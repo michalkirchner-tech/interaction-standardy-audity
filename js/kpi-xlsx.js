@@ -1,6 +1,6 @@
 // KPI – excelová šablona pro partnera (vytvoření .xlsx) a načtení vyplněné tabulky zpět
-import { zip } from "./export.js?v=20261121b";
-import { LAK, KAR, PAINT, DEPTS, periodRange } from "./kpi-defs.js?v=20261121b";
+import { zip } from "./export.js?v=20261121c";
+import { LAK, KAR, PAINT, DEPTS, periodRange } from "./kpi-defs.js?v=20261121c";
 
 const MAGIC = "interaction-kpi-sablona-v1";
 const MONTHS = ["leden", "únor", "březen", "duben", "květen", "červen", "červenec", "srpen", "září", "říjen", "listopad", "prosinec"];

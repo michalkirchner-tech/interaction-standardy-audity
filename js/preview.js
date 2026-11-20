@@ -1,6 +1,6 @@
 // Náhled kompletní výsledkové listiny auditu (jen ke čtení) + export do PDF (tisk prohlížeče)
-import { supabase } from "./supabase.js?v=20261121b";
-import { formDefs, prepareImport, arvalBreakdown, mitsubishiEval, mitsubishiRecertEval, stOf, czDate, esc } from "./results.js?v=20261121b";
+import { supabase } from "./supabase.js?v=20261121c";
+import { formDefs, prepareImport, arvalBreakdown, mitsubishiEval, mitsubishiRecertEval, stOf, czDate, esc } from "./results.js?v=20261121c";
 
 const BRAND_NAME = { arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi" };
 const OK = '<span class="pv-ok" title="Splněno">✓</span>', NOK = '<span class="pv-nok" title="Nesplněno">✗</span>';
@@ -107,7 +107,7 @@ export async function shareFormPdf(brand, state, btn) {
 // ---------- PDF stejné jako tisk („Exportovat do PDF“) ----------
 // Stránka se zkopíruje do skrytého rámu široké jako tisková plocha A4, použijí se její tiskové styly (@media print),
 // vyfotí se a rozdělí na strany A4 tak, aby se nepřetrhly řádky a karty (podle pravidel stránkování v tiskových stylech).
-const vendor = f => new URL("../assets/vendor/" + f + "?v=20261121b", import.meta.url).href;
+const vendor = f => new URL("../assets/vendor/" + f + "?v=20261121c", import.meta.url).href;
 const loaded = {};
 function loadScript(f, test) {
   if (test()) return Promise.resolve();
@@ -180,6 +180,8 @@ async function printLikePdf() {
     }
     const st = d.createElement("style"); st.textContent = css; d.head.appendChild(st);
     d.documentElement.style.background = "#fff";
+    // bez posuvníku (ve Windows by zúžil stránku a rozvržení by nesedělo s „fotkou“)
+    const noBar = d.createElement("style"); noBar.textContent = "html,body{overflow:hidden!important;scrollbar-width:none}html::-webkit-scrollbar,body::-webkit-scrollbar{display:none}"; d.head.appendChild(noBar);
     // obsah pláten (podpisy)
     const lc = document.querySelectorAll("canvas"), cc = d.querySelectorAll("canvas");
     cc.forEach((c, i) => { const o = lc[i]; if (!o || !o.width || !o.height) return; c.width = o.width; c.height = o.height; c.getContext("2d").drawImage(o, 0, 0); });
@@ -188,9 +190,10 @@ async function printLikePdf() {
     await new Promise(r => setTimeout(r, 120));
     // Je-li obsah širší než papír, Chrome ho při tisku rozvrhne aspoň na 4/3 šířky a zmenší (nejvýš 2×) – totéž zde
     let CW = W;
-    if (d.documentElement.scrollWidth > W + 1) { CW = Math.round(W * 4 / 3); fr.style.width = CW + "px"; await new Promise(r => setTimeout(r, 80)); }
+    const contentW = () => { let m = 0; for (const e of d.body.querySelectorAll("*")) { const r = e.getBoundingClientRect(); if (r.width && r.right > m) m = r.right; } return Math.max(m, d.body.scrollWidth); };
+    if (contentW() > W + 1) { CW = Math.round(W * 4 / 3); fr.style.width = CW + "px"; await new Promise(r => setTimeout(r, 80)); }
     for (let k = 0; k < 4; k++) {
-      const sw = Math.ceil(d.documentElement.scrollWidth);
+      const sw = Math.ceil(contentW());
       if (sw <= CW + 1 || sw > W * 2) break;
       CW = sw; fr.style.width = CW + "px"; await new Promise(r => setTimeout(r, 80));
     }
@@ -229,7 +232,7 @@ async function printLikePdf() {
     const cuts = []; for (let y = 0; y < total - 2; y += PH) cuts.push(y); cuts.push(total);
 
     const scale = Math.max(1, Math.min(2, Math.sqrt(15e6 / (CW * total))));
-    const canvas = await window.html2canvas(body, { scale, useCORS: true, backgroundColor: "#ffffff", width: CW, windowWidth: CW, height: total, windowHeight: total, scrollX: 0, scrollY: 0, logging: false });
+    const canvas = await window.html2canvas(body, { scale, useCORS: true, backgroundColor: "#ffffff", width: CW, windowWidth: CW, height: total, windowHeight: H, scrollX: 0, scrollY: 0, logging: false });
     const pdf = new window.jspdf.jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
     const mmPerPx = (210 - ml - mr) / CW;
     for (let i = 0; i < cuts.length - 1; i++) {
@@ -250,7 +253,7 @@ function loadHtml2pdf() {
   if (window.html2pdf) return Promise.resolve(window.html2pdf);
   return h2pLoading ||= new Promise((ok, fail) => {
     const sc = document.createElement("script");
-    sc.src = new URL("../assets/vendor/html2pdf.bundle.min.js?v=20261121b", import.meta.url).href;
+    sc.src = new URL("../assets/vendor/html2pdf.bundle.min.js?v=20261121c", import.meta.url).href;
     sc.onload = () => ok(window.html2pdf); sc.onerror = () => { h2pLoading = null; fail(new Error("Nepodařilo se načíst nástroj pro PDF (jste online?).")); };
     document.head.appendChild(sc);
   });

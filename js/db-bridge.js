@@ -1,7 +1,7 @@
 // Propojení formulářů (Arval, Stellantis) s databází: „Uložit koncept“ a „Načíst existující“
-import { supabase, getProfile } from "./supabase.js?v=20261121b";
-import { prepareImport, krajFromIc, krajFromAddress } from "./results.js?v=20261121b";
-import { shareFormPdf } from "./preview.js?v=20261121b";
+import { supabase, getProfile } from "./supabase.js?v=20261121c";
+import { prepareImport, krajFromIc, krajFromAddress } from "./results.js?v=20261121c";
+import { shareFormPdf } from "./preview.js?v=20261121c";
 
 const BRAND = location.pathname.includes("/stellantis/") ? "stellantis" : location.pathname.includes("/mitsubishi/") ? "mitsubishi" : location.pathname.includes("/hyundai/") ? "hyundai" : location.pathname.includes("/volvo/") ? "volvo" : "arval";
 const BRAND_NAME = { arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi", hyundai: "Hyundai", volvo: "Volvo" }[BRAND];
