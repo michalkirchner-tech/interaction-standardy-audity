@@ -1,6 +1,6 @@
 // Fotky ke kritériím auditu: zmenšení v zařízení → uložení do Supabase Storage (složka podle zákazníka)
 // Ve stavu formuláře se ukládá jen cesta k fotce a malá miniatura (pár kB), ne fotka samotná.
-import { supabase } from "./supabase.js?v=20261119i";
+import { supabase } from "./supabase.js?v=20261120a";
 
 const BUCKET = "audit-photos";
 const MAX_SIDE = 1200, QUALITY = 0.55;   // velká fotka: delší strana 1200 px, JPEG 55 % (obvykle 80–200 kB)
@@ -79,6 +79,61 @@ function viewer(item, getState, opts, retake) {
   });
 }
 
+// ---------- jedno trvalé políčko pro výběr fotky ----------
+// Políčko je mimo formulář, takže ho překreslení formuláře nezruší (iPhone jinak fotku do stránky nevrátí).
+const WAIT_KEY = "ia-photo-wait", NOCAP_KEY = "ia-photo-nocapture";
+let target = null;                       // { id, getState, opts, btn } – kritérium, pro které se právě fotí
+const picker = document.createElement("input");
+picker.type = "file"; picker.accept = "image/*";
+picker.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0";
+picker.setAttribute("aria-hidden", "true"); picker.tabIndex = -1;
+const noCapture = () => { try { return localStorage.getItem(NOCAP_KEY) === "1"; } catch { return false; } };
+if (!noCapture()) picker.setAttribute("capture", "environment");
+(document.body ? Promise.resolve() : new Promise(r => addEventListener("DOMContentLoaded", r))).then(() => document.body.appendChild(picker));
+const clearWait = () => { try { sessionStorage.removeItem(WAIT_KEY); } catch {} };
+
+function openPicker(id, getState, opts, btn) {
+  if (!String(opts.partner() || "").trim()) { alert("Nejdřív vyplňte název zákazníka – fotky se ukládají do složky podle zákazníka."); return; }
+  target = { id, getState, opts, btn };
+  try { sessionStorage.setItem(WAIT_KEY, JSON.stringify({ id, path: location.pathname, at: Date.now() })); } catch {}
+  picker.value = "";
+  picker.click();
+}
+picker.addEventListener("cancel", () => { clearWait(); target = null; });
+picker.addEventListener("change", async () => {
+  clearWait();
+  const file = picker.files && picker.files[0]; picker.value = "";
+  const t = target; target = null;
+  if (!file || !t) return;
+  const { id, getState, opts } = t;
+  document.querySelectorAll(`[data-iaph="${CSS.escape(id)}"]`).forEach(b => b.classList.add("iaph-busy"));
+  let shot;
+  try { shot = await shrink(file); } catch (e) { alert(e.message); rerender(); return; }
+  const folder = [slug(opts.partner()), String(opts.ic() || "").replace(/\D/g, "")].filter(Boolean).join("-") || "bez-nazvu";
+  const path = `${BRAND}/${folder}/${slug(id)}-${Date.now()}.jpg`;
+  const s = getState(); s.photos = s.photos || {};
+  const old = s.photos[id];
+  s.photos[id] = { p: path, t: shot.thumb, at: new Date().toISOString(), kb: Math.round(shot.blob.size / 1024), up: false };
+  const entry = { blob: shot.blob, tries: 0,
+    done: () => { const cur = getState().photos?.[id]; if (cur && cur.p === path) { cur.up = true; opts.changed(); } if (old?.p) supabase.storage.from(BUCKET).remove([old.p]).catch(() => {}); rerender(); },
+    fail: () => rerender() };
+  pending.set(path, entry);
+  opts.changed(); rerender();
+  try { await upload(path, shot.blob); pending.delete(path); entry.done(); }
+  catch (e) { entry.tries++; rerender(); console.warn("Nahrání fotky selhalo, zkusím znovu:", e.message); }
+});
+
+// Telefon během focení stránku zavřel a znovu načetl → fotka se nepřenesla. Upozorníme a příště nabídneme i galerii.
+try {
+  const w = JSON.parse(sessionStorage.getItem(WAIT_KEY) || "null");
+  if (w && w.path === location.pathname && Date.now() - w.at < 15 * 60000) {
+    clearWait();
+    try { localStorage.setItem(NOCAP_KEY, "1"); } catch {}
+    picker.removeAttribute("capture");
+    setTimeout(() => alert("Fotka se nepřenesla – telefon během focení obnovil stránku (obvykle kvůli nedostatku paměti).\n\nVyfoťte prosím kritérium znovu. Nově se vám nabídne volba: buď fotoaparát, nebo výběr hotové fotky z galerie – pokud se to bude opakovat, vyfoťte nejdřív fotoaparátem telefonu a pak ji vyberte z galerie."), 800);
+  }
+} catch {}
+
 // ---------- tlačítko u kritéria ----------
 // id: kritérium, getState(): aktuální stav formuláře, opts: { partner(): název zákazníka, ic(): IČ, changed(): uložit koncept }
 function button(id, getState, opts) {
@@ -89,10 +144,9 @@ function button(id, getState, opts) {
   const legacy = !item && st.photographed && st.photographed[id];
   const wrap = document.createElement("span");
   wrap.className = "iaph no-print";
-  const input = document.createElement("input");
-  input.type = "file"; input.accept = "image/*"; input.setAttribute("capture", "environment"); input.hidden = true;
   const btn = document.createElement("button");
   btn.type = "button";
+  btn.dataset.iaph = id;
   if (item) {
     const bad = item.up === false && !pending.has(item.p);
     btn.className = "iaph-thumb" + (pending.has(item.p) ? " iaph-busy" : "") + (bad ? " iaph-bad" : "");
@@ -104,33 +158,10 @@ function button(id, getState, opts) {
     btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
   }
   btn.setAttribute("aria-label", item ? "Zobrazit fotku kritéria" : "Vyfotit kritérium");
-  const pick = () => {
-    if (!String(opts.partner() || "").trim()) { alert("Nejdřív vyplňte název zákazníka – fotky se ukládají do složky podle zákazníka."); return; }
-    input.click();
-  };
+  const pick = () => openPicker(id, getState, opts, btn);
   btn.addEventListener("click", e => { e.stopPropagation(); e.preventDefault(); if (item) viewer(item, getState, opts, pick); else pick(); });
   btn.addEventListener("keydown", e => e.stopPropagation());
-  input.addEventListener("click", e => e.stopPropagation());
-  input.addEventListener("change", async () => {
-    const file = input.files && input.files[0]; input.value = "";
-    if (!file) return;
-    btn.classList.add("iaph-busy");
-    let shot;
-    try { shot = await shrink(file); } catch (e) { alert(e.message); btn.classList.remove("iaph-busy"); return; }
-    const folder = [slug(opts.partner()), String(opts.ic() || "").replace(/\D/g, "")].filter(Boolean).join("-") || "bez-nazvu";
-    const path = `${BRAND}/${folder}/${slug(id)}-${Date.now()}.jpg`;
-    const s = getState(); s.photos = s.photos || {};
-    const old = s.photos[id];
-    s.photos[id] = { p: path, t: shot.thumb, at: new Date().toISOString(), kb: Math.round(shot.blob.size / 1024), up: false };
-    const entry = { blob: shot.blob, tries: 0,
-      done: () => { const cur = getState().photos?.[id]; if (cur && cur.p === path) { cur.up = true; opts.changed(); } if (old?.p) supabase.storage.from(BUCKET).remove([old.p]).catch(() => {}); rerender(); },
-      fail: () => rerender() };
-    pending.set(path, entry);
-    opts.changed(); rerender();
-    try { await upload(path, shot.blob); pending.delete(path); entry.done(); }
-    catch (e) { entry.tries++; rerender(); console.warn("Nahrání fotky selhalo, zkusím znovu:", e.message); }
-  });
-  wrap.append(input, btn);
+  wrap.append(btn);
   return wrap;
 }
 
@@ -138,7 +169,7 @@ const css = `
 .iaph{display:inline-flex;align-items:center;flex-shrink:0}
 .iaph button{width:34px;height:34px;border-radius:8px;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
 .iaph-cam{border:1px solid #d6d6d6;background:#fff;color:#6b6b6b}
-.iaph-cam:hover{border-color:#1e1e1e;color:#1e1e1e}
+@media (hover:hover){.iaph-cam:hover{border-color:#1e1e1e;color:#1e1e1e}}
 .iaph-legacy{background:#e2f4e9;border-color:#2e7d4f;color:#2e7d4f}
 .iaph-thumb{border:2px solid #2e7d4f;background:#eee}
 .iaph-thumb img{width:100%;height:100%;object-fit:cover;display:block}
