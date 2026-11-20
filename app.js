@@ -1,13 +1,13 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
-import { supabase, getProfile } from "./js/supabase.js?v=20261120e";
-import { exportPdf, exportXlsx } from "./js/export.js?v=20261120e";
-import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261120e";
-import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261120e";
-import { renderUsers } from "./js/users.js?v=20261120e";
-import { openGallery } from "./js/gallery.js?v=20261120e";
-import { openPreview } from "./js/preview.js?v=20261120e";
-import { renderMultibrand } from "./js/multibrand.js?v=20261120e";
-import { RESULT_BRANDS, NO_VALIDITY, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261120e";
+import { supabase, getProfile } from "./js/supabase.js?v=20261120f";
+import { exportPdf, exportXlsx } from "./js/export.js?v=20261120f";
+import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261120f";
+import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261120f";
+import { renderUsers } from "./js/users.js?v=20261120f";
+import { openGallery } from "./js/gallery.js?v=20261120f";
+import { openPreview } from "./js/preview.js?v=20261120f";
+import { renderMultibrand } from "./js/multibrand.js?v=20261120f";
+import { RESULT_BRANDS, NO_VALIDITY, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261120f";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
@@ -21,7 +21,7 @@ const BRANDS = [
   { id: "byd",        name: "BYD",         logo: "assets/logos/byd.svg",        wide: true, url: "byd/" },
   { id: "tesla",      name: "Tesla",       logo: "assets/logos/tesla.svg" },
   { id: "ford",       name: "Ford",        logo: "assets/logos/ford.svg",       wide: true },
-  { id: "toyota",     name: "Toyota",      logo: "assets/logos/toyota.svg",     wide: true },
+  { id: "toyota",     name: "Toyota",      logo: "assets/logos/toyota.svg",     wide: true, url: "toyota/" },
 ];
 
 const app = document.getElementById("app");

@@ -1,11 +1,11 @@
 // Multi brand – rozdílový list: co musí servis s certifikací výchozí značky doplnit pro cílové značky
-import { exportPdf, exportXlsx } from "./export.js?v=20261120e";
+import { exportPdf, exportXlsx } from "./export.js?v=20261120f";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const TYPE = { KO: "KO", P: "Povinné", N: "Nutné", D: "Doporučené", U1: "Úroveň 1", U2: "Úroveň 2", U3: "Úroveň 3" };
 const KIND = { new: "Navíc", strict: "Přísnější", own: "Specifické pro značku" };
 const ORDER = { new: 0, strict: 1, own: 2 };
-const LOGO = { arval: "assets/logos/arval.png", stellantis: "assets/logos/stellantis.svg", mitsubishi: "assets/logos/mitsubishi.svg", hyundai: "assets/logos/hyundai.svg", byd: "assets/logos/byd.svg", volvo: "assets/logos/volvo.svg", skoda: "assets/logos/skoda.svg", porsche: "assets/logos/porsche-cr.svg" };
+const LOGO = { arval: "assets/logos/arval.png", stellantis: "assets/logos/stellantis.svg", mitsubishi: "assets/logos/mitsubishi.svg", hyundai: "assets/logos/hyundai.svg", byd: "assets/logos/byd.svg", volvo: "assets/logos/volvo.svg", skoda: "assets/logos/skoda.svg", porsche: "assets/logos/porsche-cr.svg", toyota: "assets/logos/toyota.svg" };
 const fmtNum = n => String(n).replace(".", ",");
 let catalog = null;
 const state = { customer: "", base: "", targets: [], arval: "3", incD: false };
@@ -20,7 +20,7 @@ export async function renderMultibrand(app) {
       <div id="mbBox"><div class="empty">Načítám katalog požadavků…</div></div>
     </section>`;
   const box = document.getElementById("mbBox");
-  try { catalog = catalog || await fetch(new URL("../data/multibrand.json?v=20261120e", import.meta.url)).then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }); }
+  try { catalog = catalog || await fetch(new URL("../data/multibrand.json?v=20261120f", import.meta.url)).then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }); }
   catch (e) { box.innerHTML = `<div class="empty">Katalog se nepodařilo načíst: ${esc(e.message)}</div>`; return; }
   draw(box);
 }
