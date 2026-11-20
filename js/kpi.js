@@ -1,7 +1,8 @@
 // KPI servisních partnerů (lakovna, karosárna) – jen pro administrátora
 // Krok 1: partneři a pobočky · Krok 2: zadávání vstupů za období · Krok 3: výstupy
-import { supabase } from "./supabase.js?v=20261120j";
-import { outputsHtml, loadAllEntries, loadTargets, targetsFormHtml, saveTargets } from "./kpi-out.js?v=20261120j";
+import { supabase } from "./supabase.js?v=20261120k";
+import { renderCompare } from "./kpi-compare.js?v=20261120k";
+import { outputsHtml, loadAllEntries, loadTargets, targetsFormHtml, saveTargets } from "./kpi-out.js?v=20261120k";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const czErr = e => /kpi_partners_name_uq/.test(e?.message || "") ? "Partner s tímto názvem už existuje."
@@ -109,7 +110,8 @@ async function showList(msg = "") {
     <div class="res-card">
       <div class="kpi-bar">
         <h3>Servisní partneři</h3>
-        <button type="button" class="btn-save kpi-btn" id="kpiNew">+ Založit partnera</button>
+        <div class="kpi-bar-btns">${partners.length ? `<button type="button" class="btn-logout kpi-btn-cmp" id="kpiCmp">⚖️ Porovnat partnery</button>` : ""}
+        <button type="button" class="btn-save kpi-btn" id="kpiNew">+ Založit partnera</button></div>
       </div>
       ${msg ? `<p class="kpi-ok">${msg}</p>` : ""}
       ${partners.length ? `
@@ -127,6 +129,7 @@ async function showList(msg = "") {
       : `<div class="empty">Zatím není založený žádný partner. Začněte tlačítkem „Založit partnera“.</div>`}
     </div>`;
   document.getElementById("kpiNew").onclick = () => showForm(null);
+  const cmp = document.getElementById("kpiCmp"); if (cmp) cmp.onclick = showCompare;
   b.querySelectorAll("[data-open]").forEach(x => x.onclick = e => { e.preventDefault(); showPartner(x.dataset.open); });
   b.querySelectorAll("[data-edit]").forEach(x => x.onclick = () => showForm(partners.find(p => p.id === x.dataset.edit)));
   b.querySelectorAll("[data-del]").forEach(x => x.onclick = () => delPartner(partners.find(p => p.id === x.dataset.del), x));
@@ -138,6 +141,17 @@ async function delPartner(p, btn) {
   const { error } = await supabase.from("kpi_partners").delete().eq("id", p.id);
   if (error) { alert("Smazání se nepodařilo: " + czErr(error)); btn.disabled = false; return; }
   showList(`Partner „${esc(p.name)}“ byl smazán.`);
+}
+
+// ---------- Porovnání partnerů ----------
+async function showCompare() {
+  const b = box();
+  setBack(true);
+  b.innerHTML = `<div class="empty">Načítám…</div>`;
+  window.scrollTo(0, 0);
+  try { [allEntries, targets] = await Promise.all([loadAllEntries(), loadTargets()]); }
+  catch (e) { b.innerHTML = `<div class="empty">Data se nepodařilo načíst: ${esc(e.message)}</div>`; return; }
+  renderCompare(b, { partners, allEntries, targets });
 }
 
 // ---------- Formulář partnera ----------

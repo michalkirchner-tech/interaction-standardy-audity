@@ -1,14 +1,14 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
-import { supabase, getProfile } from "./js/supabase.js?v=20261120j";
-import { exportPdf, exportXlsx } from "./js/export.js?v=20261120j";
-import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261120j";
-import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261120j";
-import { renderUsers } from "./js/users.js?v=20261120j";
-import { openGallery } from "./js/gallery.js?v=20261120j";
-import { openPreview } from "./js/preview.js?v=20261120j";
-import { renderMultibrand } from "./js/multibrand.js?v=20261120j";
-import { renderKpi } from "./js/kpi.js?v=20261120j";
-import { RESULT_BRANDS, NO_VALIDITY, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261120j";
+import { supabase, getProfile } from "./js/supabase.js?v=20261120k";
+import { exportPdf, exportXlsx } from "./js/export.js?v=20261120k";
+import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261120k";
+import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261120k";
+import { renderUsers } from "./js/users.js?v=20261120k";
+import { openGallery } from "./js/gallery.js?v=20261120k";
+import { openPreview } from "./js/preview.js?v=20261120k";
+import { renderMultibrand } from "./js/multibrand.js?v=20261120k";
+import { renderKpi } from "./js/kpi.js?v=20261120k";
+import { RESULT_BRANDS, NO_VALIDITY, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261120k";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
