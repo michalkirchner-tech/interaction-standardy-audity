@@ -1,38 +1,17 @@
 // KPI servisních partnerů (lakovna, karosárna) – jen pro administrátora
 // Krok 1: partneři a pobočky · Krok 2: zadávání vstupů za období · Krok 3: výstupy
-import { supabase } from "./supabase.js?v=20261120k";
-import { renderCompare } from "./kpi-compare.js?v=20261120k";
-import { outputsHtml, loadAllEntries, loadTargets, targetsFormHtml, saveTargets } from "./kpi-out.js?v=20261120k";
+import { supabase } from "./supabase.js?v=20261120l";
+import { renderRequests } from "./kpi-requests.js?v=20261120l";
+import { renderCompare } from "./kpi-compare.js?v=20261120l";
+import { outputsHtml, loadAllEntries, loadTargets, targetsFormHtml, saveTargets } from "./kpi-out.js?v=20261120l";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const czErr = e => /kpi_partners_name_uq/.test(e?.message || "") ? "Partner s tímto názvem už existuje."
   : /kpi_branches_name_uq/.test(e?.message || "") ? "Dvě pobočky nesmí mít stejný název."
   : (e?.message || String(e));
 
-// ---------- Sledované vstupy ----------
-export const LAK = [
-  { k: "nakup", l: "Nákup lakýrnického materiálu", u: "Kč" },
-  { k: "spotreba", l: "Spotřeba (odepsaný) lakýrnický materiál", u: "Kč" },
-  { k: "obrat", l: "Obrat (fakturace) lakýrnického materiálu", u: "Kč" },
-  { k: "mj", l: "Prodané (fakturované) materiálové jednotky", u: "MJ" },
-  { k: "lak_odch", l: "Odchozené hodiny lakovna", u: "hod" },
-  { k: "lak_prod", l: "Prodané (fakturované) hodiny lakovna", u: "hod" },
-  { k: "lak_zam", l: "Produktivní zaměstnanci lakovny (přípravář + lakýrník)", u: "osob", avg: true },
-  { k: "lak_zak", l: "Počet zakázek LAK", u: "ks" },
-];
-export const KAR = [
-  { k: "kar_zam", l: "Produktivní zaměstnanci karosárny", u: "osob", avg: true },
-  { k: "kar_odch", l: "Odchozené hodiny karosárna", u: "hod" },
-  { k: "kar_prod", l: "Prodané (fakturované) hodiny karosárna", u: "hod" },
-  { k: "kar_zak", l: "Počet zakázek KAR", u: "ks" },
-];
-export const PAINT = [
-  { k: "plnic", l: "Plnič", u: "l" },
-  { k: "barva", l: "Podkladová barva", u: "l" },
-  { k: "lak", l: "Vrchní lak", u: "l" },
-  { k: "mj", l: "Prodané MJ", u: "MJ" },
-  { k: "hod", l: "Prodané hodiny", u: "hod" },
-];
+import { LAK, KAR, PAINT } from "./kpi-defs.js?v=20261120l";
+export { LAK, KAR, PAINT };
 export const PTYPES = { M: "Měsíc", Q: "Kvartál", H: "Pololetí", Y: "Rok" };
 const MONTHS = ["leden", "únor", "březen", "duben", "květen", "červen", "červenec", "srpen", "září", "říjen", "listopad", "prosinec"];
 export const periodNos = t => t === "M" ? 12 : t === "Q" ? 4 : t === "H" ? 2 : 1;
@@ -291,7 +270,7 @@ async function showPartner(pid, msg = "") {
       <div class="kpi-bar">
         <div><h3 class="kpi-title">${esc(current.name)}</h3>
           <span class="muted-cell">Pobočky: ${current.kpi_branches.map(x => esc(x.name)).join(", ")}</span></div>
-        <div class="kpi-tabs"><button type="button" data-mode="in" class="${mode === "in" ? "active" : ""}">Vstupy</button><button type="button" data-mode="out" class="${mode === "out" ? "active" : ""}">Výstupy</button></div>
+        <div class="kpi-tabs"><button type="button" data-mode="in" class="${mode === "in" ? "active" : ""}">Vstupy</button><button type="button" data-mode="out" class="${mode === "out" ? "active" : ""}">Výstupy</button><button type="button" data-mode="req" class="${mode === "req" ? "active" : ""}">📨 Sběr dat od partnera</button></div>
       </div>
       ${msg ? `<p class="kpi-ok">${msg}</p>` : ""}
       <div class="kpi-period">
@@ -328,7 +307,11 @@ async function showPartner(pid, msg = "") {
   draw();
 }
 
-const draw = () => mode === "out" ? drawOutputs() : drawInputs();
+const draw = () => {
+  box().querySelector(".res-card")?.classList.toggle("kpi-mode-req", mode === "req");
+  if (mode === "req") { dirty = false; return renderRequests(document.getElementById("kpiInputs"), current, sel); }
+  return mode === "out" ? drawOutputs() : drawInputs();
+};
 
 function drawOutputs() {
   dirty = false;
