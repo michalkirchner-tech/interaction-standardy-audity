@@ -1,7 +1,7 @@
 // Veřejná stránka pro partnera: vyplnění vstupů KPI přes jedinečný odkaz (bez přihlášení)
-import { supabase } from "./supabase.js?v=20261120q";
-import { LAK, KAR, periodName, periodRange } from "./kpi-defs.js?v=20261120q";
-import { hoursHtml, bindHours, collectHours } from "./kpi-hours.js?v=20261120q";
+import { supabase } from "./supabase.js?v=20261120r";
+import { LAK, KAR, periodName, periodRange } from "./kpi-defs.js?v=20261120r";
+import { hoursHtml, bindHours, collectHours } from "./kpi-hours.js?v=20261120r";
 
 const app = document.getElementById("app");
 document.getElementById("year").textContent = new Date().getFullYear();
@@ -39,13 +39,15 @@ function draw(msg = "") {
   const per = `${periodName(f.period_type, f.period_no)} ${f.year}`;
   document.title = `Podklady pro KPI – ${f.partner} – ${per}`;
   const visible = list => list.filter(m => !m.adminOnly && !m.hours);
-  const defs = [["Lakovna", visible(LAK)], ...(f.has_kar ? [["Karosárna", visible(KAR)]] : [])];
+  const lak = f.has_lak !== false, kar = !!f.has_kar;
+  const defs = [...(lak ? [["Lakovna", visible(LAK)]] : []), ...(kar ? [["Karosárna", visible(KAR)]] : [])];
+  const depts = [...(lak ? ["lak"] : []), ...(kar ? ["kar"] : [])];
   page(`
     <div class="brand-head brand-head-plain"><div>
       <h2>Podklady pro KPI – ${esc(f.partner)}</h2>
       <p>Odkaz platí do ${new Date(f.expires_at).toLocaleDateString("cs-CZ")}</p>
     </div></div>
-    <div class="fill-period">Vyplňujete údaje za období<strong>${esc(per)}</strong><span>${periodRange(f.year, f.period_type, f.period_no)}</span></div>
+    <div class="fill-period">Vyplňujete údaje za období<strong>${esc(per)}</strong><span>${periodRange(f.year, f.period_type, f.period_no)}</span><em>${lak && kar ? "lakovna a karosárna" : kar ? "karosárna (klempírna)" : "lakovna"}</em></div>
     <div class="res-card">
       ${msg}
       ${f.status === "filled" && !msg ? `<p class="kpi-ok">Údaje jste už odeslali ${fmtDT(f.filled_at)} (${esc(f.filled_by)}). Níže je můžete upravit a odeslat znovu.</p>` : ""}
@@ -57,7 +59,7 @@ function draw(msg = "") {
           <tr><th scope="row">${esc(m.l)}<span class="muted">${m.u}${m.avg ? " · průměrný stav za období" : ""}</span>${m.hint ? `<span class="fill-hint">ℹ️ ${esc(m.hint)}</span>` : ""}</th>
           ${br.map(b => cell(s.b?.[b.id]?.[m.k], `data-b="${b.id}" data-k="${m.k}"`)).join("")}</tr>`).join("")).join("")}</tbody>
       </table></div>
-      ${hoursHtml(br, f.has_kar ? ["lak", "kar"] : ["lak"], { b: s.b, h: s.h })}
+      ${hoursHtml(br, depts, { b: s.b, h: s.h })}
 
       <div class="kpi-form fill-who"><label>Vyplnil(a) – jméno a příjmení *<input id="fillBy" value="${esc(f.filled_by || "")}" maxlength="120" autocomplete="name"></label></div>
       <div class="auth-msg" id="fillMsg"></div>

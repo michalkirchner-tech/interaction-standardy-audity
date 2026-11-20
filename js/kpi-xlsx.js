@@ -1,6 +1,6 @@
 // KPI – excelová šablona pro partnera (vytvoření .xlsx) a načtení vyplněné tabulky zpět
-import { zip } from "./export.js?v=20261120q";
-import { LAK, KAR, PAINT, DEPTS, periodRange } from "./kpi-defs.js?v=20261120q";
+import { zip } from "./export.js?v=20261120r";
+import { LAK, KAR, PAINT, DEPTS, periodRange } from "./kpi-defs.js?v=20261120r";
 
 const MAGIC = "interaction-kpi-sablona-v1";
 const MONTHS = ["leden", "únor", "březen", "duben", "květen", "červen", "červenec", "srpen", "září", "říjen", "listopad", "prosinec"];
@@ -42,7 +42,7 @@ export function buildTemplate(req) {
   const add = (cells, ht) => { r++; rows.push({ r, cells, ht }); return r; };
   const ncol = Math.max(2 + brs.length, 4);
   add([{ c: 0, v: `Podklady pro KPI – ${p.name}`, s: 1 }], 22);
-  const banner = add([{ c: 0, v: `VYPLŇUJETE ÚDAJE ZA OBDOBÍ:  ${per.toUpperCase()}   (${periodRange(req.year, req.type, req.no)})`, s: 8 }, ...Array.from({ length: ncol - 1 }, (_, i) => ({ c: i + 1, v: "", s: 8 }))], 28);
+  const banner = add([{ c: 0, v: `VYPLŇUJETE ÚDAJE ZA OBDOBÍ:  ${per.toUpperCase()}   (${periodRange(req.year, req.type, req.no)})   –   ${{ lak: "LAKOVNA", kar: "KAROSÁRNA (KLEMPÍRNA)", all: "LAKOVNA A KAROSÁRNA" }[req.scope || (p.has_kar ? "all" : "lak")]}`, s: 8 }, ...Array.from({ length: ncol - 1 }, (_, i) => ({ c: i + 1, v: "", s: 8 }))], 28);
   add([{ c: 0, v: "Vyplňte prosím jen žlutá pole. Čísla pište bez měny (Kč) – desetinná místa s čárkou. Pokud údaj nesledujete, pole nechte prázdné. Řádky ani sloupce prosím nepřidávejte a list nepřejmenovávejte – tabulka se pak automaticky načte zpět.", s: 6 }], 46);
   const merges = [`A2:${col(ncol - 1)}2`, `A3:${col(ncol - 1)}3`];
   add([]);
@@ -56,10 +56,12 @@ export function buildTemplate(req) {
       if (m.hint) { add([{ c: 0, v: "↑ " + m.hint, s: 9 }], 16); merges.push(`A${r}:${col(ncol - 1)}${r}`); }
     }
   };
-  section("Lakovna", LAK);
-  if (p.has_kar) section("Karosárna", KAR);
+  const scope = req.scope || (p.has_kar ? "all" : "lak");
+  const depts = scope === "all" ? ["lak", "kar"] : [scope];
+  if (depts.includes("lak")) section("Lakovna", LAK);
+  if (depts.includes("kar")) section("Karosárna (klempírna)", KAR);
   // hodiny jmenovitě – místo souhrnu za středisko
-  for (const dk of p.has_kar ? ["lak", "kar"] : ["lak"]) {
+  for (const dk of depts) {
     const d = DEPTS[dk];
     add([]);
     add([{ c: 0, v: `Odchozené a prodané hodiny jmenovitě – ${d.label}`, s: 1 }], 20);

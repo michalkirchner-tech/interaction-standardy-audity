@@ -656,3 +656,6 @@ body.gal-open { overflow: hidden; }
 .kpi-inbox-n { background: var(--ia-red); color: #fff; border-radius: 999px; font-size: .8rem; padding: 1px 9px; }
 .kpi-inbox td { vertical-align: middle; }
 .st-new { background: var(--ia-red); color: #fff; }
+.fill-period em { font-style: normal; background: rgba(255,255,255,.18); border-radius: 999px; padding: 2px 12px; font-weight: 600; }
+.kpi-ok-inline { color: #1b6b35; }
+.kpi-req-list td .muted { display: block; color: #777; font-size: .78rem; }

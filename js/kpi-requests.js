@@ -1,12 +1,13 @@
 // KPI – sběr dat od partnera: jedinečné odkazy k online vyplnění
-import { supabase } from "./supabase.js?v=20261120q";
-import { PTYPES, periodNos, periodName, LAK, KAR, PAINT, fmtNum } from "./kpi.js?v=20261120q";
-import { DEPTS } from "./kpi-defs.js?v=20261120q";
-import { buildTemplate, readTemplate } from "./kpi-xlsx.js?v=20261120q";
+import { supabase } from "./supabase.js?v=20261120r";
+import { PTYPES, periodNos, periodName, LAK, KAR, PAINT, fmtNum } from "./kpi.js?v=20261120r";
+import { DEPTS } from "./kpi-defs.js?v=20261120r";
+import { buildTemplate, readTemplate } from "./kpi-xlsx.js?v=20261120r";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmtD = iso => new Date(iso).toLocaleDateString("cs-CZ");
 const fmtDT = iso => { const d = new Date(iso); return fmtD(iso) + " " + d.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" }); };
+const SCOPE = { lak: "lakovna", kar: "karosárna (klempírna)", all: "lakovna + karosárna" };
 export const fillUrl = token => new URL("vyplnit/?k=" + token, location.origin + location.pathname.replace(/[^/]*$/, "")).href;
 
 async function copy(text, btn) {
@@ -35,7 +36,7 @@ function status(r) {
 export async function renderRequests(host, p, sel, onChange, openId) {
   host.innerHTML = `<div class="empty">Načítám…</div>`;
   const { data: list, error } = await supabase.from("kpi_requests")
-    .select("id,token,year,period_type,period_no,branch_ids,status,expires_at,note,filled_by,filled_at,imported_at,submitted,created_at")
+    .select("id,token,year,period_type,period_no,branch_ids,scope,status,expires_at,note,filled_by,filled_at,imported_at,submitted,created_at")
     .eq("partner_id", p.id).order("created_at", { ascending: false });
   if (error) { host.innerHTML = `<div class="empty">Seznam odkazů se nepodařilo načíst: ${esc(error.message)}</div>`; return; }
   const brName = id => p.kpi_branches.find(b => b.id === id)?.name || "(odebraná pobočka)";
@@ -50,6 +51,7 @@ export async function renderRequests(host, p, sel, onChange, openId) {
         <label>Rok<select id="rqYear">${[now + 1, now, now - 1, now - 2].map(y => `<option ${y === f.year ? "selected" : ""}>${y}</option>`).join("")}</select></label>
         <label>Sledované období<select id="rqType">${Object.entries(PTYPES).map(([k, v]) => `<option value="${k}" ${k === f.type ? "selected" : ""}>${v}</option>`).join("")}</select></label>
         <label id="rqNoWrap">Které<select id="rqNo"></select></label>
+        <label>Oddělení<select id="rqScope"><option value="lak" ${p.has_kar ? "" : "selected"}>Lakovna</option><option value="kar">Karosárna (klempírna)</option><option value="all" ${p.has_kar ? "selected" : ""}>Komplet (lakovna + karosárna)</option></select></label>
         <label>Platnost odkazu<select id="rqDays"><option value="14">14 dní</option><option value="30" selected>30 dní</option><option value="60">60 dní</option><option value="90">90 dní</option></select></label>
       </div>
       <div class="kpi-lbl-sm">Pobočky ve formuláři</div>
@@ -70,7 +72,7 @@ export async function renderRequests(host, p, sel, onChange, openId) {
     ${list.length ? `<div class="table-wrap kpi-table-wrap"><table class="res-table kpi-req-list">
       <thead><tr><th>Období</th><th>Pobočky</th><th>Vytvořeno</th><th>Platí do</th><th>Stav</th><th></th></tr></thead>
       <tbody>${list.map(r => `<tr>
-        <td><strong>${periodName(r.period_type, r.period_no)} ${r.year}</strong></td>
+        <td><strong>${periodName(r.period_type, r.period_no)} ${r.year}</strong><span class="muted">${SCOPE[r.scope] || ""}</span></td>
         <td>${r.branch_ids.map(brName).map(esc).join(", ")}</td>
         <td class="td-date">${fmtD(r.created_at)}</td>
         <td class="td-date">${fmtD(r.expires_at)}</td>
@@ -96,7 +98,9 @@ export async function renderRequests(host, p, sel, onChange, openId) {
     const ids = [...host.querySelectorAll("[data-rqb]:checked")].map(x => x.dataset.rqb);
     if (!ids.length) { out.textContent = "Vyberte alespoň jednu pobočku."; return; }
     e.target.disabled = true;
-    const row = { partner_id: p.id, year: +yS.value, period_type: tS.value, period_no: tS.value === "Y" ? 1 : +nS.value, branch_ids: ids,
+    const scope = host.querySelector("#rqScope").value;
+    if (!(await ensureKar(p, scope, out))) { e.target.disabled = false; return; }
+    const row = { scope, partner_id: p.id, year: +yS.value, period_type: tS.value, period_no: tS.value === "Y" ? 1 : +nS.value, branch_ids: ids,
       expires_at: new Date(Date.now() + +host.querySelector("#rqDays").value * 864e5).toISOString(), note: host.querySelector("#rqNote").value.trim() || null };
     const { data, error } = await supabase.from("kpi_requests").insert(row).select("token,year,period_type,period_no,expires_at").single();
     if (error) { out.textContent = "Odkaz se nepodařilo vytvořit: " + error.message; e.target.disabled = false; return; }
@@ -110,12 +114,13 @@ export async function renderRequests(host, p, sel, onChange, openId) {
     res.querySelector("#rqCopy").onclick = ev => copy(fillUrl(data.token), ev.target);
     res.querySelector("input").onclick = ev => ev.target.select();
   };
-  const chosen = () => ({ year: +yS.value, type: tS.value, no: tS.value === "Y" ? 1 : +nS.value, ids: [...host.querySelectorAll("[data-rqb]:checked")].map(x => x.dataset.rqb) });
-  host.querySelector("#rqXlsx").onclick = () => {
+  const chosen = () => ({ scope: host.querySelector("#rqScope").value, year: +yS.value, type: tS.value, no: tS.value === "Y" ? 1 : +nS.value, ids: [...host.querySelectorAll("[data-rqb]:checked")].map(x => x.dataset.rqb) });
+  host.querySelector("#rqXlsx").onclick = async () => {
     const c = chosen(), out = host.querySelector("#rqMsg");
     if (!c.ids.length) { out.textContent = "Vyberte alespoň jednu pobočku."; return; }
     out.textContent = "";
-    const { blob, filename } = buildTemplate({ partner: p, year: c.year, type: c.type, no: c.no, branchIds: c.ids });
+    if (!(await ensureKar(p, c.scope, out))) return;
+    const { blob, filename } = buildTemplate({ partner: p, year: c.year, type: c.type, no: c.no, branchIds: c.ids, scope: c.scope });
     const url = URL.createObjectURL(blob), a = document.createElement("a");
     a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 3000);
   };
@@ -160,6 +165,16 @@ export async function renderRequests(host, p, sel, onChange, openId) {
     if (error) return alert("Smazání se nepodařilo: " + error.message);
     renderRequests(host, p, sel, onChange);
   });
+}
+
+// Volba karosárny u partnera, který ji zatím nesleduje: zapne mu sledování karosárny
+async function ensureKar(p, scope, out) {
+  if (scope === "lak" || p.has_kar) return true;
+  const { error } = await supabase.from("kpi_partners").update({ has_kar: true }).eq("id", p.id);
+  if (error) { out.textContent = "Nepodařilo se zapnout sledování karosárny: " + error.message; return false; }
+  p.has_kar = true;
+  out.innerHTML = `<span class="kpi-ok-inline">U partnera ${esc(p.name)} bylo zapnuto sledování karosárny.</span>`;
+  return true;
 }
 
 // ---------- Import vyplněné tabulky ----------
