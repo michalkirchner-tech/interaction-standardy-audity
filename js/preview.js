@@ -1,6 +1,6 @@
 // Náhled kompletní výsledkové listiny auditu (jen ke čtení) + export do PDF (tisk prohlížeče)
-import { supabase } from "./supabase.js?v=20261120x";
-import { formDefs, arvalBreakdown, mitsubishiEval, mitsubishiRecertEval, stOf, czDate, esc } from "./results.js?v=20261120x";
+import { supabase } from "./supabase.js?v=20261120y";
+import { formDefs, prepareImport, arvalBreakdown, mitsubishiEval, mitsubishiRecertEval, stOf, czDate, esc } from "./results.js?v=20261120y";
 
 const BRAND_NAME = { arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi" };
 const OK = '<span class="pv-ok" title="Splněno">✓</span>', NOK = '<span class="pv-nok" title="Nesplněno">✗</span>';
@@ -34,25 +34,7 @@ export async function openPreview(brand, id) {
     if (error) throw error;
     rec = data; defs = await formDefs(brand);
   } catch (e) { doc.innerHTML = `<p class="pv-msg pv-err">Audit se nepodařilo načíst: ${esc(e.message)}</p>`; return; }
-  const s = rec.data || {};
-  let body;
-  try { body = brand === "arval" ? arvalDoc(s, defs) : brand === "stellantis" ? stellantisDoc(s, defs) : mitsubishiDoc(s, defs); }
-  catch (e) { body = `<p class="pv-msg pv-err">Listinu se nepodařilo sestavit: ${esc(e.message)}</p>`; }
-  const st = stOf(rec);
-  doc.innerHTML = `
-    <div class="pv-head"><img src="assets/interaction-logo.png" alt=""><div><h1>Výsledková listina auditu ${esc(BRAND_NAME[brand] || brand)}</h1>
-      <p>${esc(rec.partner)}${rec.ic ? ` · IČ ${esc(rec.ic)}` : ""}</p></div></div>
-    ${kv([
-      ["Druh auditu", rec.audit_kind === "nulty" ? "Nultý audit" : "Ostrý audit"],
-      ["Datum auditu", czDate(rec.audit_date)],
-      ["Příští audit", rec.next_audit_date ? `${czDate(rec.next_audit_date)} (${st.text})` : ""],
-      ["Platnost", rec.valid_months ? `${rec.valid_months} měsíců` : ""],
-      ["Kraj", rec.kraj || ""],
-      ["Sídlo", addr(s.meta?.ulice, [s.meta?.psc, s.meta?.mesto].filter(Boolean).join(" "))],
-      ["Auditor", s.meta?.auditor || s.kontakty?.auditorJmeno || ""],
-    ])}
-    ${body}
-    <p class="pv-foot">Vytištěno ${new Date().toLocaleDateString("cs-CZ")} z aplikace Standardy a audity · INTERACTION</p>`;
+  doc.innerHTML = docHtml(brand, rec, defs);
   const prevTitle = document.title;
   box.querySelector("[data-pdf]").onclick = () => {
     document.body.classList.add("pv-printing");
@@ -62,9 +44,65 @@ export async function openPreview(brand, id) {
     setTimeout(() => window.print(), 50);
     setTimeout(done, 20000);
   };
-  const fname = `Vysledkova_listina_${BRAND_NAME[brand] || brand}_${rec.partner}_${rec.audit_date || ""}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9_.-]+/g, "_").replace(/_+/g, "_") + ".pdf";
-  const subject = `Výsledková listina auditu ${BRAND_NAME[brand] || brand} – ${rec.partner} (${czDate(rec.audit_date)})`;
-  setupShare(box, doc, fname, subject);
+  const btn = box.querySelector("[data-share]");
+  btn.onclick = () => shareClick(btn, () => doc, names(brand, rec));
+}
+
+const LOGO_URL = new URL("../assets/interaction-logo.png", import.meta.url).href;
+const SIG_LBL = { auditor: "Auditor", odpovedna: "Odpovědná osoba", vedeni: "Vedení servisu" };
+function sigBlock(s) {
+  const sg = s.sig || {}, keys = Object.keys(sg).filter(k => sg[k]);
+  if (!keys.length) return "";
+  return `<h2>Podpisy</h2><div class="pv-sigs">${keys.map(k => {
+    const v = sg[k];
+    const inner = typeof v === "string" && v.startsWith("data:image") ? `<img src="${v}" alt="">`
+      : typeof v === "object" ? `<b>${esc(v.jmeno || "")}</b><span>Digitálně podepsáno${v.datum ? ` ${czDate(v.datum)}` : ""}</span>` : "";
+    return inner ? `<div class="pv-sig"><span class="pv-sigl">${esc(SIG_LBL[k] || k)}</span>${inner}</div>` : "";
+  }).join("")}</div>`;
+}
+function docHtml(brand, rec, defs) {
+  const s = rec.data || {};
+  let body;
+  try { body = brand === "arval" ? arvalDoc(s, defs) : brand === "stellantis" ? stellantisDoc(s, defs) : mitsubishiDoc(s, defs); body += sigBlock(s); }
+  catch (e) { body = `<p class="pv-msg pv-err">Listinu se nepodařilo sestavit: ${esc(e.message)}</p>`; }
+  const st = rec.next_audit_date ? stOf(rec) : null;
+  return `
+    <div class="pv-head"><img src="${LOGO_URL}" alt=""><div><h1>Výsledková listina auditu ${esc(BRAND_NAME[brand] || brand)}</h1>
+      <p>${esc(rec.partner)}${rec.ic ? ` · IČ ${esc(rec.ic)}` : ""}</p></div></div>
+    ${kv([
+      ["Druh auditu", rec.audit_kind ? (rec.audit_kind === "nulty" ? "Nultý audit" : "Ostrý audit") : ""],
+      ["Datum auditu", czDate(rec.audit_date)],
+      ["Příští audit", rec.next_audit_date ? `${czDate(rec.next_audit_date)}${st && rec.audit_kind ? ` (${st.text})` : ""}` : ""],
+      ["Platnost", rec.valid_months ? `${rec.valid_months} měsíců` : ""],
+      ["Kraj", rec.kraj || ""],
+      ["Sídlo", addr(s.meta?.ulice, [s.meta?.psc, s.meta?.mesto].filter(Boolean).join(" "))],
+      ["Auditor", s.meta?.auditor || s.kontakty?.auditorJmeno || ""],
+    ])}
+    ${body}
+    <p class="pv-foot">Vytvořeno ${new Date().toLocaleDateString("cs-CZ")} z aplikace Standardy a audity · INTERACTION</p>`;
+}
+function names(brand, rec) {
+  const b = BRAND_NAME[brand] || brand;
+  return {
+    fname: `Vysledkova_listina_${b}_${rec.partner}_${rec.audit_date || ""}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9_.-]+/g, "_").replace(/_+/g, "_") + ".pdf",
+    subject: `Výsledková listina auditu ${b} – ${rec.partner} (${czDate(rec.audit_date)})`,
+  };
+}
+
+// Sdílet PDF přímo z formuláře (Arval, Stellantis, Mitsubishi) – z aktuálně vyplněných údajů
+export async function shareFormPdf(brand, state, btn) {
+  if (!state?.meta?.partner?.trim()) { alert("Nejdřív vyplňte název zákazníka (partnera) v Základních údajích."); return; }
+  if (!state.meta.datumAuditu) { alert("Vyplňte datum auditu."); return; }
+  if (btn._pvReady) return shareClick(btn, null, btn._pvNames);
+  let rec, defs;
+  try { rec = await prepareImport(state, brand); defs = await formDefs(brand); }
+  catch (e) { alert("PDF nelze vytvořit: " + e.message); return; }
+  if (rec.valid_months) { const d = new Date(rec.audit_date); d.setMonth(d.getMonth() + rec.valid_months); rec.next_audit_date = d.toISOString().slice(0, 10); }
+  const el = document.createElement("div");
+  el.className = "pv-doc";
+  el.innerHTML = docHtml(brand, rec, defs);
+  btn._pvNames = names(brand, rec);
+  return shareClick(btn, () => el, btn._pvNames);
 }
 
 // ---------- Sdílet PDF (e-mail, Outlook, WhatsApp… podle nabídky Sdílet v systému) ----------
@@ -73,7 +111,7 @@ function loadHtml2pdf() {
   if (window.html2pdf) return Promise.resolve(window.html2pdf);
   return h2pLoading ||= new Promise((ok, fail) => {
     const sc = document.createElement("script");
-    sc.src = "assets/vendor/html2pdf.bundle.min.js?v=20261120x";
+    sc.src = new URL("../assets/vendor/html2pdf.bundle.min.js?v=20261120y", import.meta.url).href;
     sc.onload = () => ok(window.html2pdf); sc.onerror = () => { h2pLoading = null; fail(new Error("Nepodařilo se načíst nástroj pro PDF (jste online?).")); };
     document.head.appendChild(sc);
   });
@@ -95,32 +133,28 @@ function download(file) {
   const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = file.name;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 30000);
 }
-function setupShare(box, doc, fname, subject) {
-  const btn = box.querySelector("[data-share]");
-  let ready = null; // hotové PDF – druhé klepnutí ho rovnou sdílí
-  const share = async file => {
-    try { await navigator.share({ files: [file], title: subject, text: subject }); return "ok"; }
-    catch (e) { return e.name === "AbortError" ? "ok" : e.name === "NotAllowedError" ? "again" : "fail"; }
-  };
-  btn.onclick = async () => {
-    if (btn.disabled) return;
-    let file = ready;
-    if (!file) {
-      btn.disabled = true; btn.textContent = "Připravuji PDF…";
-      try { file = new File([await makePdf(doc)], fname, { type: "application/pdf" }); }
-      catch (e) { alert("PDF se nepodařilo vytvořit: " + e.message); btn.disabled = false; btn.textContent = "Sdílet PDF"; return; }
-      btn.disabled = false; btn.textContent = "Sdílet PDF";
-    }
-    if (!(navigator.canShare && navigator.canShare({ files: [file] }))) {
-      download(file);
-      alert("Tento prohlížeč neumí soubor sdílet přímo do aplikace. PDF se stáhlo do počítače – přiložte ho do e-mailu ručně.\n\nTip: ve Windows použijte Microsoft Edge nebo Google Chrome.");
-      return;
-    }
-    const r = await share(file);
-    if (r === "again") { ready = file; btn.textContent = "PDF je připravené – klepněte znovu"; btn.classList.add("pv-ready"); return; }
-    if (r === "fail") { download(file); alert("Sdílení se nepodařilo, PDF se stáhlo – přiložte ho ručně."); }
-    ready = null; btn.textContent = "Sdílet PDF"; btn.classList.remove("pv-ready");
-  };
+async function shareClick(btn, getDoc, { fname, subject }) {
+  if (btn.disabled) return;
+  const label = btn._pvLabel ||= btn.innerHTML;
+  const reset = () => { btn._pvReady = null; btn.innerHTML = label; btn.classList.remove("pv-ready"); };
+  let file = btn._pvReady;
+  if (!file) {
+    btn.disabled = true; btn.textContent = "Připravuji PDF…";
+    try { file = new File([await makePdf(getDoc())], fname, { type: "application/pdf" }); }
+    catch (e) { alert("PDF se nepodařilo vytvořit: " + e.message); btn.disabled = false; reset(); return; }
+    btn.disabled = false; btn.innerHTML = label;
+  }
+  if (!(navigator.canShare && navigator.canShare({ files: [file] }))) {
+    download(file); reset();
+    alert("Tento prohlížeč neumí soubor sdílet přímo do aplikace. PDF se stáhlo do počítače – přiložte ho do e-mailu ručně.\n\nTip: ve Windows použijte Microsoft Edge nebo Google Chrome.");
+    return;
+  }
+  try { await navigator.share({ files: [file], title: subject, text: subject }); reset(); }
+  catch (e) {
+    if (e.name === "AbortError") { reset(); return; }
+    if (e.name === "NotAllowedError") { btn._pvReady = file; btn.textContent = "PDF je připravené – klepněte znovu"; btn.classList.add("pv-ready"); return; }
+    reset(); download(file); alert("Sdílení se nepodařilo, PDF se stáhlo – přiložte ho ručně.");
+  }
 }
 
 // ---------- Arval ----------
@@ -216,6 +250,8 @@ const css = `
 .pv-bar strong{flex:1 1 auto}.pv-only{font-size:.88rem;display:flex;gap:6px;align-items:center;cursor:pointer}
 .pv-btns{display:flex;flex-wrap:wrap;gap:8px}.pv-btns button{border:0;border-radius:9px;padding:8px 14px;font:600 .9rem inherit;cursor:pointer}
 .pv-pdf{background:#1e1e1e;color:#fff}.pv-share{background:#e30613;color:#fff}.pv-share.pv-ready{background:#1d7a3a}.pv-share:disabled{opacity:.7;cursor:wait}
+.pv-sigs{display:flex;flex-wrap:wrap;gap:16px}.pv-sig{border:1px solid #ddd;border-radius:8px;padding:8px 12px;min-width:200px;display:flex;flex-direction:column;gap:2px}.pv-sig img{max-height:70px;max-width:260px}.pv-sigl{font-size:.75rem;color:#777}
+.btn.pv-ready{background:#1d7a3a!important;color:#fff!important;border-color:#1d7a3a!important}
 .pv-pdf-doc{overflow:visible!important;max-height:none!important;padding:0!important;background:#fff;font-size:9.5pt}.pv-pdf-doc tr.pv-bad,.pv-pdf-doc .pv-lvl{-webkit-print-color-adjust:exact}.pv-close{background:#fff;border:1px solid #ccc!important}
 .pv-doc{overflow:auto;padding:18px 22px 26px;font-size:.88rem;line-height:1.4}
 .pv-head{display:flex;gap:14px;align-items:center;margin-bottom:12px}.pv-head img{height:34px}.pv-head h1{font-size:1.15rem;margin:0}.pv-head p{margin:2px 0 0;font-weight:600}

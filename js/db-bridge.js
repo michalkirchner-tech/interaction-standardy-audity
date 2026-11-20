@@ -1,6 +1,7 @@
 // Propojení formulářů (Arval, Stellantis) s databází: „Uložit koncept“ a „Načíst existující“
-import { supabase, getProfile } from "./supabase.js?v=20261120x";
-import { prepareImport, krajFromIc, krajFromAddress } from "./results.js?v=20261120x";
+import { supabase, getProfile } from "./supabase.js?v=20261120y";
+import { prepareImport, krajFromIc, krajFromAddress } from "./results.js?v=20261120y";
+import { shareFormPdf } from "./preview.js?v=20261120y";
 
 const BRAND = location.pathname.includes("/stellantis/") ? "stellantis" : location.pathname.includes("/mitsubishi/") ? "mitsubishi" : location.pathname.includes("/hyundai/") ? "hyundai" : location.pathname.includes("/volvo/") ? "volvo" : "arval";
 const BRAND_NAME = { arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi", hyundai: "Hyundai", volvo: "Volvo" }[BRAND];
@@ -207,4 +208,7 @@ async function save(stateJson, note) {
 // Stav připojení OneDrive už se nepoužívá – skrýt
 { const s = document.createElement("style"); s.textContent = "#folderStatus{display:none!important}"; document.head.appendChild(s); }
 
-window.IA_DB = { open: openList, save };
+window.IA_DB = { open: openList, save, share: (stateJson, btn) => {
+  let st; try { st = JSON.parse(stateJson); } catch { alert("Formulář se nepodařilo přečíst."); return; }
+  return shareFormPdf(BRAND, st, btn);
+} };

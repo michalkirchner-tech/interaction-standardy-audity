@@ -14,10 +14,10 @@
 <title>Certifikační audit ARVAL</title>
 <style>html.ia-guard body{visibility:hidden}</style>
 <script>document.documentElement.classList.add("ia-guard")</script>
-<script type="module" src="../js/guard.js?v=20261120x"></script>
-<script type="module" src="../js/db-bridge.js?v=20261120x"></script>
-<script type="module" src="../js/photos.js?v=20261120x"></script>
-<script type="module" src="../js/locations.js?v=20261120x"></script>
+<script type="module" src="../js/guard.js?v=20261120y"></script>
+<script type="module" src="../js/db-bridge.js?v=20261120y"></script>
+<script type="module" src="../js/photos.js?v=20261120y"></script>
+<script type="module" src="../js/locations.js?v=20261120y"></script>
 
 <style>
 :root{
@@ -563,7 +563,7 @@ label.btn{ display:inline-block; line-height:1.3; }
 .ia-home-btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
 @media print{.ia-home-btn{display:none!important}}
 </style>
-<link rel="stylesheet" href="../mobile.css?v=20261120x">
+<link rel="stylesheet" href="../mobile.css?v=20261120y">
 </head>
 <body>
 <div class="app">
@@ -591,9 +591,9 @@ label.btn{ display:inline-block; line-height:1.3; }
         </div>
       </div>
       <button class="btn btn-primary" id="btnExport">Exportovat do PDF</button>
-      <button class="btn btn-line btn-icon no-print" id="btnEmailExport" type="button" title="Uložit PDF a otevřít e-mail v Outlooku">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"></path><path d="M22 6l-10 7L2 6"></path></svg>
-        Export a e-mail
+      <button class="btn btn-line btn-icon no-print" id="btnSharePdf" type="button" title="Vytvoří PDF výsledkové listiny a nabídne odeslání e-mailem, Outlookem, WhatsAppem…">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+        Sdílet PDF
       </button>
     </div>
   </div>
@@ -2131,29 +2131,8 @@ document.getElementById('loadFileInput').addEventListener('change', function(e){
 });
 document.getElementById('btnExport').addEventListener('click', function(){ window.print(); });
 
-/* ---------------- Export + e-mail (Outlook) ----------------
-   Browsers do not let a web page attach a file to an email draft for
-   security reasons — only a mailto: link's to/subject/body can be set
-   programmatically, never an attachment. So this does the closest thing
-   possible: it opens the same print dialog as "Exportovat do PDF" (where
-   the person saves the PDF, e.g. "Save as PDF" / tiskne do souboru), and
-   right after that it opens a prefilled e-mail in the person's default
-   mail app (Outlook, if set as default) with subject/body ready — the
-   person just needs to drag/attach the PDF they just saved.
-*/
-function emailSubjectAndBody(){
-  var partner = state.meta.partner || 'partnera';
-  var subject = 'ARVAL certifikační audit — ' + (state.meta.partner || 'koncept') + (state.meta.datumAuditu ? ' — ' + state.meta.datumAuditu : '');
-  var body = 'Dobrý den,\n\nv příloze zasílám certifikační audit pro ' + partner + '.\n' +
-    '(Před odesláním prosím přiložte PDF, které se právě uložilo z tlačítka „Export a e-mail".)\n\nS pozdravem';
-  return { subject: subject, body: body };
-}
-document.getElementById('btnEmailExport').addEventListener('click', function(){
-  window.print();
-  var sb = emailSubjectAndBody();
-  var mailtoUrl = 'mailto:?subject=' + encodeURIComponent(sb.subject) + '&body=' + encodeURIComponent(sb.body);
-  window.location.href = mailtoUrl;
-});
+/* Sdílet PDF: výsledková listina z aktuálních údajů → nabídka Sdílet (e-mail, Outlook, WhatsApp…), viz js/preview.js */
+document.getElementById('btnSharePdf').addEventListener('click', function(){ if (!window.IA_DB || !window.IA_DB.share) return alert('Aplikace se ještě načítá, zkuste to za okamžik.'); window.IA_DB.share(serializeState(), this); });
 document.getElementById('btnReset').addEventListener('click', function(){
   if (!confirm('Opravdu vymazat všechna zadaná data formuláře? Tato akce je nevratná.')) return;
   state.meta = {partner:"",ic:"",ulice:"",psc:"",auditor:"",datumAuditu:todayIso(),pocetMechaniku:"",pocetKaroseru:"",pocetLakyrniku:"",karoserieExterni:"vlastni",dodavatelKarosarna:"",dodavatelKarosarnaIco:"",dodavatelKarosarnaUlice:"",dodavatelKarosarnaPsc:"",lakovnaExterni:"vlastni",dodavatelLakovna:"",dodavatelLakovnaIco:"",dodavatelLakovnaUlice:"",dodavatelLakovnaPsc:"",lakovnaZnackaMaterialu:"",nahradniPocet:"",nahradniStari:"",nahradniVlastnik:"",platnostMesicu:"36",audaflow:"ne",teccontrol:"ne",bodoveOpravy:"ano",cng:"ne"};

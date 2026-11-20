@@ -14,10 +14,10 @@
 <title>Certifikační audit karosárny Stellantis</title>
 <style>html.ia-guard body{visibility:hidden}</style>
 <script>document.documentElement.classList.add("ia-guard")</script>
-<script type="module" src="../js/guard.js?v=20261120x"></script>
-<script type="module" src="../js/db-bridge.js?v=20261120x"></script>
-<script type="module" src="../js/photos.js?v=20261120x"></script>
-<script type="module" src="../js/locations.js?v=20261120x"></script>
+<script type="module" src="../js/guard.js?v=20261120y"></script>
+<script type="module" src="../js/db-bridge.js?v=20261120y"></script>
+<script type="module" src="../js/photos.js?v=20261120y"></script>
+<script type="module" src="../js/locations.js?v=20261120y"></script>
 
 <style>
 /* Layout: sticky top bar + section sidebar + single-column form; print renders every section as the A4 audit sheet. */
@@ -317,7 +317,7 @@ button{font-family:inherit;}
 .ia-home-btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
 @media print{.ia-home-btn{display:none!important}}
 </style>
-<link rel="stylesheet" href="../mobile.css?v=20261120x">
+<link rel="stylesheet" href="../mobile.css?v=20261120y">
 </head>
 <body>
 <div class="app">
@@ -342,7 +342,7 @@ button{font-family:inherit;}
         </div>
       </div>
       <button class="btn btn-primary" id="btnExport" type="button">Exportovat do PDF</button>
-      <button class="btn btn-line" id="btnEmail" type="button" title="Otevře tisk do PDF a poté připravený e-mail">Export a e-mail</button>
+      <button class="btn btn-line" id="btnSharePdf" type="button" title="Vytvoří PDF výsledkové listiny a nabídne odeslání e-mailem, Outlookem, WhatsAppem…">Sdílet PDF</button>
     </div>
   </div>
   <nav class="sidebar no-print" id="sidebar"></nav>
@@ -1062,12 +1062,7 @@ document.getElementById('loadFileInput').addEventListener('change', function(e){
 document.getElementById('btnSave').addEventListener('click', function(){ if (!window.IA_DB) return alert('Připojení k databázi se ještě načítá, zkuste to za okamžik.'); window.IA_DB.save(serializeState(), function(t){ note(t, 3000); }); });
 document.getElementById('btnLoad').addEventListener('click', function(){ if (!window.IA_DB) return alert('Připojení k databázi se ještě načítá, zkuste to za okamžik.'); window.IA_DB.open(function(l){ applyLoaded(l); renderAll(); saveLocal(true); note('Načteno z databáze ✓', 3000); }); });
 document.getElementById('btnExport').addEventListener('click', function(){ window.print(); });
-document.getElementById('btnEmail').addEventListener('click', function(){
-  window.print();
-  var m=state.meta, subject='Stellantis certifikační audit karosárny — '+(m.partner||'koncept')+(m.datumAuditu?' — '+m.datumAuditu:'');
-  var body='Dobrý den,\n\nv příloze zasílám certifikační audit karosárny pro '+(m.partner||'partnera')+'.\n(Před odesláním prosím přiložte PDF uložené z tlačítka „Export a e-mail“.)\n\nS pozdravem';
-  window.location.href='mailto:?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
-});
+document.getElementById('btnSharePdf').addEventListener('click', function(){ if (!window.IA_DB || !window.IA_DB.share) return alert('Aplikace se ještě načítá, zkuste to za okamžik.'); window.IA_DB.share(serializeState(), this); });
 document.getElementById('btnReset').addEventListener('click', function(){
   if(!confirm('Opravdu vymazat všechna zadaná data formuláře? Tato akce je nevratná.')) return;
   state=newState(); aresStatus={}; saveLocal(false); renderAll();
