@@ -1,5 +1,5 @@
 // Multi brand – rozdílový list: co musí servis s certifikací výchozí značky doplnit pro cílové značky
-import { exportPdf, exportXlsx } from "./export.js?v=20261120v";
+import { exportPdf, exportXlsx } from "./export.js?v=20261120w";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const TYPE = { KO: "KO", P: "Povinné", N: "Nutné", D: "Doporučené", U1: "Úroveň 1", U2: "Úroveň 2", U3: "Úroveň 3" };
@@ -8,7 +8,8 @@ const ORDER = { new: 0, strict: 1, own: 2 };
 const LOGO = { arval: "assets/logos/arval.png", stellantis: "assets/logos/stellantis.svg", mitsubishi: "assets/logos/mitsubishi.svg", hyundai: "assets/logos/hyundai.svg", byd: "assets/logos/byd.svg", volvo: "assets/logos/volvo.svg", skoda: "assets/logos/skoda.svg", porsche: "assets/logos/porsche-cr.svg", toyota: "assets/logos/toyota.svg" };
 const fmtNum = n => String(n).replace(".", ",");
 let catalog = null;
-const state = { customer: "", base: "", targets: [], arval: "3", incD: false };
+const state = { customer: "", bases: [], targets: [], arval: "3", incD: false };
+const baseNames = () => state.bases.map(bName).join(" + ");
 
 export async function renderMultibrand(app) {
   document.title = "Multi brand – rozdílový list | INTERACTION";
@@ -20,7 +21,7 @@ export async function renderMultibrand(app) {
       <div id="mbBox"><div class="empty">Načítám katalog požadavků…</div></div>
     </section>`;
   const box = document.getElementById("mbBox");
-  try { catalog = catalog || await fetch(new URL("../data/multibrand.json?v=20261120v", import.meta.url)).then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }); }
+  try { catalog = catalog || await fetch(new URL("../data/multibrand.json?v=20261120w", import.meta.url)).then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }); }
   catch (e) { box.innerHTML = `<div class="empty">Katalog se nepodařilo načíst: ${esc(e.message)}</div>`; return; }
   draw(box);
 }
@@ -37,11 +38,11 @@ function allowed(key) {
 
 // Výpočet rozdílů
 function compute() {
-  const { base, targets } = state;
+  const { bases, targets } = state;
   const rows = [];
   for (const t of catalog.topics) {
     const mem = t.m.filter(allowed);
-    const bm = mem.filter(k => catalog.items[k].b === base);
+    const bm = mem.filter(k => bases.includes(catalog.items[k].b));
     const per = [];
     for (const tb of targets) {
       const tm = mem.filter(k => catalog.items[k].b === tb);
@@ -67,7 +68,7 @@ function coverage() { // kolik požadavků cílové značky už výchozí značk
       const mem = t.m.filter(allowed);
       if (!mem.some(k => catalog.items[k].b === tb)) continue;
       need++;
-      if (!t.own && mem.some(k => catalog.items[k].b === state.base)) cov++;
+      if (!t.own && mem.some(k => state.bases.includes(catalog.items[k].b))) cov++;
     }
     res[tb] = { need, cov };
   }
@@ -79,10 +80,10 @@ const typeOf = k => TYPE[catalog.items[k].ty] || "";
 
 function draw(box) {
   const ids = brandIds();
-  if (state.base && !ids.includes(state.base)) state.base = "";
-  state.targets = state.targets.filter(b => b !== state.base);
-  const showArval = state.base === "arval" || state.targets.includes("arval");
-  const ready = state.base && state.targets.length;
+  state.bases = state.bases.filter(b => ids.includes(b));
+  state.targets = state.targets.filter(b => !state.bases.includes(b));
+  const showArval = state.bases.includes("arval") || state.targets.includes("arval");
+  const ready = state.bases.length && state.targets.length;
   const rows = ready ? compute() : [];
   const cov = ready ? coverage() : {};
   const cnt = k => rows.reduce((n, r) => n + r.per.filter(p => p.kind === k).length, 0);
@@ -90,12 +91,12 @@ function draw(box) {
   box.innerHTML = `
     <div class="res-card mb-form">
       <div class="mb-step"><span class="mb-n">1</span><div>
-        <label class="mb-lbl">Značka, na kterou má zákazník platnou certifikaci</label>
-        <div class="mb-brands" data-role="base">${ids.map(b => `<button type="button" class="mb-brand${state.base === b ? " on" : ""}" data-b="${b}"><img src="${LOGO[b]}" alt=""><span>${esc(bName(b))}</span></button>`).join("")}</div>
+        <label class="mb-lbl">Značky, na které má zákazník platnou certifikaci <span class="mb-hint">(lze vybrat víc)</span></label>
+        <div class="mb-brands" data-role="base">${ids.map(b => `<button type="button" class="mb-brand${state.bases.includes(b) ? " on" : ""}" data-b="${b}"><img src="${LOGO[b]}" alt=""><span>${esc(bName(b))}</span></button>`).join("")}</div>
       </div></div>
       <div class="mb-step"><span class="mb-n">2</span><div>
         <label class="mb-lbl">Nové značky, na které se bude auditovat <span class="mb-hint">(lze vybrat víc)</span></label>
-        <div class="mb-brands" data-role="targets">${ids.map(b => `<button type="button" class="mb-brand${state.targets.includes(b) ? " on" : ""}${b === state.base ? " dis" : ""}" data-b="${b}"${b === state.base ? " disabled" : ""}><img src="${LOGO[b]}" alt=""><span>${esc(bName(b))}</span></button>`).join("")}</div>
+        <div class="mb-brands" data-role="targets">${ids.map(b => `<button type="button" class="mb-brand${state.targets.includes(b) ? " on" : ""}${state.bases.includes(b) ? " dis" : ""}" data-b="${b}"${state.bases.includes(b) ? " disabled" : ""}><img src="${LOGO[b]}" alt=""><span>${esc(bName(b))}</span></button>`).join("")}</div>
       </div></div>
       <div class="mb-opts">
         <label class="f-field"><span>Zákazník (pro tisk, nepovinné)</span><input id="mbCust" value="${esc(state.customer)}" placeholder="např. Auto Bárta s.r.o."></label>
@@ -103,13 +104,13 @@ function draw(box) {
         <label class="mb-chk"><input type="checkbox" id="mbIncD"${state.incD ? " checked" : ""}> Zahrnout i doporučená kritéria</label>
       </div>
     </div>
-    ${!ready ? `<div class="empty">Vyberte výchozí značku a alespoň jednu novou značku.</div>` : `
+    ${!ready ? `<div class="empty">Vyberte alespoň jednu výchozí značku a alespoň jednu novou značku.</div>` : `
     <div class="kpis kpis-3">
       <div class="kpi kpi-expired"><span class="kpi-n">${cnt("new")}</span><span class="kpi-l">Požadavky navíc</span></div>
       <div class="kpi kpi-soon"><span class="kpi-n">${cnt("strict")}</span><span class="kpi-l">Přísnější parametr</span></div>
       <div class="kpi"><span class="kpi-n">${cnt("own")}</span><span class="kpi-l">Specifické pro značku</span></div>
     </div>
-    <div class="mb-cov">${state.targets.map(tb => `<span><strong>${esc(bName(tb))}:</strong> ${bName(state.base)} už pokrývá ${cov[tb].cov} z ${cov[tb].need} požadavků (${cov[tb].need ? Math.round(cov[tb].cov / cov[tb].need * 100) : 0} %)</span>`).join("")}</div>
+    <div class="mb-cov">${state.targets.map(tb => `<span><strong>${esc(bName(tb))}:</strong> ${esc(baseNames())} už ${state.bases.length > 1 ? "pokrývají" : "pokrývá"} ${cov[tb].cov} z ${cov[tb].need} požadavků (${cov[tb].need ? Math.round(cov[tb].cov / cov[tb].need * 100) : 0} %)</span>`).join("")}</div>
     <div class="res-card">
       <div class="res-toolbar"><input type="search" id="mbSearch" placeholder="Hledat v rozdílovém listu…"><span class="res-exp">
         <button type="button" class="btn-exp" data-x="pdf">Export do PDF</button><button type="button" class="btn-exp" data-x="xlsx">Export do Excelu</button></span></div>
@@ -119,16 +120,18 @@ function draw(box) {
           <div class="mb-row k-${r.kind}" data-q="${esc((r.t.title + " " + r.per.map(p => p.items.map(critText).join(" ")).join(" ")).toLowerCase())}">
             <div class="mb-row-h"><span class="mb-kind k-${r.kind}">${KIND[r.kind]}</span><strong>${esc(r.t.title)}</strong></div>
             ${r.per.map(p => `<div class="mb-req"><span class="mb-bchip">${esc(bName(p.brand))}</span><div>
-              ${p.kind === "strict" ? `<div class="mb-strict">${esc(bName(state.base))}: ${fmtNum(p.from)} ${esc(r.t.u)} → ${esc(bName(p.brand))}: <b>${fmtNum(p.to)} ${esc(r.t.u)}</b></div>` : ""}
+              ${p.kind === "strict" ? `<div class="mb-strict">${esc(baseNames())}: ${fmtNum(p.from)} ${esc(r.t.u)} → ${esc(bName(p.brand))}: <b>${fmtNum(p.to)} ${esc(r.t.u)}</b></div>` : ""}
               ${p.items.map(k => `<div class="mb-crit">${esc(critText(k))}${typeOf(k) ? ` <em>${typeOf(k)}</em>` : ""}</div>`).join("")}
               ${p.kind === "own" && r.t.note ? `<div class="mb-note">${esc(r.t.note)}</div>` : ""}
             </div></div>`).join("")}
           </div>`).join("")}`).join("")
-      : `<div class="empty">Výchozí značka pokrývá všechny požadavky vybraných značek.</div>`}
+      : `<div class="empty">Výchozí značky pokrývají všechny požadavky vybraných značek.</div>`}
     </div>
     <p class="mb-disc">Rozdílový list vychází ze společného katalogu požadavků, který přiřazuje podobná kritéria jednotlivých standardů k sobě. Jde o podklad pro přípravu – rozhodující je vždy znění standardu a výsledek auditu cílové značky.</p>`}`;
 
-  box.querySelectorAll('[data-role="base"] [data-b]').forEach(b => b.onclick = () => { state.base = b.dataset.b; draw(box); });
+  box.querySelectorAll('[data-role="base"] [data-b]').forEach(b => b.onclick = () => {
+    const v = b.dataset.b; state.bases = state.bases.includes(v) ? state.bases.filter(x => x !== v) : [...state.bases, v]; draw(box);
+  });
   box.querySelectorAll('[data-role="targets"] [data-b]').forEach(b => b.onclick = () => {
     const v = b.dataset.b; state.targets = state.targets.includes(v) ? state.targets.filter(x => x !== v) : [...state.targets, v]; draw(box);
   });
@@ -152,11 +155,11 @@ function table(rows) {
   }
   const d = new Date(), stamp = d.toISOString().slice(0, 10);
   const tnames = state.targets.map(bName).join(", ");
-  const opts = [state.base === "arval" || state.targets.includes("arval") ? `Arval úroveň ${state.arval}` : "", state.incD ? "včetně doporučených kritérií" : "bez doporučených kritérií"].filter(Boolean).join(" · ");
+  const opts = [state.bases.includes("arval") || state.targets.includes("arval") ? `Arval úroveň ${state.arval}` : "", state.incD ? "včetně doporučených kritérií" : "bez doporučených kritérií"].filter(Boolean).join(" · ");
   return {
-    title: `Rozdílový list: ${bName(state.base)} → ${tnames}`,
+    title: `Rozdílový list: ${baseNames()} → ${tnames}`,
     subtitle: `${state.customer ? state.customer + " · " : ""}Stav k ${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()} · ${opts} · ${body.length} položek`,
     sheet: "Rozdílový list", head, rows: body, rowClass,
-    file: `rozdilovy_list_${state.base}_${state.targets.join("-")}_${stamp}`,
+    file: `rozdilovy_list_${state.bases.join("-")}_${state.targets.join("-")}_${stamp}`,
   };
 }

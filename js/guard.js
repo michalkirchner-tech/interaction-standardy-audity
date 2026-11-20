@@ -1,6 +1,6 @@
 // Ochrana podstránek: bez přihlášení přesměruje na úvodní (přihlašovací) stránku.
-import { supabase } from "./supabase.js?v=20261120v";
-import { registerSW } from "./pwa.js?v=20261120v";
+import { supabase } from "./supabase.js?v=20261120w";
+import { registerSW } from "./pwa.js?v=20261120w";
 registerSW();
 
 const { data: { session } } = await supabase.auth.getSession();

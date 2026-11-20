@@ -1,6 +1,6 @@
 // Propojení formulářů (Arval, Stellantis) s databází: „Uložit koncept“ a „Načíst existující“
-import { supabase } from "./supabase.js?v=20261120v";
-import { prepareImport, krajFromIc, krajFromAddress } from "./results.js?v=20261120v";
+import { supabase, getProfile } from "./supabase.js?v=20261120w";
+import { prepareImport, krajFromIc, krajFromAddress } from "./results.js?v=20261120w";
 
 const BRAND = location.pathname.includes("/stellantis/") ? "stellantis" : location.pathname.includes("/mitsubishi/") ? "mitsubishi" : location.pathname.includes("/hyundai/") ? "hyundai" : location.pathname.includes("/volvo/") ? "volvo" : "arval";
 const BRAND_NAME = { arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi", hyundai: "Hyundai", volvo: "Volvo" }[BRAND];
@@ -140,15 +140,24 @@ function askKind(partner, load) {
   });
 }
 
+const NOT_AUDITOR = "Ostrý audit může uložit nebo přepsat jen auditor (Kirchner, Richter, Trachta). Uložte ho jako nultý audit, nebo požádejte auditora.";
+const isRls = e => /row-level security|violates|permission/i.test(e?.message || "");
+async function canSaveOstry() {
+  const p = await getProfile().catch(() => null);
+  if (!p) return false;
+  if (!("is_auditor" in p)) return true; // sloupec zatím v databázi není – rozhodne databáze
+  return p.role === "admin" || p.is_auditor === true;
+}
+
 async function writeRecord(rec, overwriteId) {
   if (overwriteId) {
     const { data, error } = await supabase.from("audits").update(rec).eq("id", overwriteId).select("id");
-    if (error) throw error;
-    if (!data?.length) throw new Error("Tento audit uložil jiný uživatel – přepsat ho může jen on nebo admin. Uložte ho jako nový.");
+    if (error) throw isRls(error) ? new Error(NOT_AUDITOR) : error;
+    if (!data?.length) throw new Error(NOT_AUDITOR);
     return overwriteId;
   }
   const { data, error } = await supabase.from("audits").insert(rec).select("id").single();
-  if (error) throw error;
+  if (error) throw isRls(error) ? new Error(NOT_AUDITOR) : error;
   return data.id;
 }
 
@@ -163,6 +172,7 @@ async function save(stateJson, note) {
   const kind = await askKind(rec.partner);
   if (!kind) return;
   rec.audit_kind = kind;
+  if (kind === "ostry" && !(await canSaveOstry())) { alert(NOT_AUDITOR); return; }
   if (kind === "nulty") rec.valid_months = null; // nultý audit je jednorázový, termín příštího auditu nemá
   // Kraj pro filtr v přehledu: podle adresy příjmu do servisu, je-li jiná než sídlo; jinak podle sídla (IČ v ARES)
   const mp = state.meta?.mistoPrijmu;

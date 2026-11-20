@@ -18,6 +18,6 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 export async function getProfile() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return null;
-  const { data } = await supabase.from("profiles").select("id,email,full_name,role").eq("id", session.user.id).single();
+  const { data } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
   return data || { id: session.user.id, email: session.user.email, full_name: "", role: "user" };
 }
