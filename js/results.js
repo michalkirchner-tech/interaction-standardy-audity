@@ -1,5 +1,5 @@
 // Výsledky auditů: přehledy podle značek a import auditů (admin)
-import { supabase } from "./supabase.js?v=20261120b";
+import { supabase } from "./supabase.js?v=20261120c";
 
 export const RESULT_BRANDS = [
   { id: "arval",      name: "Arval",      logo: "assets/logos/arval.png",      wide: true, form: "arval/" },
@@ -156,7 +156,7 @@ export async function krajFromAddress(a) {
 
 // ---------- Výpočet výsledku z JSON formuláře ----------
 let defsCache = {};
-async function formDefs(brand) {
+export async function formDefs(brand) {
   if (defsCache[brand]) return defsCache[brand];
   const html = await fetch(new URL(`../${brand}/index.html`, import.meta.url), { cache: "no-store" }).then(r => r.text());
   let defs;
@@ -394,7 +394,7 @@ export function dashboardHtml(brand, rows, isAdmin, defs, f = defaultFilter()) {
           ${list.map(r => `
           <tr class="st-${r.st.key}" data-q="${esc((r.partner + " " + (r.ic || "")).toLowerCase())}">
             <td><span class="st-badge st-${r.st.key}">${r.st.label}</span></td>
-            <td><strong>${esc(r.partner)}</strong>${r.ic ? `<span class="muted">IČ ${esc(r.ic)}</span>` : ""}${r.older ? `<span class="muted">+ ${r.older} starší audit${r.older > 1 ? "y" : ""}</span>` : ""}${rowExtra(r, f)}${brand === "mitsubishi" ? mitExtNote(r.meta) : ""}<span class="row-btns">${photoBtn(r, rows)}${isAdmin ? delBtn(r) : ""}</span></td>
+            <td><button type="button" class="pv-name" data-pv="${esc(r.id)}" title="Zobrazit výsledkovou listinu">${esc(r.partner)}</button>${r.ic ? `<span class="muted">IČ ${esc(r.ic)}</span>` : ""}${r.older ? `<span class="muted">+ ${r.older} starší audit${r.older > 1 ? "y" : ""}</span>` : ""}${rowExtra(r, f)}${brand === "mitsubishi" ? mitExtNote(r.meta) : ""}<span class="row-btns"><button type="button" class="btn-pv" data-pv="${esc(r.id)}" title="Zobrazit kompletní výsledkovou listinu (všechna kritéria)">📄 Listina</button>${photoBtn(r, rows)}${isAdmin ? delBtn(r) : ""}</span></td>
             ${arv ? arvalCells(r, defs) : `<td class="res-col">${resultCell(r.result)}</td>`}
             <td class="td-date">${czDate(r.audit_date)}${r.valid_months && r.audit_kind !== "nulty" ? `<span class="muted">platnost ${r.valid_months} měs.</span>` : ""}</td>
             <td class="td-date"><strong>${czDate(r.next_audit_date)}</strong><span class="muted">${r.st.text}</span></td>
@@ -423,7 +423,7 @@ function stellantisDashboardHtml(rows, isAdmin, f, brand = "stellantis") {
         <tbody>
           ${list.map(r => { const [head, detail] = (r.result || "—").split(" | "); return `
           <tr class="${r.inactive ? "st-inactive" : ""}" data-q="${esc((r.partner + " " + (r.ic || "")).toLowerCase())}">
-            <td>${r.inactive ? `<span class="st-badge st-inactive">Neaktivní</span><span class="muted">${stOf(r).text}</span>` : ""}<strong>${esc(r.partner)}</strong>${r.ic ? `<span class="muted">IČ ${esc(r.ic)}</span>` : ""}${r.older ? `<span class="muted">+ ${r.older} starší audit${r.older > 1 ? "y" : ""}</span>` : ""}${rowExtra(r, f)}${r.meta?.karosarnaExterni === "externi" ? `<span class="ext-note">Externí karosárna: ${esc(r.meta.ext?.nazev || "neuvedeno")}${r.meta.ext?.ic ? `, IČO ${esc(r.meta.ext.ic)}` : ""}</span>` : ""}${brand === "volvo" && extText(r.meta, brand)[0] ? `<span class="ext-note">Smluvní opravna: ${esc(extText(r.meta, brand)[0])}</span>` : ""}<span class="row-btns">${photoBtn(r, rows)}${isAdmin ? delBtn(r) : ""}</span></td>
+            <td>${r.inactive ? `<span class="st-badge st-inactive">Neaktivní</span><span class="muted">${stOf(r).text}</span>` : ""}<button type="button" class="pv-name" data-pv="${esc(r.id)}" title="Zobrazit výsledkovou listinu">${esc(r.partner)}</button>${r.ic ? `<span class="muted">IČ ${esc(r.ic)}</span>` : ""}${r.older ? `<span class="muted">+ ${r.older} starší audit${r.older > 1 ? "y" : ""}</span>` : ""}${rowExtra(r, f)}${r.meta?.karosarnaExterni === "externi" ? `<span class="ext-note">Externí karosárna: ${esc(r.meta.ext?.nazev || "neuvedeno")}${r.meta.ext?.ic ? `, IČO ${esc(r.meta.ext.ic)}` : ""}</span>` : ""}${brand === "volvo" && extText(r.meta, brand)[0] ? `<span class="ext-note">Smluvní opravna: ${esc(extText(r.meta, brand)[0])}</span>` : ""}<span class="row-btns"><button type="button" class="btn-pv" data-pv="${esc(r.id)}" title="Zobrazit kompletní výsledkovou listinu (všechna kritéria)">📄 Listina</button>${photoBtn(r, rows)}${isAdmin ? delBtn(r) : ""}</span></td>
             <td><span class="lvl ${ok(r) ? "lvl-3" : "lvl-0"}">${esc(head)}</span></td>
             <td class="muted-cell">${esc(detail || "")}</td>
             <td class="td-date">${czDate(r.audit_date)}</td>

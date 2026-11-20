@@ -486,3 +486,7 @@ body.gal-open { overflow: hidden; }
 .mb-note { color: #0D4798; font-size: .82rem; margin-top: 2px; }
 .mb-disc { color: #888; font-size: .82rem; margin: 14px 0 0; }
 @media (max-width: 600px) { .mb-opts { padding-left: 0; } .mb-brand { width: calc(50% - 5px); } .mb-req { flex-direction: column; gap: 4px; } }
+.pv-name { border: 0; background: none; padding: 0; font: 700 1em "Open Sans", system-ui, sans-serif; color: inherit; cursor: pointer; text-align: left; text-decoration: underline; text-decoration-color: #ccc; text-underline-offset: 3px; }
+.pv-name:hover { text-decoration-color: #E21F25; color: #E21F25; }
+.btn-pv { border: 1px solid #1e1e1e; background: #fff; color: #1e1e1e; border-radius: 7px; padding: 3px 9px; cursor: pointer; font: 600 .76rem "Open Sans", system-ui, sans-serif; white-space: nowrap; }
+.btn-pv:hover { background: #1e1e1e; color: #fff; }

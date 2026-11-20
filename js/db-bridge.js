@@ -1,6 +1,6 @@
 // Propojení formulářů (Arval, Stellantis) s databází: „Uložit koncept“ a „Načíst existující“
-import { supabase } from "./supabase.js?v=20261120b";
-import { prepareImport, krajFromIc, krajFromAddress } from "./results.js?v=20261120b";
+import { supabase } from "./supabase.js?v=20261120c";
+import { prepareImport, krajFromIc, krajFromAddress } from "./results.js?v=20261120c";
 
 const BRAND = location.pathname.includes("/stellantis/") ? "stellantis" : location.pathname.includes("/mitsubishi/") ? "mitsubishi" : location.pathname.includes("/hyundai/") ? "hyundai" : location.pathname.includes("/volvo/") ? "volvo" : "arval";
 const BRAND_NAME = { arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi", hyundai: "Hyundai", volvo: "Volvo" }[BRAND];
@@ -80,12 +80,44 @@ async function openList(apply) {
   q.focus();
   m.el.querySelectorAll("[data-id]").forEach(b => b.onclick = async () => {
     b.disabled = true; b.textContent = "Načítám…";
-    const { data: rec, error: e2 } = await supabase.from("audits").select("id,data,audit_kind").eq("id", b.dataset.id).single();
+    const { data: rec, error: e2 } = await supabase.from("audits").select("id,data,audit_kind,audit_date,partner").eq("id", b.dataset.id).single();
     if (e2) { b.textContent = "Chyba"; alert("Audit se nepodařilo načíst: " + e2.message); return; }
-    apply(rec.data);
-    currentId = rec.id; currentKind = rec.audit_kind;
     m.close();
+    const dates = await askDates(rec);
+    if (!dates) return;
+    apply(dates === "today" ? withToday(rec.data) : rec.data);
+    currentId = rec.id; currentKind = rec.audit_kind;
   });
+}
+
+
+// Při načtení z databáze: ponechat původní data, nebo použít dnešní datum?
+const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+function askDates(rec) {
+  const orig = rec.data?.meta?.datumAuditu || rec.audit_date, today = todayIso();
+  return new Promise(resolve => {
+    const m = modal("Jaká data použít?", `
+      <p>Načítáte audit zákazníka <strong>${esc(rec.partner || "")}</strong>.</p>
+      <div class="iadb-kinds">
+        <button type="button" class="iadb-kind" data-d="orig"><strong>Původní data</strong><span>Datum auditu ${czDate(orig)} a ostatní data zůstanou, jak byla uložena.</span></button>
+        <button type="button" class="iadb-kind" data-d="today"><strong>Dnešní datum</strong><span>Datum auditu i datum podpisu se nastaví na dnešek (${czDate(today)}). Digitální podpisy se vymažou – patří k původnímu datu.</span></button>
+      </div>
+      <div class="iadb-actions"><button type="button" class="iadb-btn ghost" data-cancel>Zrušit</button></div>`);
+    let done = false;
+    const finish = v => { if (done) return; done = true; obs.disconnect(); m.close(); resolve(v); };
+    const obs = new MutationObserver(() => { if (!document.body.contains(m.el)) { obs.disconnect(); if (!done) { done = true; resolve(null); } } });
+    obs.observe(document.body, { childList: true });
+    m.el.querySelectorAll("[data-d]").forEach(b => b.onclick = () => finish(b.dataset.d));
+    m.el.querySelector("[data-cancel]").onclick = () => finish(null);
+  });
+}
+function withToday(data) {
+  const d = JSON.parse(JSON.stringify(data || {})), t = todayIso();
+  d.meta = d.meta || {}; d.meta.datumAuditu = t;
+  if (d.kontakty) d.kontakty.datumPodpisu = t;                 // Arval
+  if (d.podpis) d.podpis.datum = t;                            // Mitsubishi, Volvo
+  if (d.sig) Object.keys(d.sig).forEach(k => { d.sig[k] = null; });
+  return d;
 }
 
 // ---------- Uložit koncept ----------

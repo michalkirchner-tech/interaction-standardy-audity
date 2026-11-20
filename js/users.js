@@ -1,5 +1,5 @@
 // Správa uživatelů (jen admin): seznam registrovaných a odstranění uživatele
-import { supabase } from "./supabase.js?v=20261120b";
+import { supabase } from "./supabase.js?v=20261120c";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmt = ts => { if (!ts) return "—"; const d = new Date(ts); return d.toLocaleDateString("cs-CZ") + " " + d.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" }); };
