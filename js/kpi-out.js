@@ -1,6 +1,6 @@
 // KPI – výstupy: dashboard, tabulka po pobočkách, grafy, vlastní cílové benchmarky
-import { supabase } from "./supabase.js?v=20261120t";
-import { KPIS, PAINT_KPIS, KPI_BY_KEY, periodData, sumBranches, kpiValues, benchmark, targetFor, rate, fmtKpi, periodName, monthCount } from "./kpi-calc.js?v=20261120t";
+import { supabase } from "./supabase.js?v=20261120u";
+import { KPIS, PAINT_KPIS, KPI_BY_KEY, periodData, sumBranches, kpiValues, benchmark, targetFor, rate, fmtKpi, periodName, monthCount } from "./kpi-calc.js?v=20261120u";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const CARDS = ["marze", "zisk", "hodnota_mj", "produktivita", "obrat_hod", "spotreba_hod", "obrat_lak", "produktivita_kar"];
@@ -140,6 +140,7 @@ export function outputsHtml(ctx) {
 
   return `
     ${note}${nullNote}
+    <h4 class="kpi-h kpi-total-h">Výsledky ${esc(p.name)} celkové <span class="kpi-total-n">${br.length} ${br.length === 1 ? "pobočka" : br.length < 5 ? "pobočky" : "poboček"} · ${periodName(sel.type, sel.no)} ${sel.year}</span></h4>
     <div class="kpi-cards">${cards}</div>
     <div class="kpi-legend"><span><i class="lg-good"></i> lepší než cíl (vlastní cíl, jinak benchmark)</span><span><i class="lg-bad"></i> horší</span><span><i class="lg-bm"></i> benchmark = průměr všech poboček partnerů zahrnutých do benchmarku, ze všech uložených dat</span></div>
     <h4 class="kpi-h">Ukazatele podle poboček</h4>

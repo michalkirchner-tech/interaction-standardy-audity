@@ -660,3 +660,5 @@ body.gal-open { overflow: hidden; }
 .kpi-ok-inline { color: #1b6b35; }
 .kpi-req-list td .muted { display: block; color: #777; font-size: .78rem; }
 .kpi-charts:has(.kpi-chart-h) { grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); }
+.kpi-total-h { margin-top: 6px; }
+.kpi-total-n { font: 400 .82rem "Open Sans", sans-serif; color: #666; }

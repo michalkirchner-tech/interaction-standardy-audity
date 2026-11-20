@@ -1,6 +1,6 @@
 // Fotky ke kritériím auditu: zmenšení v zařízení → uložení do Supabase Storage (složka podle zákazníka)
 // Ve stavu formuláře se ukládá jen cesta k fotce a malá miniatura (pár kB), ne fotka samotná.
-import { supabase } from "./supabase.js?v=20261120t";
+import { supabase } from "./supabase.js?v=20261120u";
 
 const BUCKET = "audit-photos";
 const MAX_SIDE = 1200, QUALITY = 0.55;   // velká fotka: delší strana 1200 px, JPEG 55 % (obvykle 80–200 kB)
