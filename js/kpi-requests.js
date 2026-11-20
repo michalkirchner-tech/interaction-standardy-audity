@@ -1,8 +1,8 @@
 // KPI – sběr dat od partnera: jedinečné odkazy k online vyplnění
-import { supabase } from "./supabase.js?v=20261120r";
-import { PTYPES, periodNos, periodName, LAK, KAR, PAINT, fmtNum } from "./kpi.js?v=20261120r";
-import { DEPTS } from "./kpi-defs.js?v=20261120r";
-import { buildTemplate, readTemplate } from "./kpi-xlsx.js?v=20261120r";
+import { supabase } from "./supabase.js?v=20261120s";
+import { PTYPES, periodNos, periodName, LAK, KAR, PAINT, fmtNum } from "./kpi.js?v=20261120s";
+import { DEPTS } from "./kpi-defs.js?v=20261120s";
+import { buildTemplate, readTemplate } from "./kpi-xlsx.js?v=20261120s";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmtD = iso => new Date(iso).toLocaleDateString("cs-CZ");

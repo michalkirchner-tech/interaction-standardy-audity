@@ -1,6 +1,6 @@
 // KPI – výstupy: dashboard, tabulka po pobočkách, grafy, vlastní cílové benchmarky
-import { supabase } from "./supabase.js?v=20261120r";
-import { KPIS, PAINT_KPIS, KPI_BY_KEY, periodData, sumBranches, kpiValues, benchmark, targetFor, rate, fmtKpi, periodName, monthCount } from "./kpi-calc.js?v=20261120r";
+import { supabase } from "./supabase.js?v=20261120s";
+import { KPIS, PAINT_KPIS, KPI_BY_KEY, periodData, sumBranches, kpiValues, benchmark, targetFor, rate, fmtKpi, periodName, monthCount } from "./kpi-calc.js?v=20261120s";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const CARDS = ["marze", "zisk", "hodnota_mj", "produktivita", "obrat_hod", "spotreba_hod", "obrat_lak", "produktivita_kar"];
@@ -72,7 +72,7 @@ export function outputsHtml(ctx) {
   const perBr = br.map(x => ({ name: x.name, v: kpiValues(pd.data.b?.[x.id]) }));
   const totalIn = sumBranches(br.map(x => pd.data.b?.[x.id]).filter(Boolean));
   const tot = kpiValues(totalIn);
-  const brMap = Object.fromEntries(ctx.partners.map(q => [q.id, q.kpi_branches]));
+  const brMap = Object.fromEntries(ctx.partners.filter(q => q.in_benchmark !== false).map(q => [q.id, q.kpi_branches]));
   const bm = benchmark(ctx.allEntries, brMap, sel.type);
   const defs = KPIS.filter(d => p.has_kar || !d.kar);
   const ref = d => targetFor(d, ctx.targets, sel.type) ?? bm[d.k]?.v ?? null;
@@ -116,7 +116,7 @@ export function outputsHtml(ctx) {
   return `
     ${note}${nullNote}
     <div class="kpi-cards">${cards}</div>
-    <div class="kpi-legend"><span><i class="lg-good"></i> lepší než cíl (vlastní cíl, jinak benchmark)</span><span><i class="lg-bad"></i> horší</span><span><i class="lg-bm"></i> benchmark = průměr všech poboček všech partnerů ze všech uložených dat</span></div>
+    <div class="kpi-legend"><span><i class="lg-good"></i> lepší než cíl (vlastní cíl, jinak benchmark)</span><span><i class="lg-bad"></i> horší</span><span><i class="lg-bm"></i> benchmark = průměr všech poboček partnerů zahrnutých do benchmarku, ze všech uložených dat</span></div>
     <h4 class="kpi-h">Ukazatele podle poboček</h4>
     <div class="table-wrap kpi-table-wrap"><table class="res-table kpi-out">
       <thead><tr><th>Ukazatel</th>${br.map(x => `<th>${esc(x.name)}</th>`).join("")}${multi ? "<th>Celkem</th>" : ""}<th>Benchmark</th><th>Vlastní cíl</th></tr></thead>

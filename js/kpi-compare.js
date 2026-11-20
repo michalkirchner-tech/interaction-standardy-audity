@@ -1,6 +1,6 @@
 // KPI – porovnání partnerů (nebo jejich poboček) mezi sebou
-import { KPIS, KPI_BY_KEY, periodData, sumBranches, kpiValues, benchmark, targetFor, fmtKpi, periodName, monthCount } from "./kpi-calc.js?v=20261120r";
-import { barChart } from "./kpi-out.js?v=20261120r";
+import { KPIS, KPI_BY_KEY, periodData, sumBranches, kpiValues, benchmark, targetFor, fmtKpi, periodName, monthCount } from "./kpi-calc.js?v=20261120s";
+import { barChart } from "./kpi-out.js?v=20261120s";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const TYPES = { M: "měsíc", Q: "kvartál", H: "pololetí", Y: "rok" };
@@ -44,7 +44,7 @@ export function renderCompare(host, ctx) {
       if (st.level === "partner") units.push({ name: p.name, per, t: o.t, partial: o.partial, v: scale(kpiValues(sumBranches(p.kpi_branches.map(b => pd.data.b?.[b.id]).filter(Boolean)))), kar: p.has_kar });
       else p.kpi_branches.forEach(b => { if (pd.data.b?.[b.id]) units.push({ name: p.kpi_branches.length > 1 ? `${p.name} – ${b.name}` : p.name, per, t: o.t, partial: o.partial, v: scale(kpiValues(pd.data.b[b.id])), kar: p.has_kar }); });
     }
-    const bm = benchmark(allEntries, Object.fromEntries(partners.map(p => [p.id, p.kpi_branches])), st.norm);
+    const bm = benchmark(allEntries, Object.fromEntries(partners.filter(p => p.in_benchmark !== false).map(p => [p.id, p.kpi_branches])), st.norm);
     const anyKar = units.some(u => u.kar);
     const defs = KPIS.filter(d => (!d.kar || anyKar) && units.some(u => u.v[d.k] != null));
     if (!defs.some(d => d.k === st.kpi)) st.kpi = defs[0]?.k;

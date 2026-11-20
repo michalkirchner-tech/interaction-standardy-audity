@@ -1,17 +1,17 @@
 // KPI servisních partnerů (lakovna, karosárna) – jen pro administrátora
 // Krok 1: partneři a pobočky · Krok 2: zadávání vstupů za období · Krok 3: výstupy
-import { supabase } from "./supabase.js?v=20261120r";
-import { renderRequests } from "./kpi-requests.js?v=20261120r";
-import { renderCompare } from "./kpi-compare.js?v=20261120r";
-import { outputsHtml, loadAllEntries, loadTargets, targetsFormHtml, saveTargets } from "./kpi-out.js?v=20261120r";
+import { supabase } from "./supabase.js?v=20261120s";
+import { renderRequests } from "./kpi-requests.js?v=20261120s";
+import { renderCompare } from "./kpi-compare.js?v=20261120s";
+import { outputsHtml, loadAllEntries, loadTargets, targetsFormHtml, saveTargets } from "./kpi-out.js?v=20261120s";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const czErr = e => /kpi_partners_name_uq/.test(e?.message || "") ? "Partner s tímto názvem už existuje."
   : /kpi_branches_name_uq/.test(e?.message || "") ? "Dvě pobočky nesmí mít stejný název."
   : (e?.message || String(e));
 
-import { LAK, KAR, PAINT } from "./kpi-defs.js?v=20261120r";
-import { hoursHtml, bindHours, collectHours } from "./kpi-hours.js?v=20261120r";
+import { LAK, KAR, PAINT } from "./kpi-defs.js?v=20261120s";
+import { hoursHtml, bindHours, collectHours } from "./kpi-hours.js?v=20261120s";
 export { LAK, KAR, PAINT };
 export const PTYPES = { M: "Měsíc", Q: "Kvartál", H: "Pololetí", Y: "Rok" };
 const MONTHS = ["leden", "únor", "březen", "duben", "květen", "červen", "červenec", "srpen", "září", "říjen", "listopad", "prosinec"];
@@ -33,7 +33,7 @@ let dirty = false;
 
 async function loadPartners() {
   const { data, error } = await supabase.from("kpi_partners")
-    .select("id,name,ic,note,has_kar,has_painters,created_at,kpi_branches(id,name,sort,kpi_painters(id,name,sort))")
+    .select("id,name,ic,note,has_kar,has_painters,in_benchmark,created_at,kpi_branches(id,name,sort,kpi_painters(id,name,sort))")
     .order("name");
   if (error) throw error;
   data.forEach(p => {
@@ -116,7 +116,7 @@ async function showList(msg = "") {
         <tbody>${partners.map(p => { const c = counts[p.id]; return `<tr>
           <td><a href="#kpi" class="kpi-open" data-open="${p.id}"><strong>${esc(p.name)}</strong></a><span class="muted">${p.ic ? "IČO " + esc(p.ic) : ""}${p.note ? (p.ic ? " · " : "") + esc(p.note) : ""}</span></td>
           <td>${p.kpi_branches.map(x => esc(x.name)).join(", ") || "—"}</td>
-          <td class="muted-cell">Lakovna${p.has_kar ? ", karosárna" : ""}${p.has_painters ? ", lakýrníci" : ""}</td>
+          <td class="muted-cell">Lakovna${p.has_kar ? ", karosárna" : ""}${p.has_painters ? ", lakýrníci" : ""}${p.in_benchmark === false ? `<span class="muted">mimo benchmark</span>` : ""}</td>
           <td class="muted-cell">${c ? `${c.n} · roky ${[...c.years].sort().join(", ")}` : "zatím nic"}</td>
           <td class="kpi-actions"><button type="button" class="btn-save kpi-btn kpi-btn-sm" data-open="${p.id}">Zobrazit</button>
             <button type="button" class="btn-logout" data-edit="${p.id}">Upravit</button>
@@ -178,6 +178,7 @@ function showForm(p) {
           <label class="kpi-check"><input type="checkbox" checked disabled> Lakovna (vždy)</label>
           <label class="kpi-check"><input type="checkbox" name="has_kar" ${p?.has_kar ? "checked" : ""}> Karosárna – zaměstnanci, hodiny, zakázky</label>
           <label class="kpi-check"><input type="checkbox" name="has_painters" ${p?.has_painters ? "checked" : ""}> Spotřeba materiálu podle lakýrníků (plnič, barva, lak)</label>
+          <label class="kpi-check"><input type="checkbox" name="in_benchmark" ${p?.in_benchmark === false ? "" : "checked"}> Započítávat do benchmarku (vypněte u ukázkových nebo netypických dat)</label>
         </div>
         <div class="kpi-wide">
           <div class="kpi-lbl">Pobočky (střediska) *</div>
@@ -222,7 +223,7 @@ function showForm(p) {
     const btn = form.querySelector("button[type=submit]"); btn.disabled = true;
     try {
       let pid = p?.id;
-      const fields = { name, ic: ic || null, note: note || null, has_kar: form.has_kar.checked, has_painters: form.has_painters.checked };
+      const fields = { name, ic: ic || null, note: note || null, has_kar: form.has_kar.checked, has_painters: form.has_painters.checked, in_benchmark: form.in_benchmark.checked };
       if (edit) {
         const { error } = await supabase.from("kpi_partners").update(fields).eq("id", pid);
         if (error) throw error;

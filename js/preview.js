@@ -1,6 +1,6 @@
 // Náhled kompletní výsledkové listiny auditu (jen ke čtení) + export do PDF (tisk prohlížeče)
-import { supabase } from "./supabase.js?v=20261120r";
-import { formDefs, arvalBreakdown, mitsubishiEval, mitsubishiRecertEval, stOf, czDate, esc } from "./results.js?v=20261120r";
+import { supabase } from "./supabase.js?v=20261120s";
+import { formDefs, arvalBreakdown, mitsubishiEval, mitsubishiRecertEval, stOf, czDate, esc } from "./results.js?v=20261120s";
 
 const BRAND_NAME = { arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi" };
 const OK = '<span class="pv-ok" title="Splněno">✓</span>', NOK = '<span class="pv-nok" title="Nesplněno">✗</span>';
