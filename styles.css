@@ -616,3 +616,8 @@ body.gal-open { overflow: hidden; }
 .st-lock { background: #e9e9e9; color: #444; } .st-exp { background: #fdecee; color: #b0101d; }
 .fill-page .brand-head h2 { margin: 0; }
 .fill-who { margin-top: 16px; grid-template-columns: minmax(0, 420px); }
+.kpi-out td.kpi-new { background: #e3f4ea; }
+.kpi-out td.kpi-chg { background: #fff3cd; }
+.kpi-out td.kpi-chg .muted { display: block; font-size: .72rem; color: #8a6d00; font-weight: 400; }
+.lg-chg { background: #f0c330; }
+#rqXlsx { margin-left: 6px; }

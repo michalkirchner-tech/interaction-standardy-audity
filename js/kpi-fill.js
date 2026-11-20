@@ -1,6 +1,6 @@
 // Veřejná stránka pro partnera: vyplnění vstupů KPI přes jedinečný odkaz (bez přihlášení)
-import { supabase } from "./supabase.js?v=20261120l";
-import { LAK, KAR, PAINT } from "./kpi-defs.js?v=20261120l";
+import { supabase } from "./supabase.js?v=20261120m";
+import { LAK, KAR, PAINT } from "./kpi-defs.js?v=20261120m";
 
 const app = document.getElementById("app");
 document.getElementById("year").textContent = new Date().getFullYear();

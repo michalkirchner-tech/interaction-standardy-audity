@@ -1,6 +1,7 @@
 // KPI – sběr dat od partnera: jedinečné odkazy k online vyplnění
-import { supabase } from "./supabase.js?v=20261120l";
-import { PTYPES, periodNos, periodName } from "./kpi.js?v=20261120l";
+import { supabase } from "./supabase.js?v=20261120m";
+import { PTYPES, periodNos, periodName, LAK, KAR, PAINT, fmtNum } from "./kpi.js?v=20261120m";
+import { buildTemplate, readTemplate } from "./kpi-xlsx.js?v=20261120m";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmtD = iso => new Date(iso).toLocaleDateString("cs-CZ");
@@ -38,8 +39,9 @@ export async function renderRequests(host, p, sel, onChange) {
   const f = { year: sel.year, type: sel.type, no: sel.no };
   const now = new Date().getFullYear();
   host.innerHTML = `
-    <h4 class="kpi-h">Odkaz k online vyplnění</h4>
-    <p class="f-note">Partner dostane jedinečný odkaz, otevře ho bez registrace a vyplní prázdný formulář jen pro zvolené období a pobočky (jiná období ani výsledky neuvidí). Odeslané údaje se rovnou uloží do vstupů – vyplněná pole přepíšou dosavadní hodnoty, prázdná nic nemažou.</p>
+    <h4 class="kpi-h">Odkaz k online vyplnění nebo excelová tabulka</h4>
+    <p class="f-note"><b>Odkaz:</b> partner ho otevře bez registrace a vyplní prázdný formulář jen pro zvolené období a pobočky (jiná období ani výsledky neuvidí); údaje se rovnou uloží do vstupů.
+    <b>Tabulka .xlsx:</b> stáhnete ji, pošlete partnerovi a vyplněnou nahrajete níže. V obou případech vyplněná pole přepíšou dosavadní hodnoty, prázdná nic nemažou.</p>
     <div class="kpi-req-new">
       <div class="kpi-period">
         <label>Rok<select id="rqYear">${[now + 1, now, now - 1, now - 2].map(y => `<option ${y === f.year ? "selected" : ""}>${y}</option>`).join("")}</select></label>
@@ -51,8 +53,14 @@ export async function renderRequests(host, p, sel, onChange) {
       <div class="kpi-req-br">${p.kpi_branches.map(b => `<label class="kpi-check"><input type="checkbox" data-rqb="${b.id}" checked> ${esc(b.name)}</label>`).join("")}</div>
       <label class="kpi-req-note">Poznámka pro partnera (nepovinné)<input id="rqNote" maxlength="300" placeholder="např. Prosíme o vyplnění do 15. dne následujícího měsíce."></label>
       <div class="auth-msg" id="rqMsg"></div>
-      <button type="button" class="btn-save kpi-btn" id="rqCreate">Vytvořit odkaz</button>
+      <button type="button" class="btn-save kpi-btn" id="rqCreate">📨 Vytvořit odkaz</button>
+      <button type="button" class="btn-logout kpi-btn-cmp" id="rqXlsx">⬇️ Stáhnout tabulku .xlsx</button>
       <div id="rqResult"></div>
+    </div>
+    <h4 class="kpi-h">Nahrát vyplněnou tabulku od partnera</h4>
+    <div class="kpi-req-new">
+      <label class="kpi-req-note">Soubor .xlsx stažený z této aplikace<input type="file" id="rqFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
+      <div id="rqImport"></div>
     </div>
     <h4 class="kpi-h">Vytvořené odkazy</h4>
     ${list.length ? `<div class="table-wrap kpi-table-wrap"><table class="res-table kpi-req-list">
@@ -97,6 +105,16 @@ export async function renderRequests(host, p, sel, onChange) {
     res.querySelector("#rqCopy").onclick = ev => copy(fillUrl(data.token), ev.target);
     res.querySelector("input").onclick = ev => ev.target.select();
   };
+  const chosen = () => ({ year: +yS.value, type: tS.value, no: tS.value === "Y" ? 1 : +nS.value, ids: [...host.querySelectorAll("[data-rqb]:checked")].map(x => x.dataset.rqb) });
+  host.querySelector("#rqXlsx").onclick = () => {
+    const c = chosen(), out = host.querySelector("#rqMsg");
+    if (!c.ids.length) { out.textContent = "Vyberte alespoň jednu pobočku."; return; }
+    out.textContent = "";
+    const { blob, filename } = buildTemplate({ partner: p, year: c.year, type: c.type, no: c.no, branchIds: c.ids });
+    const url = URL.createObjectURL(blob), a = document.createElement("a");
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 3000);
+  };
+  host.querySelector("#rqFile").onchange = e => { const f = e.target.files[0]; if (f) importFile(host, p, f, onChange); };
   const find = id => list.find(r => r.id === id);
   host.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => copy(fillUrl(find(b.dataset.copy).token), b));
   host.querySelectorAll("[data-lock]").forEach(b => b.onclick = async () => {
@@ -119,4 +137,52 @@ export async function renderRequests(host, p, sel, onChange) {
     if (error) return alert("Smazání se nepodařilo: " + error.message);
     renderRequests(host, p, sel, onChange);
   });
+}
+
+// ---------- Import vyplněné tabulky ----------
+async function importFile(host, p, file, onChange) {
+  const box = host.querySelector("#rqImport");
+  box.innerHTML = `<div class="empty">Načítám tabulku…</div>`;
+  let t;
+  try { t = await readTemplate(file); }
+  catch (e) { box.innerHTML = `<p class="auth-msg">Tabulku nelze načíst: ${esc(e.message)}</p>`; return; }
+  if (t.partnerId !== p.id) { box.innerHTML = `<p class="auth-msg">Tabulka patří partnerovi „${esc(t.partnerName)}“, ne „${esc(p.name)}“. Otevřete ji u správného partnera.</p>`; return; }
+  const { data: ex, error } = await supabase.from("kpi_entries").select("id,data").eq("partner_id", p.id).eq("year", t.year).eq("period_type", t.type).eq("period_no", t.no).maybeSingle();
+  if (error) { box.innerHTML = `<p class="auth-msg">${esc(error.message)}</p>`; return; }
+  const cur = ex?.data || { b: {}, p: {} };
+  const brs = p.kpi_branches.filter(b => t.branchIds.includes(b.id));
+  const defs = [...LAK, ...(p.has_kar ? KAR : [])];
+  let changes = 0;
+  const cellH = (nv, ov) => {
+    if (nv == null) return `<td class="kpi-v muted-cell">${ov != null ? fmtNum(ov) : ""}</td>`;
+    const ch = ov != null && ov !== nv; if (ov !== nv) changes++;
+    return `<td class="kpi-v ${ch ? "kpi-chg" : "kpi-new"}" title="${ch ? "dosud: " + fmtNum(ov) : "nová hodnota"}">${fmtNum(nv)}${ch ? `<span class="muted">dosud ${fmtNum(ov)}</span>` : ""}</td>`;
+  };
+  const pts = brs.flatMap(b => (b.kpi_painters || []).map(x => ({ ...x, b: b.name }))).filter(x => t.data.p[x.id]);
+  box.innerHTML = `
+    <p class="kpi-ok">Tabulka: <b>${esc(p.name)}</b> · <b>${esc(t.period)}</b> · vyplnil(a): <b>${esc(t.who || "neuvedeno")}</b> · vyplněných polí: <b>${t.count}</b></p>
+    ${t.problems.length ? `<p class="auth-msg">Tato pole nejdou načíst a budou vynechána:<br>${t.problems.map(esc).join("<br>")}</p>` : ""}
+    ${!t.count ? `<p class="auth-msg">V tabulce nejsou vyplněné žádné údaje.</p>` : `
+    <div class="table-wrap kpi-table-wrap"><table class="res-table kpi-out">
+      <thead><tr><th>Ukazatel</th>${brs.map(b => `<th>${esc(b.name)}</th>`).join("")}</tr></thead>
+      <tbody>${defs.map(m => `<tr><th scope="row">${esc(m.l)}<span class="muted">${m.u}</span></th>${brs.map(b => cellH(t.data.b[b.id]?.[m.k], cur.b?.[b.id]?.[m.k])).join("")}</tr>`).join("")}</tbody></table></div>
+    ${pts.length ? `<div class="table-wrap kpi-table-wrap"><table class="res-table kpi-out">
+      <thead><tr><th>Lakýrník</th>${PAINT.map(m => `<th>${m.l}</th>`).join("")}</tr></thead>
+      <tbody>${pts.map(x => `<tr><th scope="row">${esc(x.name)}<span class="muted">${esc(x.b)}</span></th>${PAINT.map(m => cellH(t.data.p[x.id]?.[m.k], cur.p?.[x.id]?.[m.k])).join("")}</tr>`).join("")}</tbody></table></div>` : ""}
+    <div class="kpi-legend"><span><i class="lg-good"></i> nová hodnota</span><span><i class="lg-chg"></i> přepíše dosavadní hodnotu</span><span>šedě = beze změny (pole v tabulce prázdné)</span></div>
+    <button type="button" class="btn-save kpi-btn" id="rqImpSave">Uložit do vstupů (${periodName(t.type, t.no)} ${t.year})</button>
+    <button type="button" class="btn-logout" id="rqImpCancel">Zrušit</button>`}`;
+  const cancel = box.querySelector("#rqImpCancel");
+  if (cancel) cancel.onclick = () => { box.innerHTML = ""; host.querySelector("#rqFile").value = ""; };
+  const save = box.querySelector("#rqImpSave");
+  if (save) save.onclick = async () => {
+    save.disabled = true;
+    const data = { b: { ...(cur.b || {}) }, p: { ...(cur.p || {}) } };
+    for (const sec of ["b", "p"]) for (const [id, o] of Object.entries(t.data[sec])) data[sec][id] = { ...(data[sec][id] || {}), ...o };
+    const { error: e2 } = await supabase.from("kpi_entries").upsert({ partner_id: p.id, year: t.year, period_type: t.type, period_no: t.no, data }, { onConflict: "partner_id,year,period_type,period_no" });
+    if (e2) { alert("Uložení se nepodařilo: " + e2.message); save.disabled = false; return; }
+    box.innerHTML = `<p class="kpi-ok">✅ Údaje z tabulky jsou uložené do vstupů za ${periodName(t.type, t.no)} ${t.year}. Najdete je na záložkách Vstupy a Výstupy.</p>`;
+    host.querySelector("#rqFile").value = "";
+    onChange?.();
+  };
 }

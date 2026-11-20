@@ -1,16 +1,16 @@
 // KPI servisních partnerů (lakovna, karosárna) – jen pro administrátora
 // Krok 1: partneři a pobočky · Krok 2: zadávání vstupů za období · Krok 3: výstupy
-import { supabase } from "./supabase.js?v=20261120l";
-import { renderRequests } from "./kpi-requests.js?v=20261120l";
-import { renderCompare } from "./kpi-compare.js?v=20261120l";
-import { outputsHtml, loadAllEntries, loadTargets, targetsFormHtml, saveTargets } from "./kpi-out.js?v=20261120l";
+import { supabase } from "./supabase.js?v=20261120m";
+import { renderRequests } from "./kpi-requests.js?v=20261120m";
+import { renderCompare } from "./kpi-compare.js?v=20261120m";
+import { outputsHtml, loadAllEntries, loadTargets, targetsFormHtml, saveTargets } from "./kpi-out.js?v=20261120m";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const czErr = e => /kpi_partners_name_uq/.test(e?.message || "") ? "Partner s tímto názvem už existuje."
   : /kpi_branches_name_uq/.test(e?.message || "") ? "Dvě pobočky nesmí mít stejný název."
   : (e?.message || String(e));
 
-import { LAK, KAR, PAINT } from "./kpi-defs.js?v=20261120l";
+import { LAK, KAR, PAINT } from "./kpi-defs.js?v=20261120m";
 export { LAK, KAR, PAINT };
 export const PTYPES = { M: "Měsíc", Q: "Kvartál", H: "Pololetí", Y: "Rok" };
 const MONTHS = ["leden", "únor", "březen", "duben", "květen", "červen", "červenec", "srpen", "září", "říjen", "listopad", "prosinec"];
@@ -309,7 +309,7 @@ async function showPartner(pid, msg = "") {
 
 const draw = () => {
   box().querySelector(".res-card")?.classList.toggle("kpi-mode-req", mode === "req");
-  if (mode === "req") { dirty = false; return renderRequests(document.getElementById("kpiInputs"), current, sel); }
+  if (mode === "req") { dirty = false; return renderRequests(document.getElementById("kpiInputs"), current, sel, async () => { [entries, allEntries] = await Promise.all([loadEntries(current.id), loadAllEntries()]); }); }
   return mode === "out" ? drawOutputs() : drawInputs();
 };
 
