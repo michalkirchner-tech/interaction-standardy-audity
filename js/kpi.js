@@ -1,6 +1,7 @@
 // KPI servisních partnerů (lakovna, karosárna) – jen pro administrátora
-// Krok 1: partneři a pobočky · Krok 2: zadávání vstupů za období
-import { supabase } from "./supabase.js?v=20261120h";
+// Krok 1: partneři a pobočky · Krok 2: zadávání vstupů za období · Krok 3: výstupy
+import { supabase } from "./supabase.js?v=20261120i";
+import { outputsHtml, loadAllEntries, loadTargets, targetsFormHtml, saveTargets } from "./kpi-out.js?v=20261120i";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const czErr = e => /kpi_partners_name_uq/.test(e?.message || "") ? "Partner s tímto názvem už existuje."
@@ -247,13 +248,15 @@ async function syncPainters(row, old) {
 
 // ---------- Detail partnera: zadávání vstupů ----------
 let entries = [];
+let mode = "in";      // "in" = vstupy, "out" = výstupy
+let allEntries = [], targets = {};
 
 async function showPartner(pid, msg = "") {
   const b = box();
   current = partners.find(p => p.id === pid);
   if (!current) return showList();
   b.innerHTML = `<div class="empty">Načítám…</div>`;
-  try { entries = await loadEntries(pid); }
+  try { [entries, allEntries, targets] = await Promise.all([loadEntries(pid), loadAllEntries(), loadTargets()]); }
   catch (e) { b.innerHTML = `<div class="empty">Data se nepodařilo načíst: ${esc(e.message)}</div>`; return; }
   if (!sel || sel.pid !== pid) {
     const last = entries[0];
@@ -265,6 +268,7 @@ async function showPartner(pid, msg = "") {
         <div><button type="button" class="kpi-link" id="kpiBack">← Všichni partneři</button>
           <h3 class="kpi-title">${esc(current.name)}</h3>
           <span class="muted-cell">Pobočky: ${current.kpi_branches.map(x => esc(x.name)).join(", ")}</span></div>
+        <div class="kpi-tabs"><button type="button" data-mode="in" class="${mode === "in" ? "active" : ""}">Vstupy</button><button type="button" data-mode="out" class="${mode === "out" ? "active" : ""}">Výstupy</button></div>
       </div>
       ${msg ? `<p class="kpi-ok">${msg}</p>` : ""}
       <div class="kpi-period">
@@ -275,6 +279,12 @@ async function showPartner(pid, msg = "") {
       <div class="kpi-saved"><span class="kpi-lbl-sm">Uložená období:</span> ${entries.length ? entries.map(e => `<button type="button" class="kpi-chip" data-y="${e.year}" data-t="${e.period_type}" data-n="${e.period_no}">${periodLabel(e)}</button>`).join("") : `<span class="muted-cell">zatím žádné</span>`}</div>
       <div id="kpiInputs"></div>
     </div>`;
+  b.querySelectorAll("[data-mode]").forEach(t => t.onclick = () => {
+    if (t.dataset.mode === mode || (mode === "in" && !leaveOk())) return;
+    mode = t.dataset.mode; dirty = false;
+    b.querySelectorAll("[data-mode]").forEach(x => x.classList.toggle("active", x === t));
+    draw();
+  });
   document.getElementById("kpiBack").onclick = () => { if (leaveOk()) showList(); };
   const pYear = document.getElementById("pYear"), pType = document.getElementById("pType"), pNo = document.getElementById("pNo");
   const fillNo = () => {
@@ -283,17 +293,40 @@ async function showPartner(pid, msg = "") {
     pNo.innerHTML = Array.from({ length: n }, (_, i) => `<option value="${i + 1}" ${i + 1 === sel.no ? "selected" : ""}>${periodName(sel.type, i + 1)}</option>`).join("");
     document.getElementById("pNoWrap").hidden = sel.type === "Y";
   };
-  const change = (fn) => () => { if (!leaveOk()) { pYear.value = sel.year; pType.value = sel.type; fillNo(); return; } fn(); fillNo(); drawInputs(); };
+  const change = (fn) => () => { if (!leaveOk()) { pYear.value = sel.year; pType.value = sel.type; fillNo(); return; } fn(); fillNo(); draw(); };
   pYear.onchange = change(() => sel.year = +pYear.value);
   pType.onchange = change(() => sel.type = pType.value);
   pNo.onchange = change(() => sel.no = +pNo.value);
   b.querySelectorAll(".kpi-chip").forEach(c => c.onclick = () => {
     if (!leaveOk()) return;
     Object.assign(sel, { year: +c.dataset.y, type: c.dataset.t, no: +c.dataset.n });
-    pYear.innerHTML = yearOptions(); pType.value = sel.type; fillNo(); drawInputs();
+    pYear.innerHTML = yearOptions(); pType.value = sel.type; fillNo(); draw();
   });
   fillNo();
-  drawInputs();
+  draw();
+}
+
+const draw = () => mode === "out" ? drawOutputs() : drawInputs();
+
+function drawOutputs() {
+  dirty = false;
+  const host = document.getElementById("kpiInputs");
+  host.innerHTML = `
+    <div class="kpi-bar kpi-out-bar"><h4 class="kpi-h">Výstupy – ${periodName(sel.type, sel.no)} ${sel.year}</h4>
+      <button type="button" class="btn-logout" id="kpiTgOpen">🎯 Vlastní cílové benchmarky</button></div>
+    <div id="kpiTg"></div>
+    ${outputsHtml({ partner: current, entries, allEntries, partners, targets, sel })}`;
+  document.getElementById("kpiTgOpen").onclick = () => {
+    const tg = document.getElementById("kpiTg");
+    if (tg.innerHTML) { tg.innerHTML = ""; return; }
+    tg.innerHTML = targetsFormHtml(targets);
+    document.getElementById("kpiTgClose").onclick = () => tg.innerHTML = "";
+    document.getElementById("kpiTgSave").onclick = async () => {
+      const btn = document.getElementById("kpiTgSave"); btn.disabled = true;
+      try { await saveTargets(tg); targets = await loadTargets(); drawOutputs(); }
+      catch (e) { document.getElementById("kpiTgMsg").textContent = "Uložení se nepodařilo: " + e.message; btn.disabled = false; }
+    };
+  };
 }
 
 function yearOptions() {
