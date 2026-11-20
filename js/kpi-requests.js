@@ -1,8 +1,8 @@
 // KPI – sběr dat od partnera: jedinečné odkazy k online vyplnění
-import { supabase } from "./supabase.js?v=20261120o";
-import { PTYPES, periodNos, periodName, LAK, KAR, PAINT, fmtNum } from "./kpi.js?v=20261120o";
-import { DEPTS } from "./kpi-defs.js?v=20261120o";
-import { buildTemplate, readTemplate } from "./kpi-xlsx.js?v=20261120o";
+import { supabase } from "./supabase.js?v=20261120p";
+import { PTYPES, periodNos, periodName, LAK, KAR, PAINT, fmtNum } from "./kpi.js?v=20261120p";
+import { DEPTS } from "./kpi-defs.js?v=20261120p";
+import { buildTemplate, readTemplate } from "./kpi-xlsx.js?v=20261120p";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmtD = iso => new Date(iso).toLocaleDateString("cs-CZ");
@@ -23,17 +23,19 @@ function mailto(p, r) {
 }
 
 function status(r) {
+  const rev = r.filled_at ? (r.imported_at ? `<span class="kpi-st st-ok">Uloženo do vstupů</span><span class="muted">${fmtDT(r.imported_at)}</span>` : `<span class="kpi-st st-new">Vyplněno – čeká na uložení</span>`) : "";
+  if (r.filled_at) return `${rev}<span class="muted">vyplnil(a) ${esc(r.filled_by)} · ${fmtDT(r.filled_at)}</span>${r.status === "locked" ? `<span class="muted">odkaz uzavřen</span>` : new Date(r.expires_at) < new Date() ? `<span class="muted">platnost odkazu vypršela</span>` : ""}`;
   if (r.status === "locked") return `<span class="kpi-st st-lock">Uzavřeno</span>`;
   if (new Date(r.expires_at) < new Date()) return `<span class="kpi-st st-exp">Platnost vypršela</span>${r.filled_at ? `<span class="muted">vyplněno ${fmtDT(r.filled_at)}</span>` : ""}`;
   if (r.status === "filled") return `<span class="kpi-st st-ok">Vyplněno</span><span class="muted">${fmtDT(r.filled_at)} · ${esc(r.filled_by)}</span>`;
   return `<span class="kpi-st st-wait">Čeká na vyplnění</span>`;
 }
 
-// host = kontejner, p = partner (s pobočkami), sel = výchozí období { year, type, no }, onFilled = obnova dat
-export async function renderRequests(host, p, sel, onChange) {
+// host = kontejner, p = partner (s pobočkami), sel = výchozí období { year, type, no }, onChange = obnova dat, openId = rovnou otevřít kontrolu vyplnění
+export async function renderRequests(host, p, sel, onChange, openId) {
   host.innerHTML = `<div class="empty">Načítám…</div>`;
   const { data: list, error } = await supabase.from("kpi_requests")
-    .select("id,token,year,period_type,period_no,branch_ids,status,expires_at,note,filled_by,filled_at,created_at")
+    .select("id,token,year,period_type,period_no,branch_ids,status,expires_at,note,filled_by,filled_at,imported_at,submitted,created_at")
     .eq("partner_id", p.id).order("created_at", { ascending: false });
   if (error) { host.innerHTML = `<div class="empty">Seznam odkazů se nepodařilo načíst: ${esc(error.message)}</div>`; return; }
   const brName = id => p.kpi_branches.find(b => b.id === id)?.name || "(odebraná pobočka)";
@@ -63,6 +65,7 @@ export async function renderRequests(host, p, sel, onChange) {
       <label class="kpi-req-note">Soubor .xlsx stažený z této aplikace<input type="file" id="rqFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
       <div id="rqImport"></div>
     </div>
+    <div id="rqReview"></div>
     <h4 class="kpi-h">Vytvořené odkazy</h4>
     ${list.length ? `<div class="table-wrap kpi-table-wrap"><table class="res-table kpi-req-list">
       <thead><tr><th>Období</th><th>Pobočky</th><th>Vytvořeno</th><th>Platí do</th><th>Stav</th><th></th></tr></thead>
@@ -73,6 +76,7 @@ export async function renderRequests(host, p, sel, onChange) {
         <td class="td-date">${fmtD(r.expires_at)}</td>
         <td>${status(r)}</td>
         <td class="kpi-actions">
+          ${r.filled_at ? `<button type="button" class="btn-save kpi-btn kpi-btn-sm" data-review="${r.id}">${r.imported_at ? "Zobrazit vyplnění" : "Zkontrolovat a uložit"}</button>` : ""}
           <button type="button" class="btn-logout" data-copy="${r.id}">Kopírovat odkaz</button>
           <a class="btn-logout" href="${esc(mailto(p, r))}">E-mail</a>
           <button type="button" class="btn-logout" data-lock="${r.id}">${r.status === "locked" ? "Znovu otevřít" : "Uzavřít"}</button>
@@ -117,6 +121,24 @@ export async function renderRequests(host, p, sel, onChange) {
   };
   host.querySelector("#rqFile").onchange = e => { const f = e.target.files[0]; if (f) importFile(host, p, f, onChange); };
   const find = id => list.find(r => r.id === id);
+  const review = r => {
+    const box = host.querySelector("#rqReview");
+    const t = { year: r.year, type: r.period_type, no: r.period_no, branchIds: r.branch_ids, who: r.filled_by, data: { b: {}, p: {}, h: {}, ...(r.submitted || {}) }, problems: [],
+      count: Object.values(r.submitted?.b || {}).concat(Object.values(r.submitted?.p || {})).reduce((a, o) => a + Object.keys(o).length, 0),
+      source: `Vyplněno přes odkaz ${fmtDT(r.filled_at)}`, imported: r.imported_at };
+    box.innerHTML = `<h4 class="kpi-h">Kontrola vyplnění od partnera</h4><div class="kpi-req-new kpi-review-box"></div>`;
+    previewSave(box.querySelector(".kpi-review-box"), p, t, async () => {
+      await supabase.from("kpi_requests").update({ imported_at: new Date().toISOString() }).eq("id", r.id);
+      await onChange?.();
+      document.dispatchEvent(new Event("kpi-inbox-changed"));
+      await renderRequests(host, p, sel, onChange);
+      const done = host.querySelector("#rqReview");
+      if (done) done.innerHTML = `<p class="kpi-ok">✅ Vyplnění od ${esc(r.filled_by)} (${periodName(r.period_type, r.period_no)} ${r.year}) je uložené do vstupů. Najdete ho na záložkách Vstupy a Výstupy.</p>`;
+    }, () => box.innerHTML = "");
+    box.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  host.querySelectorAll("[data-review]").forEach(b => b.onclick = () => review(find(b.dataset.review)));
+  if (openId && find(openId)) review(find(openId));
   host.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => copy(fillUrl(find(b.dataset.copy).token), b));
   host.querySelectorAll("[data-lock]").forEach(b => b.onclick = async () => {
     const r = find(b.dataset.lock);
@@ -148,6 +170,14 @@ async function importFile(host, p, file, onChange) {
   try { t = await readTemplate(file); }
   catch (e) { box.innerHTML = `<p class="auth-msg">Tabulku nelze načíst: ${esc(e.message)}</p>`; return; }
   if (t.partnerId !== p.id) { box.innerHTML = `<p class="auth-msg">Tabulka patří partnerovi „${esc(t.partnerName)}“, ne „${esc(p.name)}“. Otevřete ji u správného partnera.</p>`; return; }
+  t.source = "Excelová tabulka";
+  previewSave(box, p, t, async () => { host.querySelector("#rqFile").value = ""; await onChange?.(); }, () => { box.innerHTML = ""; host.querySelector("#rqFile").value = ""; });
+}
+
+// Náhled vyplněných údajů (z tabulky nebo z odkazu) proti dosavadním vstupům a uložení po potvrzení.
+// t = { year, type, no, branchIds, who, data:{b,p,h}, problems, count, source, imported }
+async function previewSave(box, p, t, onSaved, onCancel) {
+  box.innerHTML = `<div class="empty">Načítám…</div>`;
   const { data: ex, error } = await supabase.from("kpi_entries").select("id,data").eq("partner_id", p.id).eq("year", t.year).eq("period_type", t.type).eq("period_no", t.no).maybeSingle();
   if (error) { box.innerHTML = `<p class="auth-msg">${esc(error.message)}</p>`; return; }
   const cur = ex?.data || { b: {}, p: {} };
@@ -161,7 +191,8 @@ async function importFile(host, p, file, onChange) {
   };
   const pts = brs.flatMap(b => (b.kpi_painters || []).map(x => ({ ...x, b: b.name }))).filter(x => t.data.p[x.id]);
   box.innerHTML = `
-    <p class="kpi-ok">Tabulka: <b>${esc(p.name)}</b> · <b>${esc(t.period)}</b> · vyplnil(a): <b>${esc(t.who || "neuvedeno")}</b> · vyplněných polí: <b>${t.count}</b></p>
+    <p class="kpi-ok">${esc(t.source || "")}: <b>${esc(p.name)}</b> · <b>${periodName(t.type, t.no)} ${t.year}</b> · vyplnil(a): <b>${esc(t.who || "neuvedeno")}</b> · vyplněných polí: <b>${t.count}</b></p>
+    ${t.imported ? `<p class="f-note kpi-note">ℹ️ Toto vyplnění už bylo uloženo do vstupů ${new Date(t.imported).toLocaleString("cs-CZ")}. Náhled porovnává s aktuálními vstupy; můžete ho uložit znovu.</p>` : ""}
     ${t.problems.length ? `<p class="auth-msg">Upozornění k tabulce:<br>${t.problems.map(esc).join("<br>")}</p>` : ""}
     ${!t.count ? `<p class="auth-msg">V tabulce nejsou vyplněné žádné údaje.</p>` : `
     <div class="table-wrap kpi-table-wrap"><table class="res-table kpi-out">
@@ -175,7 +206,7 @@ async function importFile(host, p, file, onChange) {
     <button type="button" class="btn-save kpi-btn" id="rqImpSave">Uložit do vstupů (${periodName(t.type, t.no)} ${t.year})</button>
     <button type="button" class="btn-logout" id="rqImpCancel">Zrušit</button>`}`;
   const cancel = box.querySelector("#rqImpCancel");
-  if (cancel) cancel.onclick = () => { box.innerHTML = ""; host.querySelector("#rqFile").value = ""; };
+  if (cancel) cancel.onclick = onCancel;
   const save = box.querySelector("#rqImpSave");
   if (save) save.onclick = async () => {
     save.disabled = true;
@@ -189,8 +220,7 @@ async function importFile(host, p, file, onChange) {
     }
     const { error: e2 } = await supabase.from("kpi_entries").upsert({ partner_id: p.id, year: t.year, period_type: t.type, period_no: t.no, data }, { onConflict: "partner_id,year,period_type,period_no" });
     if (e2) { alert("Uložení se nepodařilo: " + e2.message); save.disabled = false; return; }
-    box.innerHTML = `<p class="kpi-ok">✅ Údaje z tabulky jsou uložené do vstupů za ${periodName(t.type, t.no)} ${t.year}. Najdete je na záložkách Vstupy a Výstupy.</p>`;
-    host.querySelector("#rqFile").value = "";
-    onChange?.();
+    box.innerHTML = `<p class="kpi-ok">✅ Údaje jsou uložené do vstupů za ${periodName(t.type, t.no)} ${t.year}. Najdete je na záložkách Vstupy a Výstupy.</p>`;
+    await onSaved?.();
   };
 }

@@ -1,17 +1,17 @@
 // KPI servisních partnerů (lakovna, karosárna) – jen pro administrátora
 // Krok 1: partneři a pobočky · Krok 2: zadávání vstupů za období · Krok 3: výstupy
-import { supabase } from "./supabase.js?v=20261120o";
-import { renderRequests } from "./kpi-requests.js?v=20261120o";
-import { renderCompare } from "./kpi-compare.js?v=20261120o";
-import { outputsHtml, loadAllEntries, loadTargets, targetsFormHtml, saveTargets } from "./kpi-out.js?v=20261120o";
+import { supabase } from "./supabase.js?v=20261120p";
+import { renderRequests } from "./kpi-requests.js?v=20261120p";
+import { renderCompare } from "./kpi-compare.js?v=20261120p";
+import { outputsHtml, loadAllEntries, loadTargets, targetsFormHtml, saveTargets } from "./kpi-out.js?v=20261120p";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const czErr = e => /kpi_partners_name_uq/.test(e?.message || "") ? "Partner s tímto názvem už existuje."
   : /kpi_branches_name_uq/.test(e?.message || "") ? "Dvě pobočky nesmí mít stejný název."
   : (e?.message || String(e));
 
-import { LAK, KAR, PAINT } from "./kpi-defs.js?v=20261120o";
-import { hoursHtml, bindHours, collectHours } from "./kpi-hours.js?v=20261120o";
+import { LAK, KAR, PAINT } from "./kpi-defs.js?v=20261120p";
+import { hoursHtml, bindHours, collectHours } from "./kpi-hours.js?v=20261120p";
 export { LAK, KAR, PAINT };
 export const PTYPES = { M: "Měsíc", Q: "Kvartál", H: "Pololetí", Y: "Rok" };
 const MONTHS = ["leden", "únor", "březen", "duben", "květen", "červen", "červenec", "srpen", "září", "říjen", "listopad", "prosinec"];
@@ -86,7 +86,23 @@ async function showList(msg = "") {
     const { data } = await supabase.from("kpi_entries").select("partner_id,year");
     (data || []).forEach(r => { const c = counts[r.partner_id] ||= { n: 0, years: new Set() }; c.n++; c.years.add(r.year); });
   } catch { /* počty jsou jen informativní */ }
+  let pending = [];
+  try {
+    const { data } = await supabase.from("kpi_requests").select("id,partner_id,year,period_type,period_no,filled_by,filled_at")
+      .not("filled_at", "is", null).is("imported_at", null).order("filled_at", { ascending: false });
+    pending = data || [];
+  } catch { /* upozornění je jen doplněk */ }
+  document.dispatchEvent(new Event("kpi-inbox-changed"));
   b.innerHTML = `
+    ${pending.length ? `<div class="res-card kpi-inbox">
+      <h3>📨 Nová vyplnění od partnerů <span class="kpi-inbox-n">${pending.length}</span></h3>
+      <p class="f-note">Partner údaje odeslal přes odkaz. Do vstupů se uloží, až je zkontrolujete a potvrdíte.</p>
+      <table class="res-table"><tbody>${pending.map(r => `<tr>
+        <td><strong>${esc(partners.find(p => p.id === r.partner_id)?.name || "?")}</strong></td>
+        <td>${periodName(r.period_type, r.period_no)} ${r.year}</td>
+        <td class="muted-cell">vyplnil(a) ${esc(r.filled_by)} · ${new Date(r.filled_at).toLocaleString("cs-CZ", { dateStyle: "short", timeStyle: "short" })}</td>
+        <td class="kpi-actions"><button type="button" class="btn-save kpi-btn kpi-btn-sm" data-inbox="${r.id}" data-ip="${r.partner_id}">Zkontrolovat a uložit</button></td>
+      </tr>`).join("")}</tbody></table></div>` : ""}
     <div class="res-card">
       <div class="kpi-bar">
         <h3>Servisní partneři</h3>
@@ -110,6 +126,7 @@ async function showList(msg = "") {
     </div>`;
   document.getElementById("kpiNew").onclick = () => showForm(null);
   const cmp = document.getElementById("kpiCmp"); if (cmp) cmp.onclick = showCompare;
+  b.querySelectorAll("[data-inbox]").forEach(x => x.onclick = () => { mode = "req"; openReview = x.dataset.inbox; showPartner(x.dataset.ip); });
   b.querySelectorAll("[data-open]").forEach(x => x.onclick = e => { e.preventDefault(); showPartner(x.dataset.open); });
   b.querySelectorAll("[data-edit]").forEach(x => x.onclick = () => showForm(partners.find(p => p.id === x.dataset.edit)));
   b.querySelectorAll("[data-del]").forEach(x => x.onclick = () => delPartner(partners.find(p => p.id === x.dataset.del), x));
@@ -251,7 +268,8 @@ async function syncPainters(row, old) {
 
 // ---------- Detail partnera: zadávání vstupů ----------
 let entries = [];
-let mode = "in";      // "in" = vstupy, "out" = výstupy
+let mode = "in";      // "in" = vstupy, "out" = výstupy, "req" = sběr dat
+let openReview = null; // id vyplnění, které se má po otevření partnera rovnou zobrazit
 let allEntries = [], targets = {};
 
 async function showPartner(pid, msg = "") {
@@ -310,7 +328,11 @@ async function showPartner(pid, msg = "") {
 
 const draw = () => {
   box().querySelector(".res-card")?.classList.toggle("kpi-mode-req", mode === "req");
-  if (mode === "req") { dirty = false; return renderRequests(document.getElementById("kpiInputs"), current, sel, async () => { [entries, allEntries] = await Promise.all([loadEntries(current.id), loadAllEntries()]); }); }
+  if (mode === "req") {
+    dirty = false;
+    const open = openReview; openReview = null;
+    return renderRequests(document.getElementById("kpiInputs"), current, sel, async () => { [entries, allEntries] = await Promise.all([loadEntries(current.id), loadAllEntries()]); }, open);
+  }
   return mode === "out" ? drawOutputs() : drawInputs();
 };
 

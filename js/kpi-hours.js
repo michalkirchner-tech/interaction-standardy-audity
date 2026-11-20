@@ -1,5 +1,5 @@
 // KPI – odchozené a prodané hodiny: za celé středisko, nebo jmenovitě (řádky se jmény, součet se dopočítá)
-import { DEPTS } from "./kpi-defs.js?v=20261120o";
+import { DEPTS } from "./kpi-defs.js?v=20261120p";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmtNum = v => v == null || v === "" || isNaN(v) ? "" : Number(v).toLocaleString("cs-CZ", { maximumFractionDigits: 4 });

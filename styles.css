@@ -649,3 +649,10 @@ body.gal-open { overflow: hidden; }
 .kpi-people { max-width: 760px; }
 .kpi-out tr.kpi-total th, .kpi-out tr.kpi-total td { background: #f3f3f3; font-weight: 700; border-top: 2px solid var(--ia-light); }
 .kpi-people + .kpi-charts, .kpi-table-wrap + .kpi-charts { margin-top: 14px; }
+.btn-kpi { position: relative; }
+.kpi-badge-n { position: absolute; top: -8px; right: -8px; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 999px; background: var(--ia-red); color: #fff; font: 700 .7rem/19px "Open Sans", sans-serif; text-align: center; box-shadow: 0 0 0 2px #fff; }
+.kpi-inbox { border-left: 6px solid var(--ia-red); margin-bottom: 14px; }
+.kpi-inbox h3 { margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+.kpi-inbox-n { background: var(--ia-red); color: #fff; border-radius: 999px; font-size: .8rem; padding: 1px 9px; }
+.kpi-inbox td { vertical-align: middle; }
+.st-new { background: var(--ia-red); color: #fff; }

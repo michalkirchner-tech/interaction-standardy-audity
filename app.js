@@ -1,14 +1,14 @@
 // Standardy a audity – úvodní stránka s dlaždicemi značek
-import { supabase, getProfile } from "./js/supabase.js?v=20261120o";
-import { exportPdf, exportXlsx } from "./js/export.js?v=20261120o";
-import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261120o";
-import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261120o";
-import { renderUsers } from "./js/users.js?v=20261120o";
-import { openGallery } from "./js/gallery.js?v=20261120o";
-import { openPreview } from "./js/preview.js?v=20261120o";
-import { renderMultibrand } from "./js/multibrand.js?v=20261120o";
-import { renderKpi } from "./js/kpi.js?v=20261120o";
-import { RESULT_BRANDS, NO_VALIDITY, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261120o";
+import { supabase, getProfile } from "./js/supabase.js?v=20261120p";
+import { exportPdf, exportXlsx } from "./js/export.js?v=20261120p";
+import { registerSW, canInstall, install, onInstallChange, offerInstall } from "./js/pwa.js?v=20261120p";
+import { renderBackups, backupReminderHtml } from "./js/backup.js?v=20261120p";
+import { renderUsers } from "./js/users.js?v=20261120p";
+import { openGallery } from "./js/gallery.js?v=20261120p";
+import { openPreview } from "./js/preview.js?v=20261120p";
+import { renderMultibrand } from "./js/multibrand.js?v=20261120p";
+import { renderKpi } from "./js/kpi.js?v=20261120p";
+import { RESULT_BRANDS, NO_VALIDITY, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261120p";
 
 const BRANDS = [
   { id: "arval",      name: "Arval",       logo: "assets/logos/arval.png",      wide: true, url: "arval/" },
@@ -95,10 +95,22 @@ function renderUserBox() {
   const name = profile.full_name || profile.email;
   userBox.innerHTML = `
     <span class="user-name" title="${esc(profile.email)}">${esc(name)}</span>
-    ${profile.role === "admin" ? `<a class="btn-backup btn-kpi" href="#kpi" title="KPI servisních partnerů">📊<span class="bk-txt"> KPI</span></a><a class="btn-backup" href="#uzivatele" title="Registrovaní uživatelé">👥<span class="bk-txt"> Uživatelé</span></a><a class="btn-backup" href="#zalohy" title="Zálohy dat">💾<span class="bk-txt"> Zálohy</span></a><span class="badge-admin">Admin</span>` : ""}
+    ${profile.role === "admin" ? `<a class="btn-backup btn-kpi" href="#kpi" title="KPI servisních partnerů">📊<span class="bk-txt"> KPI</span><span class="kpi-badge-n" id="kpiBadge" hidden></span></a><a class="btn-backup" href="#uzivatele" title="Registrovaní uživatelé">👥<span class="bk-txt"> Uživatelé</span></a><a class="btn-backup" href="#zalohy" title="Zálohy dat">💾<span class="bk-txt"> Zálohy</span></a><span class="badge-admin">Admin</span>` : ""}
     <button type="button" class="btn-logout" id="btnLogout">Odhlásit</button>`;
+  if (profile.role === "admin") updateKpiBadge();
   document.getElementById("btnLogout").onclick = async () => { await supabase.auth.signOut(); profile = null; location.hash = ""; renderAuth(); };
 }
+
+// Počet vyplnění od partnerů, která čekají na uložení (číslo na tlačítku KPI)
+async function updateKpiBadge() {
+  const el = document.getElementById("kpiBadge");
+  if (!el || profile?.role !== "admin") return;
+  const { count, error } = await supabase.from("kpi_requests").select("id", { count: "exact", head: true }).not("filled_at", "is", null).is("imported_at", null);
+  if (error) return;
+  el.hidden = !count; el.textContent = count || "";
+  el.title = count ? `${count} vyplnění od partnerů čeká na uložení` : "";
+}
+document.addEventListener("kpi-inbox-changed", updateKpiBadge);
 
 function renderHome() {
   document.title = "Standardy a audity | INTERACTION";
@@ -324,6 +336,6 @@ async function start() {
   justSignedIn = false;
 }
 
-window.addEventListener("hashchange", () => { if (profile) route(); });
+window.addEventListener("hashchange", () => { if (profile) { route(); updateKpiBadge(); } });
 registerSW();
 start();
