@@ -1,11 +1,10 @@
 // Výsledky auditů: přehledy podle značek a import auditů (admin)
-import { supabase } from "./supabase.js?v=20261120a";
+import { supabase } from "./supabase.js?v=20261120b";
 
 export const RESULT_BRANDS = [
   { id: "arval",      name: "Arval",      logo: "assets/logos/arval.png",      wide: true, form: "arval/" },
   { id: "stellantis", name: "Stellantis", logo: "assets/logos/stellantis.svg", wide: true, form: "stellantis/" },
   { id: "mitsubishi", name: "Mitsubishi", logo: "assets/logos/mitsubishi.svg", form: "mitsubishi/" },
-  { id: "volvo",      name: "Volvo",      logo: "assets/logos/volvo.svg",      form: "volvo/" },
 ];
 export const NO_VALIDITY = new Set(["stellantis", "volvo"]); // značky bez recertifikační lhůty (jen úspěšný / neúspěšný)
 export const WARN_DAYS = 60; // od kolika dní před termínem je audit „blíží se“
