@@ -621,31 +621,31 @@ body.gal-open { overflow: hidden; }
 .kpi-out td.kpi-chg .muted { display: block; font-size: .72rem; color: #8a6d00; font-weight: 400; }
 .lg-chg { background: #f0c330; }
 #rqXlsx { margin-left: 6px; }
-/* hodiny za středisko / jmenovitě */
-.hr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; }
-.hr-card { border: 1px solid #e3e3e3; border-radius: 12px; padding: 10px 12px; background: #fff; }
-.hr-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
-.hr-switch { display: inline-flex; background: var(--ia-bg); border-radius: 9px; padding: 3px; gap: 2px; }
-.hr-switch label { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 7px; font-size: .82rem; font-weight: 600; cursor: pointer; }
+/* hodiny za středisko / jmenovitě – tabulka: řádek = pobočka */
+.hr-tab { table-layout: fixed; min-width: 640px; }
+.hr-tab col.hr-c1 { width: 24%; } .hr-tab col.hr-c2 { width: 28%; } .hr-tab col.hr-c3 { width: 24%; }
+.hr-tab td, .hr-tab th { vertical-align: middle; padding: 6px 8px; }
+.hr-tab .hr-branch th { font: 600 .92rem "Open Sans", sans-serif; text-transform: none; letter-spacing: 0; color: var(--ia-dark); }
+.hr-tab tbody.hr-card { border-top: 2px solid var(--ia-light); }
+.hr-tab .kpi-num { width: 100%; min-width: 0; }
+.hr-switch { display: inline-flex; background: var(--ia-bg); border-radius: 9px; padding: 3px; gap: 2px; white-space: nowrap; }
+.hr-switch label { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 7px; font-size: .82rem; font-weight: 600; cursor: pointer; }
 .hr-switch input { margin: 0; }
 .hr-switch label:has(input:checked) { background: var(--ia-dark); color: #fff; }
-.hr-center { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.hr-center label { display: flex; flex-direction: column; gap: 4px; font-size: .82rem; font-weight: 600; }
-.hr-card[data-mode="center"] .hr-named, .hr-card[data-mode="named"] .hr-center { display: none; }
-.hr-table { font-size: .86rem; }
-.hr-table th { font-size: .7rem; }
-.hr-table td { padding: 4px; }
-.hr-table .kpi-num { min-width: 80px; }
-.hr-name { width: 100%; min-width: 140px; font: inherit; padding: 7px 9px; border: 1px solid #ccc; border-radius: 7px; }
-.hr-table tfoot th, .hr-table tfoot td { font-weight: 700; text-align: right; border-top: 2px solid var(--ia-light); }
-.hr-table tfoot th { text-align: left; }
-.hr-add { margin-top: 6px; padding: 5px 10px; font-size: .82rem; }
+.hr-so, .hr-sp { display: block; text-align: right; font-weight: 700; padding: 7px 9px; background: #f3f3f3; border-radius: 7px; }
+.hr-card[data-mode="center"] .hr-row, .hr-card[data-mode="center"] .hr-addrow, .hr-card[data-mode="center"] .hr-so, .hr-card[data-mode="center"] .hr-sp { display: none; }
+.hr-card[data-mode="named"] .hr-co, .hr-card[data-mode="named"] .hr-cp { display: none; }
+.hr-row td { background: #fafafa; border-bottom: 1px solid #eee; }
+.hr-ind { padding-left: 22px !important; }
+.hr-name { width: 100%; font: inherit; padding: 7px 9px; border: 1px solid #ccc; border-radius: 7px; }
+.hr-rm { font-size: .78rem; }
+.hr-addrow td { background: #fafafa; padding-left: 22px; }
+.hr-add { padding: 5px 10px; font-size: .82rem; }
 /* stránka pro partnera */
 .fill-period { background: var(--ia-red); color: #fff; border-radius: 14px; padding: 14px 20px; margin: 0 0 14px; font-size: .95rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
 .fill-period strong { font: 700 1.45rem "Poppins", sans-serif; }
 .fill-period span { opacity: .9; }
 .fill-hint { display: block; font-weight: 400; color: var(--ia-blue); font-size: .78rem; margin-top: 2px; }
-@media (max-width: 640px) { .hr-grid { grid-template-columns: 1fr; } }
 .kpi-people { max-width: 760px; }
 .kpi-out tr.kpi-total th, .kpi-out tr.kpi-total td { background: #f3f3f3; font-weight: 700; border-top: 2px solid var(--ia-light); }
 .kpi-people + .kpi-charts, .kpi-table-wrap + .kpi-charts { margin-top: 14px; }

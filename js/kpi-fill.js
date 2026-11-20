@@ -1,7 +1,7 @@
 // Veřejná stránka pro partnera: vyplnění vstupů KPI přes jedinečný odkaz (bez přihlášení)
-import { supabase } from "./supabase.js?v=20261120p";
-import { LAK, KAR, PAINT, periodName, periodRange } from "./kpi-defs.js?v=20261120p";
-import { hoursHtml, bindHours, collectHours } from "./kpi-hours.js?v=20261120p";
+import { supabase } from "./supabase.js?v=20261120q";
+import { LAK, KAR, periodName, periodRange } from "./kpi-defs.js?v=20261120q";
+import { hoursHtml, bindHours, collectHours } from "./kpi-hours.js?v=20261120q";
 
 const app = document.getElementById("app");
 document.getElementById("year").textContent = new Date().getFullYear();
@@ -40,7 +40,6 @@ function draw(msg = "") {
   document.title = `Podklady pro KPI – ${f.partner} – ${per}`;
   const visible = list => list.filter(m => !m.adminOnly && !m.hours);
   const defs = [["Lakovna", visible(LAK)], ...(f.has_kar ? [["Karosárna", visible(KAR)]] : [])];
-  const painters = br.filter(b => b.painters?.length);
   page(`
     <div class="brand-head brand-head-plain"><div>
       <h2>Podklady pro KPI – ${esc(f.partner)}</h2>
@@ -59,13 +58,7 @@ function draw(msg = "") {
           ${br.map(b => cell(s.b?.[b.id]?.[m.k], `data-b="${b.id}" data-k="${m.k}"`)).join("")}</tr>`).join("")).join("")}</tbody>
       </table></div>
       ${hoursHtml(br, f.has_kar ? ["lak", "kar"] : ["lak"], { b: s.b, h: s.h })}
-      ${painters.length ? `
-      <h4 class="kpi-h">Spotřeba materiálu podle lakýrníků</h4>
-      <div class="table-wrap kpi-table-wrap"><table class="res-table kpi-in">
-        <thead><tr><th>Lakýrník</th>${PAINT.map(m => `<th>${m.l}<span class="muted">${m.u}</span></th>`).join("")}</tr></thead>
-        <tbody>${painters.map(b => `<tr class="kpi-sec"><td colspan="${PAINT.length + 1}">${esc(b.name)}</td></tr>` + b.painters.map(pt => `
-          <tr><th scope="row">${esc(pt.name)}</th>${PAINT.map(m => cell(s.p?.[pt.id]?.[m.k], `data-p="${pt.id}" data-k="${m.k}"`)).join("")}</tr>`).join("")).join("")}</tbody>
-      </table></div>` : ""}
+
       <div class="kpi-form fill-who"><label>Vyplnil(a) – jméno a příjmení *<input id="fillBy" value="${esc(f.filled_by || "")}" maxlength="120" autocomplete="name"></label></div>
       <div class="auth-msg" id="fillMsg"></div>
       <button type="button" class="btn-save kpi-btn" id="fillSend">Odeslat údaje</button>
@@ -90,7 +83,6 @@ async function send() {
   let n = 0;
   for (const [id, o] of Object.entries(hrs.b)) for (const [k, v] of Object.entries(o)) { (data.b[id] ||= {})[k] = v; n++; }
   app.querySelectorAll("input[data-b]").forEach(i => { const v = parseNum(i.value); if (v != null) { (data.b[i.dataset.b] ||= {})[i.dataset.k] = v; n++; } });
-  app.querySelectorAll("input[data-p]").forEach(i => { const v = parseNum(i.value); if (v != null) { (data.p[i.dataset.p] ||= {})[i.dataset.k] = v; n++; } });
   if (!n) { out.textContent = ERR.NIC_NEVYPLNENO; return; }
   const btn = document.getElementById("fillSend"); btn.disabled = true; btn.textContent = "Odesílám…";
   const { error } = await supabase.rpc("kpi_request_submit", { p_token: token, p_data: data, p_filled_by: who });

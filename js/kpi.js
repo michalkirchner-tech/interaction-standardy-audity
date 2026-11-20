@@ -1,17 +1,17 @@
 // KPI servisních partnerů (lakovna, karosárna) – jen pro administrátora
 // Krok 1: partneři a pobočky · Krok 2: zadávání vstupů za období · Krok 3: výstupy
-import { supabase } from "./supabase.js?v=20261120p";
-import { renderRequests } from "./kpi-requests.js?v=20261120p";
-import { renderCompare } from "./kpi-compare.js?v=20261120p";
-import { outputsHtml, loadAllEntries, loadTargets, targetsFormHtml, saveTargets } from "./kpi-out.js?v=20261120p";
+import { supabase } from "./supabase.js?v=20261120q";
+import { renderRequests } from "./kpi-requests.js?v=20261120q";
+import { renderCompare } from "./kpi-compare.js?v=20261120q";
+import { outputsHtml, loadAllEntries, loadTargets, targetsFormHtml, saveTargets } from "./kpi-out.js?v=20261120q";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const czErr = e => /kpi_partners_name_uq/.test(e?.message || "") ? "Partner s tímto názvem už existuje."
   : /kpi_branches_name_uq/.test(e?.message || "") ? "Dvě pobočky nesmí mít stejný název."
   : (e?.message || String(e));
 
-import { LAK, KAR, PAINT } from "./kpi-defs.js?v=20261120p";
-import { hoursHtml, bindHours, collectHours } from "./kpi-hours.js?v=20261120p";
+import { LAK, KAR, PAINT } from "./kpi-defs.js?v=20261120q";
+import { hoursHtml, bindHours, collectHours } from "./kpi-hours.js?v=20261120q";
 export { LAK, KAR, PAINT };
 export const PTYPES = { M: "Měsíc", Q: "Kvartál", H: "Pololetí", Y: "Rok" };
 const MONTHS = ["leden", "únor", "březen", "duben", "květen", "červen", "červenec", "srpen", "září", "říjen", "listopad", "prosinec"];

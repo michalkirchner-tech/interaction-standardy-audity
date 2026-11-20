@@ -1,6 +1,6 @@
 // KPI – excelová šablona pro partnera (vytvoření .xlsx) a načtení vyplněné tabulky zpět
-import { zip } from "./export.js?v=20261120p";
-import { LAK, KAR, PAINT, DEPTS, periodRange } from "./kpi-defs.js?v=20261120p";
+import { zip } from "./export.js?v=20261120q";
+import { LAK, KAR, PAINT, DEPTS, periodRange } from "./kpi-defs.js?v=20261120q";
 
 const MAGIC = "interaction-kpi-sablona-v1";
 const MONTHS = ["leden", "únor", "březen", "duben", "květen", "červen", "červenec", "srpen", "září", "říjen", "listopad", "prosinec"];
@@ -40,7 +40,7 @@ export function buildTemplate(req) {
   const map = [];        // [ref, "b|p", id, key, label]
   let r = 0;
   const add = (cells, ht) => { r++; rows.push({ r, cells, ht }); return r; };
-  const ncol = Math.max(2 + brs.length, 1 + PAINT.length + 1, 4);
+  const ncol = Math.max(2 + brs.length, 4);
   add([{ c: 0, v: `Podklady pro KPI – ${p.name}`, s: 1 }], 22);
   const banner = add([{ c: 0, v: `VYPLŇUJETE ÚDAJE ZA OBDOBÍ:  ${per.toUpperCase()}   (${periodRange(req.year, req.type, req.no)})`, s: 8 }, ...Array.from({ length: ncol - 1 }, (_, i) => ({ c: i + 1, v: "", s: 8 }))], 28);
   add([{ c: 0, v: "Vyplňte prosím jen žlutá pole. Čísla pište bez měny (Kč) – desetinná místa s čárkou. Pokud údaj nesledujete, pole nechte prázdné. Řádky ani sloupce prosím nepřidávejte a list nepřejmenovávejte – tabulka se pak automaticky načte zpět.", s: 6 }], 46);
@@ -76,19 +76,6 @@ export function buildTemplate(req) {
       }
     }
   }
-  const painters = p.has_painters ? brs.filter(b => b.kpi_painters?.length) : [];
-  if (painters.length) {
-    add([]);
-    add([{ c: 0, v: "Spotřeba materiálu podle lakýrníků", s: 1 }], 20);
-    add([{ c: 0, v: "Lakýrník", s: 2 }, ...PAINT.map((m, i) => ({ c: 1 + i, v: `${m.l} (${m.u})`, s: 2 }))], 20);
-    for (const b of painters) {
-      add([{ c: 0, v: b.name, s: 3 }, ...PAINT.map((_, i) => ({ c: 1 + i, v: "", s: 3 }))]);
-      for (const pt of b.kpi_painters) {
-        const rr = r + 1;
-        add([{ c: 0, v: pt.name, s: 4 }, ...PAINT.map((m, i) => { map.push([`${col(1 + i)}${rr}`, "p", pt.id, m.k, pt.name]); return { c: 1 + i, v: null, s: 5 }; })], 18);
-      }
-    }
-  }
   add([]);
   const whoRow = add([{ c: 0, v: "Vyplnil(a) – jméno a příjmení", s: 4 }, { c: 1, v: null, s: 5 }], 18);
   merges.push(`B${whoRow}:${col(Math.max(2, ncol - 1))}${whoRow}`);
@@ -100,7 +87,6 @@ export function buildTemplate(req) {
     return `<c r="${ref}" t="inlineStr" s="${x.s}"><is><t xml:space="preserve">${escX(x.v)}</t></is></c>`;
   };
   const widths = [52, 11, ...Array(Math.max(0, ncol - 2)).fill(18)];
-  if (painters.length) widths[1] = Math.max(widths[1], 16);
   const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
 <sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>
