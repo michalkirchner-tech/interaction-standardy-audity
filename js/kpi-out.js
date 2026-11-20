@@ -1,6 +1,6 @@
 // KPI – výstupy: dashboard, tabulka po pobočkách, grafy, vlastní cílové benchmarky
-import { supabase } from "./supabase.js?v=20261121a";
-import { KPIS, PAINT_KPIS, KPI_BY_KEY, periodData, sumBranches, kpiValues, benchmark, targetFor, rate, fmtKpi, periodName, monthCount } from "./kpi-calc.js?v=20261121a";
+import { supabase } from "./supabase.js?v=20261121b";
+import { KPIS, PAINT_KPIS, KPI_BY_KEY, periodData, sumBranches, kpiValues, benchmark, targetFor, rate, fmtKpi, periodName, monthCount } from "./kpi-calc.js?v=20261121b";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const CARDS = ["marze", "zisk", "hodnota_mj", "produktivita", "obrat_hod", "spotreba_hod", "obrat_lak", "produktivita_kar"];

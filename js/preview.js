@@ -1,6 +1,6 @@
 // Náhled kompletní výsledkové listiny auditu (jen ke čtení) + export do PDF (tisk prohlížeče)
-import { supabase } from "./supabase.js?v=20261121a";
-import { formDefs, prepareImport, arvalBreakdown, mitsubishiEval, mitsubishiRecertEval, stOf, czDate, esc } from "./results.js?v=20261121a";
+import { supabase } from "./supabase.js?v=20261121b";
+import { formDefs, prepareImport, arvalBreakdown, mitsubishiEval, mitsubishiRecertEval, stOf, czDate, esc } from "./results.js?v=20261121b";
 
 const BRAND_NAME = { arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi" };
 const OK = '<span class="pv-ok" title="Splněno">✓</span>', NOK = '<span class="pv-nok" title="Nesplněno">✗</span>';
@@ -107,7 +107,7 @@ export async function shareFormPdf(brand, state, btn) {
 // ---------- PDF stejné jako tisk („Exportovat do PDF“) ----------
 // Stránka se zkopíruje do skrytého rámu široké jako tisková plocha A4, použijí se její tiskové styly (@media print),
 // vyfotí se a rozdělí na strany A4 tak, aby se nepřetrhly řádky a karty (podle pravidel stránkování v tiskových stylech).
-const vendor = f => new URL("../assets/vendor/" + f + "?v=20261121a", import.meta.url).href;
+const vendor = f => new URL("../assets/vendor/" + f + "?v=20261121b", import.meta.url).href;
 const loaded = {};
 function loadScript(f, test) {
   if (test()) return Promise.resolve();
@@ -196,39 +196,37 @@ async function printLikePdf() {
     }
     const PH = Math.floor(H * CW / W);
 
-    // místa zalomení stran
-    const body = d.body, total = Math.ceil(body.scrollHeight);
-    const forced = new Set(), avoid = [];
-    const top0 = body.getBoundingClientRect().top;
-    for (const el of body.querySelectorAll("*")) {
-      const cs = fr.contentWindow.getComputedStyle(el);
-      if (cs.display === "none") continue;
-      const r = el.getBoundingClientRect(); if (!r.height) continue;
-      const t = r.top - top0, bt = r.bottom - top0;
-      if (/page|always|left|right/.test(cs.breakBefore) || /always/.test(cs.pageBreakBefore)) forced.add(Math.round(t));
-      if (/page|always|left|right/.test(cs.breakAfter) || /always/.test(cs.pageBreakAfter)) forced.add(Math.round(bt));
-      if (/avoid/.test(cs.breakInside) || /avoid/.test(cs.pageBreakInside) || el.tagName === "TR" || el.tagName === "IMG" || el.tagName === "CANVAS") avoid.push([t, bt]);
-      if (/avoid/.test(cs.breakAfter) || /avoid/.test(cs.pageBreakAfter)) avoid.push([t, bt + 40]); // nadpis drží s dalším obsahem
-    }
-    const fb = [...forced].filter(x => x > 4 && x < total - 4).sort((a, b) => a - b);
-    const cuts = [0];
-    let pos = 0;
-    while (pos < total - 2) {
-      let cut = Math.min(pos + PH, total);
-      const f = fb.find(x => x > pos + 4 && x <= cut);
-      if (f != null) cut = f;
-      else if (cut < total) {
-        // nejnižší místo v posledních ~35 % strany, které přetne co nejméně řádků/karet (ideálně žádný)
-        const regs = avoid.filter(([t, b]) => b > pos + 4 && t < cut && b - t <= PH);
-        let best = cut, bestN = Infinity;
-        for (let y = Math.floor(cut); y >= cut - PH * 0.35 && y > pos + 40; y -= 2) {
-          let n = 0; for (const [t, b] of regs) if (t < y - 0.5 && b > y + 0.5) n++;
-          if (n < bestN) { bestN = n; best = y; if (!n) break; }
-        }
-        cut = best;
+    // Stránkování jako při tisku: řádky a karty, které by se přetrhly na hraně strany, se odsunou na další stranu
+    // (každý sloupec zvlášť), nucené zalomení (break-before: page) začne novou stranu. Pak se stránka jen rozřeže po A4.
+    const body = d.body, win = fr.contentWindow;
+    const top0 = () => body.getBoundingClientRect().top;
+    const isForced = cs => /page|always|left|right/.test(cs.breakBefore) || /always/.test(cs.pageBreakBefore);
+    const isAvoid = (el, cs) => /avoid/.test(cs.breakInside) || /avoid/.test(cs.pageBreakInside) || /^(TR|IMG|CANVAS|SVG)$/i.test(el.tagName);
+    const keepNext = cs => /avoid/.test(cs.breakAfter) || /avoid/.test(cs.pageBreakAfter);
+    const push = (el, delta) => {
+      if (delta < 0.5) return;
+      if (el.tagName === "TR") {
+        const tr = d.createElement("tr"), td = d.createElement("td");
+        td.colSpan = 99; td.style.cssText = `height:${delta}px;padding:0;border:0;background:transparent`;
+        tr.style.cssText = "border:0;background:transparent"; tr.appendChild(td); el.before(tr); return;
       }
-      cuts.push(cut); pos = cut;
+      const mt = parseFloat(win.getComputedStyle(el).marginTop) || 0;
+      el.style.setProperty("margin-top", (mt + delta) + "px", "important");
+    };
+    const els = [...body.querySelectorAll("*")].filter(el => { const cs = win.getComputedStyle(el); return cs.display !== "none" && cs.position !== "fixed" && cs.position !== "absolute"; });
+    const done = new Set();
+    for (const el of els) {
+      if ([...done].some(x => x.contains(el))) continue;
+      const cs = win.getComputedStyle(el);
+      let r = el.getBoundingClientRect(); if (!r.height) continue;
+      let t = r.top - top0(), bt = r.bottom - top0();
+      if (isForced(cs) && t > 4) { const off = t % PH; if (off > 1 && PH - off > 1) { push(el, PH - off); r = el.getBoundingClientRect(); t = r.top - top0(); bt = r.bottom - top0(); } }
+      const B = (Math.floor(t / PH) + 1) * PH; // nejbližší hrana strany pod horním okrajem prvku
+      if (isAvoid(el, cs) && r.height <= PH * 0.95 && bt > B + 0.5) { push(el, B - t); done.add(el); continue; }
+      if (keepNext(cs) && r.height < PH * 0.3 && bt + 40 > B && t < B) { push(el, B - t); continue; }
     }
+    const total = Math.ceil(body.scrollHeight);
+    const cuts = []; for (let y = 0; y < total - 2; y += PH) cuts.push(y); cuts.push(total);
 
     const scale = Math.max(1, Math.min(2, Math.sqrt(15e6 / (CW * total))));
     const canvas = await window.html2canvas(body, { scale, useCORS: true, backgroundColor: "#ffffff", width: CW, windowWidth: CW, height: total, windowHeight: total, scrollX: 0, scrollY: 0, logging: false });
@@ -252,7 +250,7 @@ function loadHtml2pdf() {
   if (window.html2pdf) return Promise.resolve(window.html2pdf);
   return h2pLoading ||= new Promise((ok, fail) => {
     const sc = document.createElement("script");
-    sc.src = new URL("../assets/vendor/html2pdf.bundle.min.js?v=20261121a", import.meta.url).href;
+    sc.src = new URL("../assets/vendor/html2pdf.bundle.min.js?v=20261121b", import.meta.url).href;
     sc.onload = () => ok(window.html2pdf); sc.onerror = () => { h2pLoading = null; fail(new Error("Nepodařilo se načíst nástroj pro PDF (jste online?).")); };
     document.head.appendChild(sc);
   });
