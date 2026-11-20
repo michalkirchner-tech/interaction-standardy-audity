@@ -1,6 +1,6 @@
 // KPI – výstupy: dashboard, tabulka po pobočkách, grafy, vlastní cílové benchmarky
-import { supabase } from "./supabase.js?v=20261120u";
-import { KPIS, PAINT_KPIS, KPI_BY_KEY, periodData, sumBranches, kpiValues, benchmark, targetFor, rate, fmtKpi, periodName, monthCount } from "./kpi-calc.js?v=20261120u";
+import { supabase } from "./supabase.js?v=20261120v";
+import { KPIS, PAINT_KPIS, KPI_BY_KEY, periodData, sumBranches, kpiValues, benchmark, targetFor, rate, fmtKpi, periodName, monthCount } from "./kpi-calc.js?v=20261120v";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const CARDS = ["marze", "zisk", "hodnota_mj", "produktivita", "obrat_hod", "spotreba_hod", "obrat_lak", "produktivita_kar"];
@@ -152,6 +152,13 @@ export function outputsHtml(ctx) {
     ${paintersHtml(p, pd.data)}`;
 }
 
+// Popisek v grafu: příjmení; při shodě příjmení i iniciála jména (např. „J. Procházka“)
+function shortName(n, rows) {
+  const parts = n.trim().split(/\s+/), sur = parts.slice(-1)[0];
+  const same = rows.filter(r => r.n.trim().split(/\s+/).slice(-1)[0] === sur).length > 1;
+  return same && parts.length > 1 ? `${parts[0][0]}. ${sur}` : sur;
+}
+
 // Produktivita podle jmenovitě zadaných hodin – jednotlivci i středisko jako celek
 function peopleHtml(p, data, ctx, bm, sel) {
   if (!data.h) return "";
@@ -172,7 +179,7 @@ function peopleHtml(p, data, ctx, bm, sel) {
       <tr class="kpi-total"><th scope="row">Středisko celkem</th><td class="kpi-v">${fmtKpi(g.tot.o, "num")}</td><td class="kpi-v">${fmtKpi(g.tot.p, "num")}</td><td class="kpi-v ${cls(g.d, g.tot.v, ref)}">${fmtKpi(g.tot.v, "pct")}</td></tr>`;
   }).join("");
   const charts = groups.map(g => barChart(`Produktivita – ${g.b} – ${g.lab.toLowerCase()}`,
-    [...g.rows.map(r => ({ label: r.n.split(" ").slice(-1)[0], v: r.v })), { label: "Středisko", v: g.tot.v, total: true }],
+    [...g.rows.map(r => ({ label: shortName(r.n, g.rows), v: r.v })), { label: "Středisko", v: g.tot.v, total: true }],
     "pct", bm[g.d.k]?.v, targetFor(g.d, ctx.targets, sel.type))).join("");
   return `<h4 class="kpi-h">Produktivita podle zaměstnanců a středisek</h4>
     <p class="f-note">Produktivita = prodané (fakturované) hodiny / odchozené hodiny. Barva porovnává s vlastním cílem, jinak s benchmarkem.</p>
