@@ -77,8 +77,8 @@ h1, h2, h3 { font-family: "Poppins", system-ui, sans-serif; }
   gap: 28px;
   perspective: 1000px;
 }
-@media (max-width: 960px) { .grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 480px) { .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; padding-left: 14px; padding-right: 14px; } .tile-name { font-size: .85rem; } .tile-stats { font-size: .74rem; } }
+@media (max-width: 960px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding-left: 14px; padding-right: 14px; } .tile-name { font-size: .85rem; } .tile-stats { font-size: .74rem; } }
 
 /* 3D dlaždice */
 .tile {
@@ -260,7 +260,7 @@ h1, h2, h3 { font-family: "Poppins", system-ui, sans-serif; }
 .c-exp { color: var(--ia-red); } .c-soon { color: #c77700; }
 .wide-page { max-width: 1200px; }
 .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 24px 0; }
-@media (max-width: 760px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 760px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .kpis.kpis-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .kpis-1 { grid-template-columns: minmax(0, 1fr); } }
 .kpi { background: #fff; border-radius: 14px; padding: 16px 18px; box-shadow: 0 6px 16px rgba(0,0,0,.08); border-top: 4px solid var(--ia-gray); display: flex; flex-direction: column; }
 .kpi-n { font: 700 2rem "Poppins", sans-serif; line-height: 1.1; }
 .kpi-l { color: #555; font-size: .88rem; }
@@ -269,7 +269,10 @@ h1, h2, h3 { font-family: "Poppins", system-ui, sans-serif; }
 .kpi-ok { border-top-color: #2e9e5b; } .kpi-ok .kpi-n { color: #2e7d4f; }
 .res-card { background: #fff; border-radius: 14px; box-shadow: 0 6px 16px rgba(0,0,0,.08); padding: 16px; }
 .res-toolbar input { width: 100%; max-width: 360px; padding: 9px 12px; border: 1px solid #ccc; border-radius: 9px; font: inherit; margin-bottom: 12px; }
-.table-wrap { overflow-x: auto; }
+/* Tabulka výsledků: posuvník doleva/doprava je vždy na obrazovce (tabulka roluje uvnitř okna, záhlaví zůstává nahoře) */
+.table-wrap { overflow: auto; max-height: calc(100vh - 150px); max-height: calc(100dvh - 150px); overscroll-behavior: contain; }
+.table-wrap thead th { position: sticky; top: 0; background: #fff; z-index: 2; }
+@media print { .table-wrap { max-height: none; overflow: visible; } .table-wrap thead th { position: static; } }
 .res-table { width: 100%; border-collapse: collapse; font-size: .92rem; }
 .res-table th { text-align: left; font: 600 .78rem "Poppins", sans-serif; text-transform: uppercase; letter-spacing: .04em; color: #666; padding: 8px 10px; border-bottom: 2px solid var(--ia-light); }
 .res-table td { padding: 10px; border-bottom: 1px solid #eee; vertical-align: top; }
@@ -306,7 +309,7 @@ tr.st-soon td:first-child { box-shadow: inset 4px 0 0 #f0a000; }
 .lvl-cell .ext { display: block; font-size: .74rem; color: #555; margin-top: 4px; line-height: 1.25; }
 .res-arval td, .res-arval th { padding-left: 7px; padding-right: 7px; }
 
-.kpis-3 { grid-template-columns: repeat(3, 1fr); }
+.kpis-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .muted-cell { color: #555; font-size: .85rem; }
 .ext-note { display: block; font-size: .78rem; color: #0D4798; margin-top: 3px; }
 

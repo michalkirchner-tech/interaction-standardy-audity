@@ -1,0 +1,14 @@
+/* Společné úpravy pro mobil (všechny stránky aplikace) */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+img, svg, video { max-width: 100%; }
+@media (max-width: 820px) {
+  /* iPhone při kliknutí do pole s písmem menším než 16 px stránku přiblíží – proto 16 px */
+  input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea { font-size: 16px !important; }
+  body { overflow-wrap: break-word; }
+  table { overflow-wrap: normal; }
+}
+@media (max-width: 480px) {
+  .kpi-n { font-size: 1.7rem; }
+  .kpi-l { font-size: .78rem; }
+  .kpi { padding: 12px; }
+}
