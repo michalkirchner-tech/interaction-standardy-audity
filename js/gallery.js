@@ -1,7 +1,7 @@
 // Galerie fotek zákazníka (přehled výsledků): všechny fotky z jeho auditů u dané značky
-import { supabase } from "./supabase.js?v=20261120z";
-import { criteriaLabels, czDate, esc } from "./results.js?v=20261120z";
-import { zip } from "./export.js?v=20261120z";
+import { supabase } from "./supabase.js?v=20261121a";
+import { criteriaLabels, czDate, esc } from "./results.js?v=20261121a";
+import { zip } from "./export.js?v=20261121a";
 
 const BUCKET = "audit-photos";
 const KIND = { ostry: "Ostrý audit", nulty: "Nultý audit" };

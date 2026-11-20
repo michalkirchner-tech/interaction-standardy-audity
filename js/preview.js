@@ -1,6 +1,6 @@
 // Náhled kompletní výsledkové listiny auditu (jen ke čtení) + export do PDF (tisk prohlížeče)
-import { supabase } from "./supabase.js?v=20261120z";
-import { formDefs, prepareImport, arvalBreakdown, mitsubishiEval, mitsubishiRecertEval, stOf, czDate, esc } from "./results.js?v=20261120z";
+import { supabase } from "./supabase.js?v=20261121a";
+import { formDefs, prepareImport, arvalBreakdown, mitsubishiEval, mitsubishiRecertEval, stOf, czDate, esc } from "./results.js?v=20261121a";
 
 const BRAND_NAME = { arval: "Arval", stellantis: "Stellantis", mitsubishi: "Mitsubishi" };
 const OK = '<span class="pv-ok" title="Splněno">✓</span>', NOK = '<span class="pv-nok" title="Nesplněno">✗</span>';
@@ -45,7 +45,7 @@ export async function openPreview(brand, id) {
     setTimeout(done, 20000);
   };
   const btn = box.querySelector("[data-share]");
-  btn.onclick = () => shareClick(btn, () => doc, names(brand, rec));
+  btn.onclick = () => shareClick(btn, () => makePdf(doc), names(brand, rec));
 }
 
 const LOGO_URL = new URL("../assets/interaction-logo.png", import.meta.url).href;
@@ -92,19 +92,158 @@ function names(brand, rec) {
 }
 
 // Sdílet PDF přímo z formuláře (Arval, Stellantis, Mitsubishi) – z aktuálně vyplněných údajů
+// Sdílet PDF přímo z formuláře (Arval, Stellantis, Mitsubishi): PDF 1:1 jako „Exportovat do PDF“ (tisková podoba formuláře)
 export async function shareFormPdf(brand, state, btn) {
   if (!state?.meta?.partner?.trim()) { alert("Nejdřív vyplňte název zákazníka (partnera) v Základních údajích."); return; }
   if (!state.meta.datumAuditu) { alert("Vyplňte datum auditu."); return; }
-  if (btn._pvReady) return shareClick(btn, null, btn._pvNames);
-  let rec, defs;
-  try { rec = await prepareImport(state, brand); defs = await formDefs(brand); }
-  catch (e) { alert("PDF nelze vytvořit: " + e.message); return; }
-  if (rec.valid_months) { const d = new Date(rec.audit_date); d.setMonth(d.getMonth() + rec.valid_months); rec.next_audit_date = d.toISOString().slice(0, 10); }
-  const el = document.createElement("div");
-  el.className = "pv-doc";
-  el.innerHTML = docHtml(brand, rec, defs);
-  btn._pvNames = names(brand, rec);
-  return shareClick(btn, () => el, btn._pvNames);
+  const b = BRAND_NAME[brand] || brand, typ = brand === "mitsubishi" && state.meta.typAuditu === "recert" ? "re-certifikační audit" : "certifikační audit";
+  btn._pvNames = {
+    fname: `${b}_${typ}_${state.meta.partner}_${state.meta.datumAuditu}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9_.-]+/g, "_").replace(/_+/g, "_") + ".pdf",
+    subject: `${b} ${typ} – ${state.meta.partner.trim()} (${czDate(state.meta.datumAuditu)})`,
+  };
+  return shareClick(btn, printLikePdf, btn._pvNames);
+}
+
+// ---------- PDF stejné jako tisk („Exportovat do PDF“) ----------
+// Stránka se zkopíruje do skrytého rámu široké jako tisková plocha A4, použijí se její tiskové styly (@media print),
+// vyfotí se a rozdělí na strany A4 tak, aby se nepřetrhly řádky a karty (podle pravidel stránkování v tiskových stylech).
+const vendor = f => new URL("../assets/vendor/" + f + "?v=20261121a", import.meta.url).href;
+const loaded = {};
+function loadScript(f, test) {
+  if (test()) return Promise.resolve();
+  return loaded[f] ||= new Promise((ok, fail) => {
+    const sc = document.createElement("script"); sc.src = vendor(f);
+    sc.onload = ok; sc.onerror = () => { delete loaded[f]; fail(new Error("Nepodařilo se načíst nástroj pro PDF (jste online?).")); };
+    document.head.appendChild(sc);
+  });
+}
+const toMm = v => { const m = String(v || "").trim().match(/^([\d.]+)(mm|cm|in|px|pt)?$/); if (!m) return null; const n = +m[1]; return { cm: n * 10, in: n * 25.4, px: n * 25.4 / 96, pt: n * 25.4 / 72 }[m[2]] ?? n; };
+
+function printCss() {
+  let css = "", margin = null;
+  const walk = (rules, inPrint) => {
+    for (const r of rules) {
+      if (r instanceof CSSPageRule) {
+        const p = [r.style.marginTop, r.style.marginRight, r.style.marginBottom, r.style.marginLeft].map(toMm);
+        if (p.every(x => x != null)) margin = p;
+        else if (r.style.margin) { const q = r.style.margin.split(/\s+/).map(toMm); if (q.every(x => x != null)) margin = [q[0], q[1] ?? q[0], q[2] ?? q[0], q[3] ?? q[1] ?? q[0]]; }
+        continue;
+      }
+      if (r instanceof CSSMediaRule) { if (/\bprint\b/.test(r.media.mediaText) || inPrint) walk(r.cssRules, true); continue; }
+      if (inPrint) css += r.cssText + "\n";
+    }
+  };
+  for (const sh of document.styleSheets) { try { walk(sh.cssRules, false); } catch { /* cizí styly */ } }
+  return { css, margin: margin || [10, 10, 10, 10] };
+}
+
+function snapshotHtml() {
+  // aktuální hodnoty polí se přepíšou do atributů, aby se přenesly do kopie
+  const live = document.documentElement, copy = live.cloneNode(true);
+  const lf = live.querySelectorAll("input,textarea,select"), cf = copy.querySelectorAll("input,textarea,select");
+  lf.forEach((el, i) => {
+    const c = cf[i]; if (!c) return;
+    if (el.tagName === "TEXTAREA") c.textContent = el.value;
+    else if (el.tagName === "SELECT") [...c.options].forEach((o, j) => { if (el.options[j]?.selected) o.setAttribute("selected", ""); else o.removeAttribute("selected"); });
+    else if (el.type === "checkbox" || el.type === "radio") { if (el.checked) c.setAttribute("checked", ""); else c.removeAttribute("checked"); }
+    else if (el.type !== "file") c.setAttribute("value", el.value);
+  });
+  copy.querySelectorAll("script,.pv-back,[data-ia-cover]").forEach(n => n.remove());
+  const head = copy.querySelector("head"), base = document.createElement("base"); base.href = document.baseURI; head.prepend(base);
+  return "<!DOCTYPE html>" + copy.outerHTML;
+}
+
+async function printLikePdf() {
+  await loadScript("html2canvas.min.js", () => window.html2canvas);
+  await loadScript("jspdf.umd.min.js", () => window.jspdf);
+  const { css, margin: [mt, mr, mb, ml] } = printCss();
+  const W = Math.round((210 - ml - mr) / 25.4 * 96), H = Math.floor((297 - mt - mb) / 25.4 * 96);
+  const fr = document.createElement("iframe");
+  fr.setAttribute("aria-hidden", "true");
+  fr.style.cssText = `position:fixed;left:-${W + 100}px;top:0;width:${W}px;height:${H}px;border:0;visibility:hidden`;
+  document.body.appendChild(fr);
+  try {
+    await new Promise(ok => { fr.onload = ok; fr.srcdoc = snapshotHtml(); });
+    const d = fr.contentDocument;
+    // pravidla jen pro obrazovku (@media screen …) se při tisku nepoužijí – odebrat
+    const dropScreen = list => { for (let i = list.cssRules.length - 1; i >= 0; i--) { const r = list.cssRules[i]; if (r.type === 4 && r.media) { const m = r.media.mediaText; if (/\bscreen\b/.test(m) && !/\bprint\b/.test(m) && !/not\s+screen/.test(m)) list.deleteRule(i); else dropScreen(r); } } };
+    // (úpravy se zapíšou zpět jako text stylu, protože fotografování stránky styly kopíruje z textu)
+    for (const sh of [...d.styleSheets]) {
+      try {
+        const own = sh.ownerNode;
+        if (sh.media && /\bscreen\b/.test(sh.media.mediaText) && !/print/.test(sh.media.mediaText)) { own.remove(); continue; }
+        dropScreen(sh);
+        const txt = [...sh.cssRules].map(r => r.cssText).join("\n");
+        if (own.tagName === "STYLE") own.textContent = txt;
+        else { const ns = d.createElement("style"); ns.textContent = txt; own.replaceWith(ns); }
+      } catch { /* cizí styly (písma) */ }
+    }
+    const st = d.createElement("style"); st.textContent = css; d.head.appendChild(st);
+    d.documentElement.style.background = "#fff";
+    // obsah pláten (podpisy)
+    const lc = document.querySelectorAll("canvas"), cc = d.querySelectorAll("canvas");
+    cc.forEach((c, i) => { const o = lc[i]; if (!o || !o.width || !o.height) return; c.width = o.width; c.height = o.height; c.getContext("2d").drawImage(o, 0, 0); });
+    await Promise.all([...d.images].map(im => im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; })));
+    try { await d.fonts.ready; } catch { /* nic */ }
+    await new Promise(r => setTimeout(r, 120));
+    // Je-li obsah širší než papír, Chrome ho při tisku rozvrhne aspoň na 4/3 šířky a zmenší (nejvýš 2×) – totéž zde
+    let CW = W;
+    if (d.documentElement.scrollWidth > W + 1) { CW = Math.round(W * 4 / 3); fr.style.width = CW + "px"; await new Promise(r => setTimeout(r, 80)); }
+    for (let k = 0; k < 4; k++) {
+      const sw = Math.ceil(d.documentElement.scrollWidth);
+      if (sw <= CW + 1 || sw > W * 2) break;
+      CW = sw; fr.style.width = CW + "px"; await new Promise(r => setTimeout(r, 80));
+    }
+    const PH = Math.floor(H * CW / W);
+
+    // místa zalomení stran
+    const body = d.body, total = Math.ceil(body.scrollHeight);
+    const forced = new Set(), avoid = [];
+    const top0 = body.getBoundingClientRect().top;
+    for (const el of body.querySelectorAll("*")) {
+      const cs = fr.contentWindow.getComputedStyle(el);
+      if (cs.display === "none") continue;
+      const r = el.getBoundingClientRect(); if (!r.height) continue;
+      const t = r.top - top0, bt = r.bottom - top0;
+      if (/page|always|left|right/.test(cs.breakBefore) || /always/.test(cs.pageBreakBefore)) forced.add(Math.round(t));
+      if (/page|always|left|right/.test(cs.breakAfter) || /always/.test(cs.pageBreakAfter)) forced.add(Math.round(bt));
+      if (/avoid/.test(cs.breakInside) || /avoid/.test(cs.pageBreakInside) || el.tagName === "TR" || el.tagName === "IMG" || el.tagName === "CANVAS") avoid.push([t, bt]);
+      if (/avoid/.test(cs.breakAfter) || /avoid/.test(cs.pageBreakAfter)) avoid.push([t, bt + 40]); // nadpis drží s dalším obsahem
+    }
+    const fb = [...forced].filter(x => x > 4 && x < total - 4).sort((a, b) => a - b);
+    const cuts = [0];
+    let pos = 0;
+    while (pos < total - 2) {
+      let cut = Math.min(pos + PH, total);
+      const f = fb.find(x => x > pos + 4 && x <= cut);
+      if (f != null) cut = f;
+      else if (cut < total) {
+        // nejnižší místo v posledních ~35 % strany, které přetne co nejméně řádků/karet (ideálně žádný)
+        const regs = avoid.filter(([t, b]) => b > pos + 4 && t < cut && b - t <= PH);
+        let best = cut, bestN = Infinity;
+        for (let y = Math.floor(cut); y >= cut - PH * 0.35 && y > pos + 40; y -= 2) {
+          let n = 0; for (const [t, b] of regs) if (t < y - 0.5 && b > y + 0.5) n++;
+          if (n < bestN) { bestN = n; best = y; if (!n) break; }
+        }
+        cut = best;
+      }
+      cuts.push(cut); pos = cut;
+    }
+
+    const scale = Math.max(1, Math.min(2, Math.sqrt(15e6 / (CW * total))));
+    const canvas = await window.html2canvas(body, { scale, useCORS: true, backgroundColor: "#ffffff", width: CW, windowWidth: CW, height: total, windowHeight: total, scrollX: 0, scrollY: 0, logging: false });
+    const pdf = new window.jspdf.jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    const mmPerPx = (210 - ml - mr) / CW;
+    for (let i = 0; i < cuts.length - 1; i++) {
+      const y0 = cuts[i], h = cuts[i + 1] - y0;
+      const pc = document.createElement("canvas"); pc.width = canvas.width; pc.height = Math.max(1, Math.round(h * scale));
+      const g = pc.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, pc.width, pc.height);
+      g.drawImage(canvas, 0, Math.round(y0 * scale), canvas.width, pc.height, 0, 0, pc.width, pc.height);
+      if (i) pdf.addPage();
+      pdf.addImage(pc.toDataURL("image/jpeg", 0.85), "JPEG", ml, mt, 210 - ml - mr, h * mmPerPx);
+    }
+    return pdf.output("blob");
+  } finally { if (!window.IA_PDF_DEBUG) fr.remove(); }
 }
 
 // ---------- Sdílet PDF (e-mail, Outlook, WhatsApp… podle nabídky Sdílet v systému) ----------
@@ -113,7 +252,7 @@ function loadHtml2pdf() {
   if (window.html2pdf) return Promise.resolve(window.html2pdf);
   return h2pLoading ||= new Promise((ok, fail) => {
     const sc = document.createElement("script");
-    sc.src = new URL("../assets/vendor/html2pdf.bundle.min.js?v=20261120z", import.meta.url).href;
+    sc.src = new URL("../assets/vendor/html2pdf.bundle.min.js?v=20261121a", import.meta.url).href;
     sc.onload = () => ok(window.html2pdf); sc.onerror = () => { h2pLoading = null; fail(new Error("Nepodařilo se načíst nástroj pro PDF (jste online?).")); };
     document.head.appendChild(sc);
   });
@@ -135,14 +274,14 @@ function download(file) {
   const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = file.name;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 30000);
 }
-async function shareClick(btn, getDoc, { fname, subject }) {
+async function shareClick(btn, build, { fname, subject }) {
   if (btn.disabled) return;
   const label = btn._pvLabel ||= btn.innerHTML;
   const reset = () => { btn._pvReady = null; btn.innerHTML = label; btn.classList.remove("pv-ready"); };
   let file = btn._pvReady;
   if (!file) {
     btn.disabled = true; btn.textContent = "Připravuji PDF…";
-    try { file = new File([await makePdf(getDoc())], fname, { type: "application/pdf" }); }
+    try { file = new File([await build()], fname, { type: "application/pdf" }); }
     catch (e) { alert("PDF se nepodařilo vytvořit: " + e.message); btn.disabled = false; reset(); return; }
     btn.disabled = false; btn.innerHTML = label;
   }
