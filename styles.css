@@ -686,3 +686,12 @@ body.gal-open { overflow: hidden; }
 .tr-brand { display: block; margin-top: 4px; font-size: .78rem; color: #777; }
 .tr-brand select { font: 400 .8rem "Open Sans", sans-serif; padding: 2px 4px; border: 1px solid #ccc; border-radius: 6px; margin-left: 4px; }
 @media (max-width: 600px) { .f-input { width: 100%; min-width: 0; } .brand-head-duo img { width: 90px; } }
+.tr-import { margin-top: 22px; }
+.tri-head { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: flex-end; margin-bottom: 12px; }
+.tri-src { flex: 1 1 100%; font-size: .92rem; }
+.tri-src .muted { display: inline; }
+.tri-table td { vertical-align: top; }
+.tri-table select { font: 400 .85rem "Open Sans", sans-serif; padding: 5px 8px; border: 1px solid #ccc; border-radius: 7px; max-width: 360px; }
+.tri-table input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--ia-red); }
+.tri-chg { display: block; font-size: .85rem; }
+.tri-off td { opacity: .45; }
