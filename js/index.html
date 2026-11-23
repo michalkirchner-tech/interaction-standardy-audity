@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1e1e1e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Audity">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
+  <title>Standardy a audity | INTERACTION</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=20261123a">
+<link rel="stylesheet" href="mobile.css?v=20261121c">
+</head>
+<body>
+  <header class="topbar">
+    <a href="#" class="ia-home-btn" title="Zpět na úvodní stránku" aria-label="Zpět na úvodní stránku"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5M5.5 9.5V20h5v-6h3v6h5V9.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    <a class="brand" href="#" aria-label="Úvodní stránka">
+      <img src="assets/interaction-logo.png" alt="INTERACTION" width="44" height="48">
+    </a>
+    <span class="topbar-label">Standardy a audity</span>
+    <div class="user-box" id="userBox"></div>
+  </header>
+
+  <main id="app"></main>
+
+  <footer class="footer">
+    <span>© <span id="year"></span> INTERACTION s.r.o.</span>
+  </footer>
+
+  <script type="module" src="app.js?v=20261123a"></script>
+</body>
+</html>
