@@ -4,6 +4,7 @@
 // Kvalifikační cesta je splněná, když má účastník všechny povinné kurzy své značky.
 import { supabase } from "./supabase.js?v=20261121c";
 import { exportPdf, exportXlsx } from "./export.js?v=20261121c";
+import { importBoxHtml, bindImport } from "./training-import.js?v=20261123b";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const czDate = iso => iso ? iso.split("-").reverse().map((x, i) => i < 2 ? String(+x) : x).join(". ") : "";
@@ -88,6 +89,7 @@ export async function renderTrainingProgram(app, program, profile) {
         <span class="brand-head-duo">${program.logos.map(l => `<img src="${l.src}" alt="${esc(l.alt)}">`).join("")}</span>
         <div><h2>Školení – ${esc(program.name)}</h2><p>${esc(program.who)}: přehled absolvovaných kurzů a splnění kvalifikační cesty.</p></div>
       </div>
+      ${isAdmin ? `<div class="tr-import">${importBoxHtml()}</div>` : ""}
       <div id="trBox"><div class="empty">Načítám…</div></div>
     </section>`;
   window.scrollTo(0, 0);
@@ -228,5 +230,6 @@ export async function renderTrainingProgram(app, program, profile) {
     refresh();
   };
 
+  if (isAdmin) bindImport(program, () => data, refresh);
   refresh();
 }
