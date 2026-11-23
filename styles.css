@@ -695,3 +695,11 @@ body.gal-open { overflow: hidden; }
 .tri-table input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--ia-red); }
 .tri-chg { display: block; font-size: .85rem; }
 .tri-off td { opacity: .45; }
+.tr-tstat { display: block; }
+.tr-tabs { display: flex; gap: 8px; margin: 22px 0 0; flex-wrap: wrap; }
+.tr-tabs a { padding: 10px 22px; border-radius: 999px; background: #fff; color: #1e1e1e; text-decoration: none; font: 600 .98rem "Poppins", sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,.08); border: 2px solid transparent; }
+.tr-tabs a:hover { border-color: #ccc; }
+.tr-tabs a.on { background: var(--ia-dark); color: #fff; }
+.tr-table .tr-rec { color: #0D4798; }
+.tr-pnote { font-style: italic; }
+.tr-dealers { margin-top: 18px; }

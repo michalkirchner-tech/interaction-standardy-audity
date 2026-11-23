@@ -19,6 +19,15 @@ const COURSE_HINTS = {
     ["sp-mikro", ["mikro repair", "micro repair", "mikro", "micro"]],
     ["sp-matne", ["matne lakovani", "matn"]],
   ],
+  "hyundai-kar": [
+    ["hk-spot", ["spot", "antikorozni", "tmeleni", "cinovani"]],
+    ["hk-svar", ["svarovani", "lepeni", "odvrtavani"]],
+  ],
+  "hyundai-lak": [
+    ["hl-priprava", ["priprava podkladu", "priprava"]],
+    ["hl-aplikace", ["aplikacni dovednosti", "aplikacni"]],
+    ["hl-kolor1", ["koloristika 1", "koloristika i", "koloristika"]],
+  ],
 };
 
 function detectCourse(program, text) {
@@ -60,7 +69,7 @@ function parseSheet(rows) {
     const full = String(r[col.name] ?? "").replace(/\s+/g, " ").trim();
     if (!full) continue;
     const user = String(r[col.user] ?? "").trim(), orgCode = String(r[col.code] ?? "").trim();
-    const vw = /^vw$/i.test(user) || /^vw$/i.test(orgCode);
+    const vw = /^vw$/i.test(user) || /^vw$/i.test(orgCode); // „VW“ = Porsche ČR (má význam jen u programu Škoda / Porsche)
     const org = String(r[col.org] ?? "").replace(/\s*\([^)]*\)\s*$/, "").trim();
     const parts = full.split(" ");
     people.push({ full, first: parts.slice(0, -1).join(" "), last: parts.at(-1), org, orgCode: vw ? "" : orgCode, vw });
@@ -89,16 +98,18 @@ function matchPerson(x, people) {
   return { pick, candidates: [...ex.map(e => e.p), ...rank(similar).map(e => e.p)], ambiguous: ex.length > 1 || (!ex.length && similar.length > 0) };
 }
 
-export function importBoxHtml() {
+export function importBoxHtml(program) {
+  const hasVwNote = program?.brands?.porsche ? " „VW“ místo čísla uživatele = lakýrník Porsche ČR." : "";
   return `
     <div class="import-box">
-      <div><strong>Nahrát prezenční list (admin)</strong><span class="muted">Soubor .xlsx z ŠKODA Academy. Kurz a datum (první den školení) se rozpoznají automaticky, před uložením uvidíte náhled. „VW“ místo čísla uživatele = lakýrník Porsche ČR.</span></div>
+      <div><strong>Nahrát prezenční list (admin)</strong><span class="muted">Soubor .xlsx s tabulkou účastníků (sloupce Název, Číslo uživatele / Název primární organizace). Kurz a datum (první den školení) se rozpoznají automaticky, před uložením uvidíte náhled.${hasVwNote}</span></div>
       <label class="btn-import">Vybrat prezenční list<input type="file" id="trImportFile" accept=".xlsx" hidden></label>
       <div id="trImportOut" class="import-out"></div>
     </div>`;
 }
 
 export function bindImport(program, getData, onSaved) {
+  const hasVw = !!program.brands.porsche;
   const input = document.getElementById("trImportFile");
   const out = document.getElementById("trImportOut");
   if (!input) return;
@@ -119,9 +130,9 @@ export function bindImport(program, getData, onSaved) {
     const personLabel = p => `${p.last_name} ${p.first_name} – ${p.dealer}${p.dealer_no ? " (" + p.dealer_no + ")" : ""}${p.active ? "" : " – neaktivní"}`;
 
     const changes = r => {
-      if (r.pick === "new") return [`<b>nový účastník</b> – ${esc(r.x.last)} ${esc(r.x.first)}, ${esc(r.x.org)}, ${r.x.vw ? "Porsche ČR" : "Škoda Auto"}`, `zapíše se ${esc(courses.find(c => c.id === st.course)?.name || "kurz")} ${czDate(st.date)}`];
+      if (r.pick === "new") return [`<b>nový účastník</b> – ${esc(r.x.last)} ${esc(r.x.first)}, ${esc(r.x.org)}${hasVw ? ", " + (r.x.vw ? "Porsche ČR" : "Škoda Auto") : ""}`, `zapíše se ${esc(courses.find(c => c.id === st.course)?.name || "kurz")} ${czDate(st.date)}`];
       const p = byId.get(r.pick), list = [];
-      if (r.x.vw && p.brand !== "porsche") list.push(`značka: ${esc(program.brands[p.brand] || p.brand)} → <b>Porsche ČR</b>`);
+      if (hasVw && r.x.vw && p.brand !== "porsche") list.push(`značka: ${esc(program.brands[p.brand] || p.brand)} → <b>Porsche ČR</b>`);
       if (!p.active) list.push(`<b>znovu aktivovat</b> (byl neaktivní${p.inactive_note ? ": " + esc(p.inactive_note) : ""})`);
       const prev = p.rec[st.course]?.done_on;
       if (prev && prev === st.date) list.push(`kurz už má zapsaný se stejným datem`);
@@ -143,7 +154,7 @@ export function bindImport(program, getData, onSaved) {
         <div class="table-wrap"><table class="res-table small tri-table"><thead><tr><th>Zapsat</th><th>Účastník v listu</th><th>Přiřadit k osobě v seznamu</th><th>Co se změní</th></tr></thead><tbody>
         ${st.rows.map((r, i) => `<tr class="${r.on ? "" : "tri-off"}">
           <td><input type="checkbox" data-on="${i}"${r.on ? " checked" : ""}></td>
-          <td><strong>${esc(r.x.full)}</strong><span class="muted">${esc(r.x.org)}${r.x.orgCode ? " (" + esc(r.x.orgCode) + ")" : ""}${r.x.vw ? " · <b>VW → Porsche ČR</b>" : ""}</span></td>
+          <td><strong>${esc(r.x.full)}</strong><span class="muted">${esc(r.x.org)}${r.x.orgCode ? " (" + esc(r.x.orgCode) + ")" : ""}${hasVw && r.x.vw ? " · <b>VW → Porsche ČR</b>" : ""}</span></td>
           <td><select data-pick="${i}" class="tri-pick">
               ${r.candidates.map(p => `<option value="${p.id}"${r.pick === p.id ? " selected" : ""}>${esc(personLabel(p))}</option>`).join("")}
               <option value="new"${r.pick === "new" ? " selected" : ""}>➕ Nový účastník</option></select>
@@ -170,12 +181,12 @@ export function bindImport(program, getData, onSaved) {
         try {
           let id = r.pick;
           if (id === "new") {
-            const { data, error } = await supabase.from("training_people").insert({ program: program.id, first_name: r.x.first, last_name: r.x.last, dealer: r.x.org, dealer_no: r.x.orgCode || null, brand: r.x.vw ? "porsche" : program.defaultBrand }).select("id").single();
+            const { data, error } = await supabase.from("training_people").insert({ program: program.id, first_name: r.x.first, last_name: r.x.last, dealer: r.x.org, dealer_no: r.x.orgCode || null, brand: hasVw && r.x.vw ? "porsche" : program.defaultBrand }).select("id").single();
             if (error) throw new Error(/duplicate|unique/i.test(error.message) ? "osoba se stejným jménem u stejného dealera už v seznamu je – vyberte ji místo „Nový účastník“" : error.message);
             id = data.id;
           } else {
             const p = byId.get(id), patch = {};
-            if (r.x.vw && p.brand !== "porsche") patch.brand = "porsche";
+            if (hasVw && r.x.vw && p.brand !== "porsche") patch.brand = "porsche";
             if (!p.active) { patch.active = true; patch.inactive_note = null; }
             if (!p.dealer_no && r.x.orgCode) patch.dealer_no = r.x.orgCode;
             if (Object.keys(patch).length) {

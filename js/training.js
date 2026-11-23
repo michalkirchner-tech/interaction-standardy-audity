@@ -4,19 +4,25 @@
 // Kvalifikační cesta je splněná, když má účastník všechny povinné kurzy své značky.
 import { supabase } from "./supabase.js?v=20261121c";
 import { exportPdf, exportXlsx } from "./export.js?v=20261121c";
-import { importBoxHtml, bindImport } from "./training-import.js?v=20261123b";
+import { importBoxHtml, bindImport } from "./training-import.js?v=20261123c";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const czDate = iso => iso ? iso.split("-").reverse().map((x, i) => i < 2 ? String(+x) : x).join(". ") : "";
 const norm = s => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
+// Program = jedna sada kurzů. Programy se stejnou „group“ sdílí dlaždici a zobrazí se jako záložky (např. Hyundai: karosáři / lakýrníci).
+const HY_LOGO = [{ src: "assets/logos/hyundai.svg", alt: "Hyundai" }];
 export const PROGRAMS = [
   {
-    id: "skoda-porsche", name: "Škoda Auto a Porsche ČR", who: "Lakýrníci",
+    id: "skoda-porsche", group: "skoda-porsche", name: "Škoda Auto a Porsche ČR", who: "Lakýrníci",
     logos: [{ src: "assets/logos/skoda.svg", alt: "Škoda Auto" }, { src: "assets/logos/porsche-cr.svg", alt: "Porsche ČR" }],
     brands: { skoda: "Škoda Auto", porsche: "Porsche ČR" }, defaultBrand: "skoda",
   },
+  { id: "hyundai-kar", group: "hyundai", name: "Hyundai", who: "Karosáři", logos: HY_LOGO, brands: { hyundai: "Hyundai" }, defaultBrand: "hyundai" },
+  { id: "hyundai-lak", group: "hyundai", name: "Hyundai", who: "Lakýrníci", logos: HY_LOGO, brands: { hyundai: "Hyundai" }, defaultBrand: "hyundai" },
 ];
+const groupOf = p => PROGRAMS.filter(x => x.group === p.group);
+const isDone = r => !!(r?.done_on || r?.recognized); // splněno = datum nebo „uznáno“
 
 // ---------- načtení dat ----------
 async function loadAll(table, query) {
@@ -34,19 +40,24 @@ async function loadProgram(pid) {
     loadAll("training_people", q => q.select("*").eq("program", pid).order("last_name")),
   ]);
   const ids = new Set(people.map(p => p.id));
-  const recs = courses.length ? await loadAll("training_records", q => q.select("person_id,course_id,done_on,note").in("course_id", courses.map(c => c.id))) : [];
+  const recs = courses.length ? await loadAll("training_records", q => q.select("person_id,course_id,done_on,note,recognized").in("course_id", courses.map(c => c.id))) : [];
   const byPerson = new Map();
   for (const r of recs) if (ids.has(r.person_id)) { if (!byPerson.has(r.person_id)) byPerson.set(r.person_id, {}); byPerson.get(r.person_id)[r.course_id] = r; }
   for (const p of people) p.rec = byPerson.get(p.id) || {};
   return { courses, people };
+}
+async function loadDealers(pid) {
+  const { data, error } = await supabase.from("training_dealers").select("*").eq("program", pid).order("dealer_no");
+  if (error) return []; // přehled dealerů je doplňkový – chyba nesmí zablokovat seznam lidí
+  return data;
 }
 
 // ---------- výpočet kvalifikace ----------
 const ruleOf = (c, brand) => c.rules?.[brand] || null;  // "P" | "V" | null
 function evalPerson(p, courses) {
   const req = courses.filter(c => ruleOf(c, p.brand) === "P");
-  const missing = req.filter(c => !p.rec[c.id]?.done_on);
-  const opt = courses.filter(c => ruleOf(c, p.brand) === "V" && p.rec[c.id]?.done_on);
+  const missing = req.filter(c => !isDone(p.rec[c.id]));
+  const opt = courses.filter(c => ruleOf(c, p.brand) === "V" && isDone(p.rec[c.id]));
   return { ok: !missing.length, missing, opt, doneReq: req.length - missing.length, req: req.length };
 }
 
@@ -56,23 +67,23 @@ export async function renderTrainingHome(app, attachTilt) {
   app.innerHTML = `
     <section class="hero"><h1>Školení</h1><p>Vyberte značku</p></section>
     <section class="grid grid-3">
-      ${PROGRAMS.map(p => `
+      ${PROGRAMS.filter(p => groupOf(p)[0] === p).map(p => `
         <a class="tile" href="#skoleni-${p.id}" aria-label="Školení ${esc(p.name)}">
-          <span class="tile-logo tile-logo-duo">${p.logos.map(l => `<img src="${l.src}" alt="${esc(l.alt)}">`).join("")}</span>
+          <span class="tile-logo${p.logos.length > 1 ? " tile-logo-duo" : " wide"}">${p.logos.map(l => `<img src="${l.src}" alt="${esc(l.alt)}">`).join("")}</span>
           <span class="tile-name">${esc(p.name)}</span>
-          <span class="tile-stats" data-tstats="${p.id}">načítám…</span>
+          <span class="tile-stats">${groupOf(p).map(g => `<span class="tr-tstat" data-tstats="${g.id}">${esc(g.who)}: načítám…</span>`).join("")}</span>
         </a>`).join("")}
     </section>`;
   if (attachTilt) app.querySelectorAll(".tile").forEach(attachTilt);
-  for (const p of PROGRAMS) {
+  await Promise.all(PROGRAMS.map(async p => {
     const el = app.querySelector(`[data-tstats="${p.id}"]`);
     try {
       const { courses, people } = await loadProgram(p.id);
       const act = people.filter(x => x.active);
       const ok = act.filter(x => evalPerson(x, courses).ok).length;
-      if (el) el.innerHTML = act.length ? `${esc(p.who)}: ${act.length} · <b class="c-ok">${ok} s kvalifikací</b>` : "zatím bez účastníků";
-    } catch (e) { if (el) el.textContent = "chyba načtení"; }
-  }
+      if (el) el.innerHTML = act.length ? `${esc(p.who)}: ${act.length} · <b class="c-ok">${ok} s kvalifikací</b>` : `${esc(p.who)}: zatím bez účastníků`;
+    } catch (e) { if (el) el.textContent = `${p.who}: chyba načtení`; }
+  }));
 }
 
 // ---------- seznam proškolených ----------
@@ -81,7 +92,9 @@ const defaultFilter = () => ({ q: "", dealer: "", course: "", has: "1", qual: ""
 
 export async function renderTrainingProgram(app, program, profile) {
   const isAdmin = profile?.role === "admin";
-  document.title = `Školení ${program.name} | INTERACTION`;
+  const multi = Object.keys(program.brands).length > 1; // výběr značky jen tam, kde program má víc značek (Škoda / Porsche)
+  const tabs = groupOf(program);
+  document.title = `Školení ${program.name} – ${program.who} | INTERACTION`;
   app.innerHTML = `
     <section class="brand-page wide-page">
       <a class="back" href="#skoleni">← Zpět na školení</a>
@@ -89,7 +102,8 @@ export async function renderTrainingProgram(app, program, profile) {
         <span class="brand-head-duo">${program.logos.map(l => `<img src="${l.src}" alt="${esc(l.alt)}">`).join("")}</span>
         <div><h2>Školení – ${esc(program.name)}</h2><p>${esc(program.who)}: přehled absolvovaných kurzů a splnění kvalifikační cesty.</p></div>
       </div>
-      ${isAdmin ? `<div class="tr-import">${importBoxHtml()}</div>` : ""}
+      ${tabs.length > 1 ? `<nav class="tr-tabs">${tabs.map(t => `<a href="#skoleni-${t.id}" class="${t.id === program.id ? "on" : ""}">${esc(t.who)}</a>`).join("")}</nav>` : ""}
+      ${isAdmin ? `<div class="tr-import">${importBoxHtml(program)}</div>` : ""}
       <div id="trBox"><div class="empty">Načítám…</div></div>
     </section>`;
   window.scrollTo(0, 0);
@@ -98,7 +112,7 @@ export async function renderTrainingProgram(app, program, profile) {
   let data;
 
   const refresh = async () => {
-    try { data = await loadProgram(program.id); }
+    try { data = await loadProgram(program.id); data.dealers = await loadDealers(program.id); }
     catch (e) { box.innerHTML = `<div class="empty">Data se nepodařilo načíst: ${esc(e.message)}</div>`; return; }
     for (const p of data.people) p.ev = evalPerson(p, data.courses);
     draw();
@@ -112,7 +126,7 @@ export async function renderTrainingProgram(app, program, profile) {
       (!d || norm(p.dealer).includes(d) || norm(p.dealer_no).includes(d)) &&
       (!f.brand || p.brand === f.brand) &&
       (!f.qual || (f.qual === "ok") === p.ev.ok) &&
-      (!f.course || (f.has === "1") === !!p.rec[f.course]?.done_on)
+      (!f.course || (f.has === "1") === isDone(p.rec[f.course]))
     ).sort((a, b) => a.last_name.localeCompare(b.last_name, "cs") || a.first_name.localeCompare(b.first_name, "cs"));
   };
 
@@ -126,22 +140,46 @@ export async function renderTrainingProgram(app, program, profile) {
   const cell = (p, c) => {
     const r = p.rec[c.id], rule = ruleOf(c, p.brand);
     if (r?.done_on) return `<td class="tr-c tr-done${rule === "V" ? " tr-opt" : ""}">${czDate(r.done_on)}</td>`;
+    if (r?.recognized) return `<td class="tr-c tr-done tr-rec" title="${esc(r.note || "")}">uznáno${r.note ? `<span class="muted">${esc(r.note)}</span>` : ""}</td>`;
     const note = r?.note && r.note !== p.inactive_note ? `<span class="muted">${esc(r.note)}</span>` : "";
     if (!rule) return `<td class="tr-c tr-na">netýká se${note}</td>`;
     return `<td class="tr-c ${rule === "P" ? "tr-miss" : "tr-none"}">${rule === "P" ? "chybí" : "—"}${note}</td>`;
   };
 
   const exportTable = list => {
-    const head = ["Příjmení", "Jméno", "Dealer", "Číslo dealera", "Značka", ...data.courses.map(c => c.name), "Kvalifikační cesta", "Stav"];
-    const rows = list.map(p => [p.last_name, p.first_name, p.dealer, p.dealer_no || "", program.brands[p.brand] || p.brand,
-      ...data.courses.map(c => { const r = p.rec[c.id]; return r?.done_on ? czDate(r.done_on) : !ruleOf(c, p.brand) ? "netýká se" : ruleOf(c, p.brand) === "P" ? "chybí" : ""; }),
-      p.ev.ok ? "splněna" : "chybí: " + p.ev.missing.map(c => c.name).join(", "), p.active ? "aktivní" : "neaktivní" + (p.inactive_note ? ` (${p.inactive_note})` : "")]);
+    const head = ["Příjmení", "Jméno", "Dealer", "Číslo dealera", ...(multi ? ["Značka"] : []), ...data.courses.map(c => c.name), "Kvalifikační cesta", "Poznámka", "Stav"];
+    const rows = list.map(p => [p.last_name, p.first_name, p.dealer, p.dealer_no || "", ...(multi ? [program.brands[p.brand] || p.brand] : []),
+      ...data.courses.map(c => { const r = p.rec[c.id]; return r?.done_on ? czDate(r.done_on) : r?.recognized ? "uznáno" : !ruleOf(c, p.brand) ? "netýká se" : ruleOf(c, p.brand) === "P" ? "chybí" : ""; }),
+      p.ev.ok ? "splněna" : "chybí: " + p.ev.missing.map(c => c.name).join(", "), p.note || "", p.active ? "aktivní" : "neaktivní" + (p.inactive_note ? ` (${p.inactive_note})` : "")]);
     const desc = [f.q && `příjmení „${f.q}“`, f.dealer && `dealer „${f.dealer}“`, f.brand && program.brands[f.brand],
       f.qual && (f.qual === "ok" ? "kvalifikace splněna" : "kvalifikace nesplněna"),
       f.course && `${f.has === "1" ? "absolvoval" : "neabsolvoval"} ${data.courses.find(c => c.id === f.course)?.name}`,
       f.state === "inactive" ? "jen neaktivní" : f.state === "all" ? "aktivní i neaktivní" : ""].filter(Boolean).join(", ");
     return { title: `Školení ${program.name} – ${program.who.toLowerCase()}`, subtitle: `Stav k ${czDate(new Date().toISOString().slice(0, 10))}${desc ? " · filtr: " + desc : ""} · ${list.length} osob`,
       head, rows, rowClass: list.map(p => p.active ? "" : "st-inactive"), file: `Skoleni_${program.id}` };
+  };
+
+  // Dealeři bez vlastních proškolených pracovníků (realizuje jinde, doložené certifikáty, neplní podle HMCZ)
+  const ST = { jinde: ["st-ok", "✓ Realizuje u jiného dealera"], dolozeno: ["st-ok", "✓ Doloženy certifikáty"], bez: ["st-expired", "Bez proškolených"] };
+  const dealersHtml = () => {
+    const d = norm(f.dealer);
+    const rows = (data.dealers || []).filter(x => !d || norm(x.dealer).includes(d) || norm(x.dealer_no).includes(d));
+    if (!rows.length) return "";
+    const names = new Map(); for (const p of data.people) if (p.dealer_no && !names.has(p.dealer_no)) names.set(p.dealer_no, p.dealer);
+    for (const x of data.dealers) if (x.dealer_no && !names.has(x.dealer_no)) names.set(x.dealer_no, x.dealer);
+    const note = s => esc(s || "").replace(/\b(1\d{4})\b/g, (m) => names.has(m) ? `${m} (${esc(names.get(m))})` : m).replace(/\bHOD\b/, "HOD (Hodonín)");
+    const order = x => x.status === "jinde" || x.status === "dolozeno" ? 2 : x.status === "bez" ? 0 : 1;
+    rows.sort((a, b) => order(a) - order(b) || String(a.dealer_no).localeCompare(String(b.dealer_no)));
+    return `
+      <div class="res-card tr-dealers">
+        <h3>Dealeři bez vlastních proškolených ${esc({ "Karosáři": "karosářů", "Lakýrníci": "lakýrníků" }[program.who] || "pracovníků")}</h3>
+        <p>Dealeři, kteří v seznamu nemají vlastní proškolené pracovníky – realizují opravy u jiného dealera, doložili certifikáty jiného dodavatele, nebo zatím nesplňují.</p>
+        <div class="table-wrap"><table class="res-table"><thead><tr><th>Dealer</th><th>Stav</th><th>Poznámka</th></tr></thead><tbody>
+        ${rows.map(x => `<tr><td><strong>${esc(x.dealer)}</strong>${x.dealer_no ? `<span class="muted">č. ${esc(x.dealer_no)}</span>` : ""}</td>
+          <td>${x.status && ST[x.status] ? `<span class="st-badge ${ST[x.status][0]}">${ST[x.status][1]}</span>` : ""}${x.neplni ? ` <span class="st-badge st-expired">Neplní (podle HMCZ)</span>` : ""}</td>
+          <td>${note(x.note)}</td></tr>`).join("")}
+        </tbody></table></div>
+      </div>`;
   };
 
   const draw = () => {
@@ -167,8 +205,8 @@ export async function renderTrainingProgram(app, program, profile) {
             <option value="">Všechny kurzy</option>${data.courses.map(c => `<option value="${c.id}"${f.course === c.id ? " selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label>
           ${f.course ? `<label class="f-field"><span>Kurz absolvoval</span><select id="tfHas">
             ${[["1", "Ano – má kurz"], ["0", "Ne – kurz nemá"]].map(([v, t]) => `<option value="${v}"${f.has === v ? " selected" : ""}>${t}</option>`).join("")}</select></label>` : ""}
-          <label class="f-field"><span>Značka</span><select id="tfBrand">
-            <option value="">Všechny</option>${Object.entries(program.brands).map(([b, n]) => `<option value="${b}"${f.brand === b ? " selected" : ""}>${esc(n)}</option>`).join("")}</select></label>
+          ${multi ? `<label class="f-field"><span>Značka</span><select id="tfBrand">
+            <option value="">Všechny</option>${Object.entries(program.brands).map(([b, n]) => `<option value="${b}"${f.brand === b ? " selected" : ""}>${esc(n)}</option>`).join("")}</select></label>` : ""}
           <label class="f-field"><span>Stav</span><select id="tfState">
             ${[["active", "Aktivní"], ["inactive", "Neaktivní"], ["all", "Aktivní i neaktivní"]].map(([v, t]) => `<option value="${v}"${f.state === v ? " selected" : ""}>${t}</option>`).join("")}</select></label>
         </div>
@@ -181,8 +219,9 @@ export async function renderTrainingProgram(app, program, profile) {
           <tbody>${list.map(p => `
             <tr class="${p.active ? "" : "st-inactive"}">
               <td><strong>${esc(p.last_name)}</strong> ${esc(p.first_name)}
-                ${isAdmin ? `<label class="tr-brand">Značka: <select data-brand="${p.id}">${Object.entries(program.brands).map(([b, n]) => `<option value="${b}"${p.brand === b ? " selected" : ""}>${esc(n)}</option>`).join("")}</select></label>`
+                ${!multi ? "" : isAdmin ? `<label class="tr-brand">Značka: <select data-brand="${p.id}">${Object.entries(program.brands).map(([b, n]) => `<option value="${b}"${p.brand === b ? " selected" : ""}>${esc(n)}</option>`).join("")}</select></label>`
                   : `<span class="muted">${esc(program.brands[p.brand] || p.brand)}</span>`}
+                ${p.note ? `<span class="muted tr-pnote">${esc(p.note)}</span>` : ""}
                 ${p.active ? "" : `<span class="st-badge st-inactive">Neaktivní</span>${p.inactive_note ? `<span class="muted">${esc(p.inactive_note)}</span>` : ""}`}
                 ${isAdmin ? (p.active ? `<button type="button" class="btn-delcust" data-deact="${p.id}">Označit jako neaktivní</button>` : `<button type="button" class="btn-actcust" data-act="${p.id}">Znovu aktivovat</button>`) : ""}</td>
               <td>${esc(p.dealer)}${p.dealer_no ? `<span class="muted">č. ${esc(p.dealer_no)}</span>` : ""}</td>
@@ -190,7 +229,8 @@ export async function renderTrainingProgram(app, program, profile) {
                 ${p.ev.opt.length ? `<span class="muted">volitelné: ${esc(p.ev.opt.map(c => c.name).join(", "))}</span>` : ""}</td>
               ${data.courses.map(c => cell(p, c)).join("")}
             </tr>`).join("")}</tbody></table></div>` : `<div class="empty">Zvoleným filtrům neodpovídá nikdo.</div>`}
-      </div>`;
+      </div>
+      ${dealersHtml()}`;
 
     const bind = (id, key, ev = "change") => { const el = document.getElementById(id); if (el) el.addEventListener(ev, () => { f[key] = el.value; draw(); }); };
     bind("tfQ", "q", "input"); bind("tfDealer", "dealer", "input"); bind("tfQual", "qual"); bind("tfHas", "has"); bind("tfBrand", "brand"); bind("tfState", "state");

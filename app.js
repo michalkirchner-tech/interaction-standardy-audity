@@ -8,7 +8,7 @@ import { openGallery } from "./js/gallery.js?v=20261121c";
 import { openPreview } from "./js/preview.js?v=20261121c";
 import { renderMultibrand } from "./js/multibrand.js?v=20261121c";
 import { renderKpi } from "./js/kpi.js?v=20261121c";
-import { PROGRAMS, renderTrainingHome, renderTrainingProgram } from "./js/training.js?v=20261123b";
+import { PROGRAMS, renderTrainingHome, renderTrainingProgram } from "./js/training.js?v=20261123c";
 import { RESULT_BRANDS, NO_VALIDITY, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261121c";
 
 const BRANDS = [
