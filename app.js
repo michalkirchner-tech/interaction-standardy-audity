@@ -8,6 +8,7 @@ import { openGallery } from "./js/gallery.js?v=20261121c";
 import { openPreview } from "./js/preview.js?v=20261121c";
 import { renderMultibrand } from "./js/multibrand.js?v=20261121c";
 import { renderKpi } from "./js/kpi.js?v=20261121c";
+import { PROGRAMS, renderTrainingHome, renderTrainingProgram } from "./js/training.js?v=20261123a";
 import { RESULT_BRANDS, NO_VALIDITY, arvalDefs, loadAudits, exportTable, latestPerCustomer, statusOf, dashboardHtml, detectBrand, prepareImport, saveAudit, deleteAudit, czDate, defaultFilter, custKey, loadInactive, markInactive, setInactive, stOf, esc as escR } from "./js/results.js?v=20261121c";
 
 const BRANDS = [
@@ -125,6 +126,10 @@ function renderHome() {
       <a class="btn-results btn-multi" href="#multibrand" title="Rozdílový list mezi standardy značek">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="9" height="12" rx="2"/><rect x="12.5" y="8" width="9" height="12" rx="2"/><path d="M15.5 14h3M17 12.5v3"/></g></svg>
         Multi brand
+      </a>
+      <a class="btn-results btn-training" href="#skoleni" title="Přehled proškolených pracovníků podle značek">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9.5 12 5l10 4.5-10 4.5z"/><path d="M6 11.3V16c0 1.4 2.7 3 6 3s6-1.6 6-3v-4.7M22 9.5V15"/></g></svg>
+        Školení
       </a>
       <div><button type="button" class="btn-install" id="btnInstall" hidden>
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM12 7v7m-3-3 3 3 3-3M10 19h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -315,11 +320,14 @@ function route() {
   document.body.classList.toggle("is-home", !id);
   const brand = BRANDS.find(b => b.id === id);
   const rb = RESULT_BRANDS.find(b => "vysledky-" + b.id === id);
+  const tp = PROGRAMS.find(p => "skoleni-" + p.id === id);
   if (id === "zalohy" && profile.role === "admin") renderBackups(app);
   else if (id === "uzivatele" && profile.role === "admin") renderUsers(app, profile);
   else if (id === "kpi" && profile.role === "admin") renderKpi(app);
   else if (id === "vysledky") renderResultsHome();
   else if (id === "multibrand") renderMultibrand(app);
+  else if (id === "skoleni") renderTrainingHome(app, attachTilt);
+  else if (tp) renderTrainingProgram(app, tp, profile);
   else if (rb) renderResultsBrand(rb);
   else if (brand) renderBrand(brand);
   else renderHome();
