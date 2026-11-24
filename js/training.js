@@ -5,7 +5,7 @@
 import { supabase } from "./supabase.js?v=20261121c";
 import { exportPdf, exportXlsx } from "./export.js?v=20261121c";
 import { importBoxHtml, bindImport } from "./training-import.js?v=20261124b";
-import { renderSites, loadSites } from "./training-sites.js?v=20261124a";
+import { renderSites, loadSites, presetSiteFilter } from "./training-sites.js?v=20261124c";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const czDate = iso => iso ? iso.split("-").reverse().map((x, i) => i < 2 ? String(+x) : x).join(". ") : "";
@@ -66,11 +66,17 @@ function evalPerson(p, courses) {
 }
 
 // ---------- úvodní stránka Školení ----------
+// ---------- úvodní stránka Školení + vyhledávání napříč značkami ----------
+let homeQuery = ""; // poslední hledaný text – zůstane po návratu ze seznamu
+
 export async function renderTrainingHome(app, attachTilt) {
   document.title = "Školení | INTERACTION";
   app.innerHTML = `
-    <section class="hero"><h1>Školení</h1><p>Vyberte značku</p></section>
-    <section class="grid grid-3">
+    <section class="hero tr-hero"><h1>Školení</h1><p>Vyberte značku, nebo hledejte napříč všemi značkami</p>
+      <div class="tr-search"><input type="search" id="trSearch" placeholder="Název servisu nebo příjmení účastníka…" value="${esc(homeQuery)}" autocomplete="off"></div>
+    </section>
+    <section id="trResults" class="tr-results" hidden></section>
+    <section class="grid" id="trTiles">
       ${PROGRAMS.filter(p => groupOf(p)[0] === p).map(p => `
         <a class="tile" href="#skoleni-${p.id}" aria-label="Školení ${esc(p.name)}">
           <span class="tile-logo${p.logos.length > 1 ? " tile-logo-duo" : " wide"}">${p.logos.map(l => `<img src="${l.src}" alt="${esc(l.alt)}">`).join("")}</span>
@@ -79,19 +85,87 @@ export async function renderTrainingHome(app, attachTilt) {
         </a>`).join("")}
     </section>`;
   if (attachTilt) app.querySelectorAll(".tile").forEach(attachTilt);
+
+  const cache = {}; // načtená data všech programů – pro dlaždice i vyhledávání
+  const input = document.getElementById("trSearch");
+  const box = document.getElementById("trResults");
+  const tiles = document.getElementById("trTiles");
+  let loaded = 0;
+
+  const search = () => {
+    homeQuery = input.value;
+    const q = norm(input.value);
+    if (q.length < 2) { box.hidden = true; box.innerHTML = ""; tiles.hidden = false; return; }
+    tiles.hidden = true; box.hidden = false;
+    const people = [], dealers = [];
+    for (const p of PROGRAMS) {
+      const d = cache[p.id]; if (!d) continue;
+      const label = `${p.name} – ${p.who.toLowerCase()}`;
+      if (p.layout === "sites") {
+        for (const s of d.sites) {
+          const all = d.courses.flatMap(c => s.c[c.id].map(x => ({ ...x, c })));
+          if (norm(s.name).includes(q) || norm(s.city).includes(q) || s.codes.some(c => norm(c).includes(q)))
+            dealers.push({ p, label: `${p.name} – pobočky`, name: s.name, sub: [s.street, s.city].filter(Boolean).join(", "),
+              status: s.full ? `<span class="st-badge st-ok">✓ Všechna školení</span>` : `<span class="st-badge st-expired">${d.courses.filter(c => s.c[c.id].length).length} z ${d.courses.length} školení</span>`,
+              go: { dealer: s.name } });
+          const seen = new Set();
+          for (const x of all) if (norm(x.p.last_name).includes(q) && !seen.has(x.p.id)) {
+            seen.add(x.p.id);
+            const has = d.courses.filter(c => s.c[c.id].some(y => y.p.id === x.p.id)).map(c => c.name);
+            people.push({ p, label: `${p.name} – pobočky`, name: `${x.p.last_name} ${x.p.first_name}`, sub: `${s.name}, ${s.city || ""}`,
+              status: `<span class="muted">${esc(has.join(", "))}</span>`, go: { q: x.p.last_name } });
+          }
+        }
+        continue;
+      }
+      const byDealer = new Map();
+      for (const x of d.people) {
+        const ev = evalPerson(x, d.courses);
+        if (norm(x.last_name).includes(q))
+          people.push({ p, label, name: `${x.last_name} ${x.first_name}`, sub: x.dealer + (x.dealer_no ? ` (${x.dealer_no})` : ""),
+            status: (ev.ok ? `<span class="st-badge st-ok">✓ Kvalifikace splněna</span>` : `<span class="st-badge st-expired">${ev.doneReq} z ${ev.req} povinných</span>`) + (x.active ? "" : ` <span class="st-badge st-inactive">Neaktivní</span>`),
+            go: { q: x.last_name, state: x.active ? "active" : "all" } });
+        if (x.active && (norm(x.dealer).includes(q) || norm(x.dealer_no).includes(q))) {
+          const k = x.dealer; if (!byDealer.has(k)) byDealer.set(k, { n: 0, ok: 0, no: x.dealer_no }); const g = byDealer.get(k); g.n++; if (ev.ok) g.ok++;
+        }
+      }
+      for (const [name, g] of byDealer) dealers.push({ p, label, name, sub: g.no ? `č. ${g.no}` : "",
+        status: `${g.n} ${g.n === 1 ? "účastník" : g.n < 5 ? "účastníci" : "účastníků"} · <b class="c-ok">${g.ok} s kvalifikací</b>`, go: { dealer: name } });
+    }
+    const sortFn = (a, b) => a.name.localeCompare(b.name, "cs") || a.label.localeCompare(b.label, "cs");
+    people.sort(sortFn); dealers.sort(sortFn);
+    const row = (r, i, kind) => `<tr><td><span class="tr-rbrand">${r.p.logos.map(l => `<img src="${l.src}" alt="${esc(l.alt)}">`).join("")}</span><span class="muted">${esc(r.label)}</span></td>
+      <td><strong>${esc(r.name)}</strong>${r.sub ? `<span class="muted">${esc(r.sub)}</span>` : ""}</td><td>${r.status}</td>
+      <td><a class="btn-exp" href="#skoleni-${r.p.id}" data-go="${kind}:${i}">Otevřít</a></td></tr>`;
+    const table = (title, list, kind) => list.length ? `<h3>${title} (${list.length})</h3><div class="table-wrap"><table class="res-table tr-rtable"><tbody>${list.slice(0, 200).map((r, i) => row(r, i, kind)).join("")}</tbody></table></div>${list.length > 200 ? `<p class="f-note">Zobrazeno prvních 200 – upřesněte hledání.</p>` : ""}` : "";
+    box.innerHTML = `<div class="res-card">
+      ${loaded < PROGRAMS.length ? `<p class="f-note">Načítám data všech značek…</p>` : ""}
+      ${table("Servisy", dealers, "d")}${table("Účastníci", people, "p")}
+      ${!people.length && !dealers.length && loaded >= PROGRAMS.length ? `<div class="empty">Nic nenalezeno pro „${esc(input.value)}“.</div>` : ""}
+    </div>`;
+    box.querySelectorAll("[data-go]").forEach(a => a.onclick = () => {
+      const [kind, i] = a.dataset.go.split(":"); const r = (kind === "d" ? dealers : people)[+i];
+      if (r.p.layout === "sites") presetSiteFilter(r.p.id, r.go); else filters[r.p.id] = { ...defaultFilter(), ...r.go };
+    });
+  };
+  input.addEventListener("input", search);
+  if (homeQuery) search();
+
   await Promise.all(PROGRAMS.map(async p => {
     const el = app.querySelector(`[data-tstats="${p.id}"]`);
     try {
       if (p.layout === "sites") {
-        const { sites } = await loadSites(p.id);
-        if (el) el.innerHTML = `Pobočky: ${sites.length} · <b class="c-ok">${sites.filter(s => s.full).length} se všemi školeními</b>`;
-        return;
+        const d = cache[p.id] = await loadSites(p.id);
+        if (el) el.innerHTML = `Pobočky: ${d.sites.length} · <b class="c-ok">${d.sites.filter(s => s.full).length} se všemi školeními</b>`;
+      } else {
+        const d = cache[p.id] = await loadProgram(p.id);
+        const act = d.people.filter(x => x.active);
+        const ok = act.filter(x => evalPerson(x, d.courses).ok).length;
+        if (el) el.innerHTML = act.length ? `${esc(p.who)}: ${act.length} · <b class="c-ok">${ok} s kvalifikací</b>` : `${esc(p.who)}: zatím bez účastníků`;
       }
-      const { courses, people } = await loadProgram(p.id);
-      const act = people.filter(x => x.active);
-      const ok = act.filter(x => evalPerson(x, courses).ok).length;
-      if (el) el.innerHTML = act.length ? `${esc(p.who)}: ${act.length} · <b class="c-ok">${ok} s kvalifikací</b>` : `${esc(p.who)}: zatím bez účastníků`;
     } catch (e) { if (el) el.textContent = `${p.who}: chyba načtení`; }
+    loaded++;
+    if (document.getElementById("trSearch") === input && norm(input.value).length >= 2) search();
   }));
 }
 

@@ -44,6 +44,8 @@ export async function loadSites(pid) {
 
 const filters = {};
 const defaultFilter = () => ({ q: "", dealer: "", brand: "", course: "", has: "1", full: "" });
+// nastaví filtr předem (např. při prokliku z vyhledávání na stránce Školení)
+export function presetSiteFilter(pid, patch) { filters[pid] = { ...defaultFilter(), ...patch }; }
 
 export function renderSites(app, program, profile) {
   document.title = `Školení ${program.name} | INTERACTION`;

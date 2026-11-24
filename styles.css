@@ -711,3 +711,16 @@ body.gal-open { overflow: hidden; }
 .st-person.off { opacity: .5; }
 .st-brands { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .st-brand { font-size: .72rem; padding: 2px 8px; border-radius: 999px; background: #eef1f6; color: #33415c; }
+/* Školení – vyhledávání napříč značkami */
+.tr-hero { padding-bottom: 72px; }
+.tr-search { max-width: 560px; margin: 22px auto 0; }
+.tr-search input { width: 100%; box-sizing: border-box; padding: 14px 20px; border-radius: 999px; border: 0; font: 400 1rem "Open Sans", system-ui, sans-serif; box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+.tr-search input:focus { outline: 3px solid var(--ia-red); }
+.tr-results { max-width: 1200px; margin: -32px auto 48px; padding: 0 24px; position: relative; }
+.tr-results h3 { margin: 6px 0 10px; }
+.tr-rtable td { vertical-align: middle; }
+.tr-rtable td:last-child { text-align: right; white-space: nowrap; }
+.tr-rbrand { display: inline-flex; gap: 6px; vertical-align: middle; margin-right: 8px; }
+.tr-rbrand img { height: 18px; max-width: 70px; object-fit: contain; }
+@media (max-width: 600px) { .tr-rtable td:first-child .muted { display: block; } }
+#trTiles[hidden], #trResults[hidden] { display: none; }
