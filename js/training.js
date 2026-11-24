@@ -80,7 +80,7 @@ export async function renderTrainingHome(app, attachTilt) {
     <section id="trResults" class="tr-results" hidden></section>
     <section class="grid" id="trTiles">
       ${PROGRAMS.filter(p => groupOf(p)[0] === p).map(p => `
-        <a class="tile" href="#skoleni-${p.id}" aria-label="Školení ${esc(p.name)}">
+        <a class="tile" href="#skoleni-${groupOf(p).length > 1 ? "vse-" + p.group : p.id}" aria-label="Školení ${esc(p.name)}">
           <span class="tile-logo${p.logos.length > 1 ? " tile-logo-duo" : " wide"}">${p.logos.map(l => `<img src="${l.src}" alt="${esc(l.alt)}">`).join("")}</span>
           <span class="tile-name">${esc(p.name)}</span>
           <span class="tile-stats">${groupOf(p).map(g => `<span class="tr-tstat" data-tstats="${g.id}">${esc(g.who)}: načítám…</span>`).join("")}</span>
@@ -188,7 +188,7 @@ export async function renderTrainingProgram(app, program, profile) {
         <span class="brand-head-duo">${program.logos.map(l => `<img src="${l.src}" alt="${esc(l.alt)}">`).join("")}</span>
         <div><h2>Školení – ${esc(program.name)}</h2><p>${esc(program.who)}: přehled absolvovaných kurzů a splnění kvalifikační cesty.</p></div>
       </div>
-      ${tabs.length > 1 ? `<nav class="tr-tabs">${tabs.map(t => `<a href="#skoleni-${t.id}" class="${t.id === program.id ? "on" : ""}">${esc(t.who)}</a>`).join("")}</nav>` : ""}
+      ${tabsHtml(program.group, program.id)}
       ${isAdmin ? `<div class="tr-import">${importBoxHtml(program)}</div>` : ""}
       <div id="trBox"><div class="empty">Načítám…</div></div>
     </section>`;
@@ -285,6 +285,7 @@ export async function renderTrainingProgram(app, program, profile) {
           <label class="f-field"><span>Příjmení</span><input type="search" id="tfQ" class="f-input" placeholder="např. Novák" value="${esc(f.q)}"></label>
           <label class="f-field"><span>Dealer</span><input type="search" id="tfDealer" class="f-input" list="tfDealers" placeholder="název nebo číslo dealera" value="${esc(f.dealer)}"></label>
           <datalist id="tfDealers">${dealers.map(d => `<option value="${esc(d)}">`).join("")}</datalist>
+          ${tabs.length > 1 ? profeseSelect(program.group, program.id) : ""}
           <label class="f-field"><span>Kvalifikační cesta</span><select id="tfQual">
             ${[["", "Všichni"], ["ok", "Splněna"], ["no", "Nesplněna"]].map(([v, t]) => `<option value="${v}"${f.qual === v ? " selected" : ""}>${t}</option>`).join("")}</select></label>
           <label class="f-field"><span>Kurz</span><select id="tfCourse">
@@ -320,6 +321,7 @@ export async function renderTrainingProgram(app, program, profile) {
 
     const bind = (id, key, ev = "change") => { const el = document.getElementById(id); if (el) el.addEventListener(ev, () => { f[key] = el.value; draw(); }); };
     bind("tfQ", "q", "input"); bind("tfDealer", "dealer", "input"); bind("tfQual", "qual"); bind("tfHas", "has"); bind("tfBrand", "brand"); bind("tfState", "state");
+    bindProfese(f);
     const course = document.getElementById("tfCourse");
     course.onchange = () => { f.course = course.value; if (!f.course) f.has = "1"; draw(); };
     const reset = document.getElementById("tfReset"); if (reset) reset.onclick = () => { Object.assign(f, defaultFilter()); draw(); };
@@ -358,4 +360,130 @@ export async function renderTrainingProgram(app, program, profile) {
 
   if (isAdmin) bindImport(program, () => data, refresh);
   refresh();
+}
+
+
+// ---------- záložky profesí + společný přehled „Všichni“ (Mitsubishi, Hyundai…) ----------
+function tabsHtml(group, activeId) {
+  const tabs = PROGRAMS.filter(p => p.group === group);
+  if (tabs.length < 2) return "";
+  return `<nav class="tr-tabs"><a href="#skoleni-vse-${group}" class="${activeId === "vse" ? "on" : ""}">Všichni</a>${tabs.map(t => `<a href="#skoleni-${t.id}" class="${t.id === activeId ? "on" : ""}">${esc(t.who)}</a>`).join("")}</nav>`;
+}
+function profeseSelect(group, activeId) {
+  const tabs = PROGRAMS.filter(p => p.group === group);
+  return `<label class="f-field"><span>Profese</span><select id="tfProf">
+    <option value="vse-${group}"${activeId === "vse" ? " selected" : ""}>Všechny</option>
+    ${tabs.map(t => `<option value="${t.id}"${t.id === activeId ? " selected" : ""}>${esc(t.who)}</option>`).join("")}</select></label>`;
+}
+// přepnutí profese zachová hledané příjmení a dealera
+function bindProfese(f) {
+  const el = document.getElementById("tfProf"); if (!el) return;
+  el.onchange = () => {
+    const keep = { q: f.q, dealer: f.dealer, state: f.state };
+    if (!el.value.startsWith("vse-")) filters[el.value] = { ...defaultFilter(), ...keep };
+    else groupFilters[el.value.slice(4)] = { ...defaultGroupFilter(), ...keep };
+    location.hash = "#skoleni-" + el.value;
+  };
+}
+
+const groupFilters = {};
+const defaultGroupFilter = () => ({ q: "", dealer: "", course: "", has: "1", qual: "", state: "active" });
+
+export async function renderTrainingGroup(app, group, profile) {
+  const progs = PROGRAMS.filter(p => p.group === group);
+  if (!progs.length) { app.innerHTML = `<div class="empty">Neznámá značka.</div>`; return; }
+  const head = progs[0];
+  document.title = `Školení ${head.name} – všichni | INTERACTION`;
+  app.innerHTML = `
+    <section class="brand-page wide-page">
+      <a class="back" href="#skoleni">← Zpět na školení</a>
+      <div class="brand-head">
+        <span class="brand-head-duo">${head.logos.map(l => `<img src="${l.src}" alt="${esc(l.alt)}">`).join("")}</span>
+        <div><h2>Školení – ${esc(head.name)}</h2><p>Všichni proškolení (${progs.map(p => p.who.toLowerCase()).join(", ")}) v jednom přehledu. Úpravy a nahrání prezenčního listu najdete v záložce dané profese.</p></div>
+      </div>
+      ${tabsHtml(group, "vse")}
+      <div id="trBox"><div class="empty">Načítám…</div></div>
+    </section>`;
+  window.scrollTo(0, 0);
+  const box = document.getElementById("trBox");
+  const f = groupFilters[group] || (groupFilters[group] = defaultGroupFilter());
+  let rows = [], courses = [];
+  try {
+    for (const p of progs) {
+      const d = await loadProgram(p.id);
+      for (const c of d.courses) courses.push({ ...c, prog: p });
+      for (const x of d.people) rows.push({ ...x, prog: p, courses: d.courses, ev: evalPerson(x, d.courses) });
+    }
+  } catch (e) { box.innerHTML = `<div class="empty">Data se nepodařilo načíst: ${esc(e.message)}</div>`; return; }
+
+  const doneTxt = r => r?.done_on ? czDate(r.done_on) : r?.recognized ? "uznáno" : r?.done ? "termín bude doplněn" : "";
+  const filtered = () => {
+    const q = norm(f.q), d = norm(f.dealer);
+    const course = courses.find(c => c.id === f.course);
+    return rows.filter(p =>
+      (f.state === "all" || (f.state === "active") === !!p.active) &&
+      (!q || norm(p.last_name).includes(q)) &&
+      (!d || norm(p.dealer).includes(d) || norm(p.dealer_no).includes(d)) &&
+      (!f.qual || (f.qual === "ok") === p.ev.ok) &&
+      (!course || (p.prog.id === course.prog.id && (f.has === "1") === isDone(p.rec[course.id])))
+    ).sort((a, b) => a.last_name.localeCompare(b.last_name, "cs") || a.first_name.localeCompare(b.first_name, "cs") || a.prog.who.localeCompare(b.prog.who, "cs"));
+  };
+  const coursesHtml = p => p.courses.map(c => {
+    const r = p.rec[c.id], rule = ruleOf(c, p.brand);
+    if (isDone(r)) return `<span class="tr-cchip ok${rule === "V" ? " opt" : ""}">${esc(c.name)} <small>${esc(doneTxt(r))}</small></span>`;
+    if (rule === "P") return `<span class="tr-cchip miss">${esc(c.name)} <small>chybí</small></span>`;
+    return "";
+  }).join("");
+  const exportTable = list => ({
+    title: `Školení ${head.name} – všichni`, subtitle: `Stav k ${czDate(new Date().toISOString().slice(0, 10))} · ${list.length} osob`,
+    head: ["Příjmení", "Jméno", "Profese", "Dealer", "Kvalifikační cesta", "Absolvované kurzy", "Stav"],
+    rows: list.map(p => [p.last_name, p.first_name, p.prog.who, p.dealer + (p.dealer_no ? ` (${p.dealer_no})` : ""),
+      p.ev.ok ? "splněna" : "chybí: " + p.ev.missing.map(c => c.name).join(", "),
+      p.courses.filter(c => isDone(p.rec[c.id])).map(c => `${c.name} (${doneTxt(p.rec[c.id])})`).join(", "),
+      p.active ? "aktivní" : "neaktivní" + (p.inactive_note ? ` (${p.inactive_note})` : "")]),
+    rowClass: list.map(p => p.active ? "" : "st-inactive"), file: `Skoleni_${group}_vsichni` });
+
+  const draw = () => {
+    const list = filtered(), act = rows.filter(p => p.active), nOk = act.filter(p => p.ev.ok).length;
+    const focus = document.activeElement?.id, selStart = document.activeElement?.selectionStart;
+    box.innerHTML = `
+      <div class="kpis kpis-3">
+        <div class="kpi"><span class="kpi-n">${act.length}</span><span class="kpi-l">Aktivních účastníků<small class="kpi-sub">${progs.map(p => `${p.who}: ${act.filter(x => x.prog === p).length}`).join(" · ")}</small></span></div>
+        <div class="kpi kpi-ok"><span class="kpi-n">${nOk}</span><span class="kpi-l">Kvalifikační cesta splněna</span></div>
+        <div class="kpi kpi-expired"><span class="kpi-n">${act.length - nOk}</span><span class="kpi-l">Kvalifikace nesplněna</span></div>
+      </div>
+      <div class="res-card">
+        <div class="res-filters">
+          <label class="f-field"><span>Příjmení</span><input type="search" id="tfQ" class="f-input" placeholder="např. Novák" value="${esc(f.q)}"></label>
+          <label class="f-field"><span>Dealer</span><input type="search" id="tfDealer" class="f-input" placeholder="název nebo číslo dealera" value="${esc(f.dealer)}"></label>
+          ${profeseSelect(group, "vse")}
+          <label class="f-field"><span>Kvalifikační cesta</span><select id="tfQual">
+            ${[["", "Všichni"], ["ok", "Splněna"], ["no", "Nesplněna"]].map(([v, t]) => `<option value="${v}"${f.qual === v ? " selected" : ""}>${t}</option>`).join("")}</select></label>
+          <label class="f-field"><span>Kurz</span><select id="tfCourse"><option value="">Všechny kurzy</option>
+            ${progs.map(p => `<optgroup label="${esc(p.who)}">${courses.filter(c => c.prog === p).map(c => `<option value="${c.id}"${f.course === c.id ? " selected" : ""}>${esc(c.name)}</option>`).join("")}</optgroup>`).join("")}</select></label>
+          ${f.course ? `<label class="f-field"><span>Kurz absolvoval</span><select id="tfHas">
+            ${[["1", "Ano – má kurz"], ["0", "Ne – kurz nemá"]].map(([v, t]) => `<option value="${v}"${f.has === v ? " selected" : ""}>${t}</option>`).join("")}</select></label>` : ""}
+          <label class="f-field"><span>Stav</span><select id="tfState">
+            ${[["active", "Aktivní"], ["inactive", "Neaktivní"], ["all", "Aktivní i neaktivní"]].map(([v, t]) => `<option value="${v}"${f.state === v ? " selected" : ""}>${t}</option>`).join("")}</select></label>
+        </div>
+        <div class="res-toolbar"><span class="f-note tr-count">Zobrazeno ${list.length} z ${rows.length} osob${JSON.stringify(f) !== JSON.stringify(defaultGroupFilter()) ? ` · <button type="button" class="btn-link" id="tfReset">zrušit filtry</button>` : ""}</span>
+          <span class="res-exp">${list.length ? `<button type="button" class="btn-exp" data-export="pdf">Export do PDF</button><button type="button" class="btn-exp" data-export="xlsx">Export do Excelu</button>` : ""}</span></div>
+        ${list.length ? `<div class="table-wrap"><table class="res-table tr-table">
+          <thead><tr><th>Účastník</th><th>Profese</th><th>Dealer</th><th>Kvalifikační cesta</th><th>Kurzy</th></tr></thead>
+          <tbody>${list.map(p => `<tr class="${p.active ? "" : "st-inactive"}">
+            <td><strong>${esc(p.last_name)}</strong> ${esc(p.first_name)}${p.note ? `<span class="muted tr-pnote">${esc(p.note)}</span>` : ""}${p.active ? "" : `<span class="st-badge st-inactive">Neaktivní</span>`}</td>
+            <td><a href="#skoleni-${p.prog.id}" class="tr-prof">${esc(p.prog.who)}</a></td>
+            <td>${esc(p.dealer)}${p.dealer_no ? `<span class="muted">č. ${esc(p.dealer_no)}</span>` : ""}</td>
+            <td>${p.ev.ok ? `<span class="st-badge st-ok">✓ Splněna</span>` : `<span class="st-badge st-expired">${p.ev.doneReq} z ${p.ev.req} povinných</span>`}</td>
+            <td>${coursesHtml(p)}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Zvoleným filtrům neodpovídá nikdo.</div>`}
+      </div>`;
+    const bind = (id, key, ev = "change") => { const el = document.getElementById(id); if (el) el.addEventListener(ev, () => { f[key] = el.value; draw(); }); };
+    bind("tfQ", "q", "input"); bind("tfDealer", "dealer", "input"); bind("tfQual", "qual"); bind("tfHas", "has"); bind("tfState", "state");
+    const course = document.getElementById("tfCourse"); course.onchange = () => { f.course = course.value; if (!f.course) f.has = "1"; draw(); };
+    bindProfese(f);
+    const reset = document.getElementById("tfReset"); if (reset) reset.onclick = () => { Object.assign(f, defaultGroupFilter()); draw(); };
+    if (focus && document.getElementById(focus)) { const el = document.getElementById(focus); el.focus(); if (selStart != null && el.setSelectionRange) try { el.setSelectionRange(selStart, selStart); } catch (_) {} }
+    box.querySelectorAll("[data-export]").forEach(btn => btn.onclick = () => { const t = exportTable(list); if (btn.dataset.export === "pdf") exportPdf(t); else exportXlsx(t, t.file + ".xlsx"); });
+  };
+  draw();
 }

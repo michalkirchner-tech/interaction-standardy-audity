@@ -724,3 +724,9 @@ body.gal-open { overflow: hidden; }
 .tr-rbrand img { height: 18px; max-width: 70px; object-fit: contain; }
 @media (max-width: 600px) { .tr-rtable td:first-child .muted { display: block; } }
 #trTiles[hidden], #trResults[hidden] { display: none; }
+.tr-cchip { display: inline-block; margin: 2px 4px 2px 0; padding: 3px 9px; border-radius: 8px; font-size: .8rem; background: #f2f2f2; color: #555; }
+.tr-cchip small { color: #888; margin-left: 3px; }
+.tr-cchip.ok { background: #e8f5ec; color: #22663f; }
+.tr-cchip.ok.opt { background: #e9f0fb; color: #0D4798; }
+.tr-cchip.miss { background: #fdecee; color: #b0101d; }
+.tr-prof { color: inherit; font-weight: 600; }
