@@ -703,3 +703,11 @@ body.gal-open { overflow: hidden; }
 .tr-table .tr-rec { color: #0D4798; }
 .tr-pnote { font-style: italic; }
 .tr-dealers { margin-top: 18px; }
+.st-sites td { min-width: 150px; }
+.st-sites td:first-child { min-width: 230px; }
+.st-person { display: block; margin-bottom: 6px; font-size: .9rem; }
+.st-person small { display: block; color: #999; font-size: .74rem; }
+.st-person.hit strong { background: #fff3b0; }
+.st-person.off { opacity: .5; }
+.st-brands { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.st-brand { font-size: .72rem; padding: 2px 8px; border-radius: 999px; background: #eef1f6; color: #33415c; }

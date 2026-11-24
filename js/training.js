@@ -5,6 +5,7 @@
 import { supabase } from "./supabase.js?v=20261121c";
 import { exportPdf, exportXlsx } from "./export.js?v=20261121c";
 import { importBoxHtml, bindImport } from "./training-import.js?v=20261123c";
+import { renderSites, loadSites } from "./training-sites.js?v=20261124a";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const czDate = iso => iso ? iso.split("-").reverse().map((x, i) => i < 2 ? String(+x) : x).join(". ") : "";
@@ -20,6 +21,8 @@ export const PROGRAMS = [
   },
   { id: "hyundai-kar", group: "hyundai", name: "Hyundai", who: "Karosáři", logos: HY_LOGO, brands: { hyundai: "Hyundai" }, defaultBrand: "hyundai" },
   { id: "hyundai-lak", group: "hyundai", name: "Hyundai", who: "Lakýrníci", logos: HY_LOGO, brands: { hyundai: "Hyundai" }, defaultBrand: "hyundai" },
+  // Stellantis: přehled po pobočkách (jedna adresa = jeden řádek, více značek)
+  { id: "stellantis", group: "stellantis", name: "Stellantis", who: "Pobočky", layout: "sites", logos: [{ src: "assets/logos/stellantis.svg", alt: "Stellantis" }], brands: { stellantis: "Stellantis" }, defaultBrand: "stellantis" },
 ];
 const groupOf = p => PROGRAMS.filter(x => x.group === p.group);
 const isDone = r => !!(r?.done_on || r?.recognized); // splněno = datum nebo „uznáno“
@@ -78,6 +81,11 @@ export async function renderTrainingHome(app, attachTilt) {
   await Promise.all(PROGRAMS.map(async p => {
     const el = app.querySelector(`[data-tstats="${p.id}"]`);
     try {
+      if (p.layout === "sites") {
+        const { sites } = await loadSites(p.id);
+        if (el) el.innerHTML = `Pobočky: ${sites.length} · <b class="c-ok">${sites.filter(s => s.full).length} se všemi školeními</b>`;
+        return;
+      }
       const { courses, people } = await loadProgram(p.id);
       const act = people.filter(x => x.active);
       const ok = act.filter(x => evalPerson(x, courses).ok).length;
@@ -91,6 +99,7 @@ const filters = {}; // filtry zůstanou nastavené během práce v aplikaci
 const defaultFilter = () => ({ q: "", dealer: "", course: "", has: "1", qual: "", brand: "", state: "active" });
 
 export async function renderTrainingProgram(app, program, profile) {
+  if (program.layout === "sites") return renderSites(app, program, profile);
   const isAdmin = profile?.role === "admin";
   const multi = Object.keys(program.brands).length > 1; // výběr značky jen tam, kde program má víc značek (Škoda / Porsche)
   const tabs = groupOf(program);
