@@ -4,7 +4,7 @@
 // Kvalifikační cesta je splněná, když má účastník všechny povinné kurzy své značky.
 import { supabase } from "./supabase.js?v=20261121c";
 import { exportPdf, exportXlsx } from "./export.js?v=20261121c";
-import { importBoxHtml, bindImport } from "./training-import.js?v=20261123c";
+import { importBoxHtml, bindImport } from "./training-import.js?v=20261124b";
 import { renderSites, loadSites } from "./training-sites.js?v=20261124a";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -21,6 +21,7 @@ export const PROGRAMS = [
   },
   { id: "hyundai-kar", group: "hyundai", name: "Hyundai", who: "Karosáři", logos: HY_LOGO, brands: { hyundai: "Hyundai" }, defaultBrand: "hyundai" },
   { id: "hyundai-lak", group: "hyundai", name: "Hyundai", who: "Lakýrníci", logos: HY_LOGO, brands: { hyundai: "Hyundai" }, defaultBrand: "hyundai" },
+  { id: "mitsubishi-kar", group: "mitsubishi", name: "Mitsubishi", who: "Karosáři", logos: [{ src: "assets/logos/mitsubishi.svg", alt: "Mitsubishi" }], brands: { mitsubishi: "Mitsubishi" }, defaultBrand: "mitsubishi" },
   // Stellantis: přehled po pobočkách (jedna adresa = jeden řádek, více značek)
   { id: "stellantis", group: "stellantis", name: "Stellantis", who: "Pobočky", layout: "sites", logos: [{ src: "assets/logos/stellantis.svg", alt: "Stellantis" }], brands: { stellantis: "Stellantis" }, defaultBrand: "stellantis" },
 ];
@@ -181,7 +182,7 @@ export async function renderTrainingProgram(app, program, profile) {
     rows.sort((a, b) => order(a) - order(b) || String(a.dealer_no).localeCompare(String(b.dealer_no)));
     return `
       <div class="res-card tr-dealers">
-        <h3>Dealeři bez vlastních proškolených ${esc({ "Karosáři": "karosářů", "Lakýrníci": "lakýrníků" }[program.who] || "pracovníků")}</h3>
+        <h3>Dealeři bez vlastních proškolených ${esc({ "Karosáři": "karosářů", "Lakýrníci": "lakýrníků", "Servisní poradci": "servisních poradců" }[program.who] || "pracovníků")}</h3>
         <p>Dealeři, kteří v seznamu nemají vlastní proškolené pracovníky – realizují opravy u jiného dealera, doložili certifikáty jiného dodavatele, nebo zatím nesplňují.</p>
         <div class="table-wrap"><table class="res-table"><thead><tr><th>Dealer</th><th>Stav</th><th>Poznámka</th></tr></thead><tbody>
         ${rows.map(x => `<tr><td><strong>${esc(x.dealer)}</strong>${x.dealer_no ? `<span class="muted">č. ${esc(x.dealer_no)}</span>` : ""}</td>

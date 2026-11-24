@@ -19,6 +19,9 @@ const COURSE_HINTS = {
     ["sp-mikro", ["mikro repair", "micro repair", "mikro", "micro"]],
     ["sp-matne", ["matne lakovani", "matn"]],
   ],
+  "mitsubishi-kar": [
+    ["mk-kar", ["skoleni karosaru", "karosar"]],
+  ],
   "hyundai-kar": [
     ["hk-spot", ["spot", "antikorozni", "tmeleni", "cinovani"]],
     ["hk-svar", ["svarovani", "lepeni", "odvrtavani"]],
