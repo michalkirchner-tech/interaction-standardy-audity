@@ -22,6 +22,11 @@ const COURSE_HINTS = {
   "mitsubishi-kar": [
     ["mk-kar", ["skoleni karosaru", "karosar"]],
   ],
+  "mitsubishi-lak": [
+    ["ml-priprava", ["priprava podkladu", "priprava"]],
+    ["ml-aplikace", ["aplikacni dovednosti", "aplikacni", "lakovani"]],
+    ["ml-kolor1", ["koloristika 1", "koloristika i", "koloristika"]],
+  ],
   "hyundai-kar": [
     ["hk-spot", ["spot", "antikorozni", "tmeleni", "cinovani"]],
     ["hk-svar", ["svarovani", "lepeni", "odvrtavani"]],
