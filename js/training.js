@@ -4,7 +4,7 @@
 // Kvalifikační cesta je splněná, když má účastník všechny povinné kurzy své značky.
 import { supabase } from "./supabase.js?v=20261121c";
 import { exportPdf, exportXlsx } from "./export.js?v=20261121c";
-import { importBoxHtml, bindImport } from "./training-import.js?v=20261124d";
+import { importBoxHtml, bindImport } from "./training-import.js?v=20261124e";
 import { renderSites, loadSites, presetSiteFilter } from "./training-sites.js?v=20261124c";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -23,6 +23,7 @@ export const PROGRAMS = [
   { id: "hyundai-lak", group: "hyundai", name: "Hyundai", who: "Lakýrníci", logos: HY_LOGO, brands: { hyundai: "Hyundai" }, defaultBrand: "hyundai" },
   { id: "mitsubishi-kar", group: "mitsubishi", name: "Mitsubishi", who: "Karosáři", logos: [{ src: "assets/logos/mitsubishi.svg", alt: "Mitsubishi" }], brands: { mitsubishi: "Mitsubishi" }, defaultBrand: "mitsubishi" },
   { id: "mitsubishi-lak", group: "mitsubishi", name: "Mitsubishi", who: "Lakýrníci", logos: [{ src: "assets/logos/mitsubishi.svg", alt: "Mitsubishi" }], brands: { mitsubishi: "Mitsubishi" }, defaultBrand: "mitsubishi" },
+  { id: "mitsubishi-sp", group: "mitsubishi", name: "Mitsubishi", who: "Servisní poradci", logos: [{ src: "assets/logos/mitsubishi.svg", alt: "Mitsubishi" }], brands: { mitsubishi: "Mitsubishi" }, defaultBrand: "mitsubishi" },
   // Stellantis: přehled po pobočkách (jedna adresa = jeden řádek, více značek)
   { id: "stellantis", group: "stellantis", name: "Stellantis", who: "Pobočky", layout: "sites", logos: [{ src: "assets/logos/stellantis.svg", alt: "Stellantis" }], brands: { stellantis: "Stellantis" }, defaultBrand: "stellantis" },
 ];

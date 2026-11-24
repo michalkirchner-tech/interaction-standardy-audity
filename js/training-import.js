@@ -27,6 +27,9 @@ const COURSE_HINTS = {
     ["ml-aplikace", ["aplikacni dovednosti", "aplikacni", "lakovani"]],
     ["ml-kolor1", ["koloristika 1", "koloristika i", "koloristika"]],
   ],
+  "mitsubishi-sp": [
+    ["ms-sp", ["servisnich poradcu", "servisni poradce", "skoleni techniku", "techniku"]],
+  ],
   "hyundai-kar": [
     ["hk-spot", ["spot", "antikorozni", "tmeleni", "cinovani"]],
     ["hk-svar", ["svarovani", "lepeni", "odvrtavani"]],
